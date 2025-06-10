@@ -26,6 +26,10 @@
             <el-icon><Goods /></el-icon>
             <span>日志管理</span>
           </el-menu-item>
+          <el-menu-item index="3" @click="handleMenuClick('test')">
+            <el-icon><Goods /></el-icon>
+            <span>测试</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -83,7 +87,8 @@ const handleMenuClick = (route) => {
   const pageNames = {
     dashboard: '仪表盘',
     components: '模块管理',
-    logs: '日志管理'
+    logs: '日志管理',
+    test: '测试'
   }
   currentPage.value = pageNames[route]
 }
