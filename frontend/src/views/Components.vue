@@ -31,30 +31,45 @@
             <defs>
               <marker
                 id="arrowhead"
-                markerWidth="10"
-                markerHeight="7"
-                refX="9"
-                refY="3.5"
+                markerWidth="8"
+                markerHeight="6"
+                refX="7"
+                refY="3"
                 orient="auto"
               >
                 <polygon
-                  points="0 0, 10 3.5, 0 7"
+                  points="0 0, 8 3, 0 6"
                   fill="#409EFF"
                 />
               </marker>
+              <marker
+                id="arrowhead-temp"
+                markerWidth="8"
+                markerHeight="6"
+                refX="7"
+                refY="3"
+                orient="auto"
+              >
+                <polygon
+                  points="0 0, 8 3, 0 6"
+                  fill="#67C23A"
+                />
+              </marker>
             </defs>
-            <path
-              v-for="conn in connections"
-              :key="conn.id"
-              :d="`M ${conn.startPos.x} ${conn.startPos.y} C ${(conn.startPos.x + conn.endPos.x) / 2} ${conn.startPos.y}, ${(conn.startPos.x + conn.endPos.x) / 2} ${conn.endPos.y}, ${conn.endPos.x} ${conn.endPos.y}`"
-              class="connection-path"
-              :class="{ 'animated': conn.animated }"
-            />
-            <path
-              v-if="tempLine"
-              :d="`M ${tempLine.start.x} ${tempLine.start.y} C ${(tempLine.start.x + tempLine.end.x) / 2} ${tempLine.start.y}, ${(tempLine.start.x + tempLine.end.x) / 2} ${tempLine.end.y}, ${tempLine.end.x} ${tempLine.end.y}`"
-              class="connection-path temp"
-            />
+            <g v-for="conn in connections" :key="conn.id" class="connection-group">
+              <path
+                :d="getConnectionPath(conn.startPos, conn.endPos)"
+                class="connection-path"
+                :class="{ 'animated': conn.animated }"
+                @click="selectConnection(conn)"
+              />
+            </g>
+            <g v-if="tempLine" class="connection-group">
+              <path
+                :d="getConnectionPath(tempLine.start, tempLine.end)"
+                class="connection-path temp"
+              />
+            </g>
           </svg>
 
           <!-- 节点 -->
@@ -203,6 +218,98 @@ let isDragging = false
 let currentDragNode = null
 let dragOffset = { x: 0, y: 0 }
 
+// 更新连线位置
+const updateConnections = () => {
+  const canvas = document.querySelector('.canvas')
+  const rect = canvas.getBoundingClientRect()
+  
+  connections.value = connections.value.map(conn => {
+    const startNode = document.querySelector(`[data-node-id="${conn.start.node.id}"]`)
+    const endNode = document.querySelector(`[data-node-id="${conn.end.node.id}"]`)
+    
+    if (!startNode || !endNode) return conn
+    
+    const startPort = startNode.querySelector(`[data-port-id="${conn.start.port.id}"]`)
+    const endPort = endNode.querySelector(`[data-port-id="${conn.end.port.id}"]`)
+    
+    if (!startPort || !endPort) return conn
+    
+    const startRect = startPort.getBoundingClientRect()
+    const endRect = endPort.getBoundingClientRect()
+    
+    return {
+      ...conn,
+      startPos: {
+        x: startRect.left - rect.left + (conn.start.isInput ? 0 : startRect.width),
+        y: startRect.top - rect.top + startRect.height / 2
+      },
+      endPos: {
+        x: endRect.left - rect.left + (conn.end.isInput ? 0 : endRect.width),
+        y: endRect.top - rect.top + endRect.height / 2
+      }
+    }
+  })
+}
+
+// 开始拖拽节点
+const startDrag = (event, node) => {
+  if (event.target.closest('.port')) return
+  
+  isDragging = true
+  currentDragNode = node
+  dragOffset = {
+    x: event.clientX - node.x,
+    y: event.clientY - node.y
+  }
+  
+  // 添加事件监听
+  document.addEventListener('mousemove', handleDrag)
+  document.addEventListener('mouseup', stopDrag)
+  
+  // 阻止默认行为和事件冒泡
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+// 处理拖拽
+const handleDrag = (event) => {
+  if (!isDragging || !currentDragNode) return
+  
+  // 计算新位置
+  const newX = event.clientX - dragOffset.x
+  const newY = event.clientY - dragOffset.y
+  
+  // 更新节点位置
+  currentDragNode.x = newX
+  currentDragNode.y = newY
+  
+  // 更新连线位置
+  updateConnections()
+  
+  // 阻止默认行为和事件冒泡
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+// 停止拖拽
+const stopDrag = (event) => {
+  if (!isDragging) return
+  
+  isDragging = false
+  currentDragNode = null
+  
+  // 移除事件监听
+  document.removeEventListener('mousemove', handleDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  
+  // 阻止默认行为和事件冒泡
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+// 添加变量
+const updateFrame = ref(null)
+
 // 处理模块拖拽开始
 const handleDragStart = (event, module) => {
   event.dataTransfer.setData('moduleId', module.id)
@@ -228,66 +335,22 @@ const handleDrop = (event) => {
   }
 }
 
-// 开始拖动节点
-const startDrag = (event, node) => {
-  if (event.target.closest('.port')) return
-  
-  isDragging = true
-  currentDragNode = node
-  const rect = event.target.getBoundingClientRect()
-  dragOffset = {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
-  }
-  
-  document.addEventListener('mousemove', handleDrag)
-  document.addEventListener('mouseup', stopDrag)
-}
-
-// 处理节点拖动
-const handleDrag = (event) => {
-  if (!isDragging || !currentDragNode) return
-  
-  const canvas = document.querySelector('.canvas')
-  const rect = canvas.getBoundingClientRect()
-  
-  currentDragNode.x = event.clientX - rect.left - dragOffset.x
-  currentDragNode.y = event.clientY - rect.top - dragOffset.y
-  
-  // 更新连线位置
-  updateConnections()
-}
-
-// 停止拖动
-const stopDrag = () => {
-  isDragging = false
-  currentDragNode = null
-  document.removeEventListener('mousemove', handleDrag)
-  document.removeEventListener('mouseup', stopDrag)
-}
-
 // 开始连线
 const startConnection = (event, node, port, isInput) => {
   event.stopPropagation()
   
-  // 如果是输入端口，且已经连接，则不允许再次连接
   if (isInput && port.connected) {
     return
   }
   
-  // 如果是输出端口，开始拖拽连线
   if (!isInput) {
     isConnecting = true
     startPort = { node, port, isInput }
-    
-    // 添加拖拽时的视觉反馈
     port.connecting = true
     
-    // 添加事件监听
     document.addEventListener('mousemove', handleConnectionMove)
     document.addEventListener('mouseup', stopConnection)
     
-    // 立即更新临时连线
     const startPos = getPortPosition(node, port, isInput)
     tempLine = {
       start: startPos,
@@ -333,22 +396,19 @@ const handleConnectionMove = (event) => {
   const x = event.clientX - rect.left
   const y = event.clientY - rect.top
   
-  // 更新临时连线
+  const startPos = getPortPosition(startPort.node, startPort.port, startPort.isInput)
   tempLine = {
-    start: getPortPosition(startPort.node, startPort.port, startPort.isInput),
+    start: startPos,
     end: { x, y }
   }
   
-  // 查找鼠标下方的端口
   const targetPort = findPortAtPosition(event.clientX, event.clientY)
   
-  // 清除所有端口的高亮状态
   placedNodes.value.forEach(node => {
     node.inputs.forEach(input => input.connecting = false)
     node.outputs.forEach(output => output.connecting = false)
   })
   
-  // 如果找到目标端口，且可以连接，则高亮显示
   if (targetPort && canConnect(startPort, targetPort)) {
     targetPort.port.connecting = true
   }
@@ -433,17 +493,33 @@ const createConnection = (start, end) => {
     endPos,
     animated: true
   })
+  
+  // 立即更新一次连线位置
+  updateConnections()
 }
 
-// 更新连线位置
-const updateConnections = () => {
-  requestAnimationFrame(() => {
-    connections.value = connections.value.map(conn => ({
-      ...conn,
-      startPos: getPortPosition(conn.start.node, conn.start.port, conn.start.isInput),
-      endPos: getPortPosition(conn.end.node, conn.end.port, conn.end.isInput)
-    }))
-  })
+// 获取连线路径
+const getConnectionPath = (start, end) => {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  
+  // 计算控制点
+  const controlPoint1 = {
+    x: start.x + dx * 0.5,
+    y: start.y
+  }
+  const controlPoint2 = {
+    x: end.x - dx * 0.5,
+    y: end.y
+  }
+  
+  // 调整终点位置，使箭头刚好碰到端口
+  const endX = end.x - (dx > 0 ? 7 : -7)
+  
+  return `M ${start.x} ${start.y} 
+          C ${controlPoint1.x} ${controlPoint1.y},
+            ${controlPoint2.x} ${controlPoint2.y},
+            ${endX} ${end.y}`
 }
 
 // 组件卸载时清理事件监听
@@ -538,13 +614,19 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+.connection-group {
+  transform-origin: center;
+  will-change: transform;
+}
+
 .connection-path {
   fill: none;
   stroke: #409EFF;
   stroke-width: 2;
   pointer-events: none;
-  transition: all 0.3s ease;
+  transition: none;
   marker-end: url(#arrowhead);
+  will-change: d;
 }
 
 .connection-path.temp {
@@ -552,6 +634,7 @@ onUnmounted(() => {
   animation: dash 1s linear infinite;
   stroke: #67C23A;
   stroke-width: 2;
+  marker-end: url(#arrowhead-temp);
 }
 
 .connection-path.animated {
@@ -574,8 +657,9 @@ onUnmounted(() => {
   padding: 12px;
   cursor: move;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-  transition: all 0.3s;
+  transition: none;
   user-select: none;
+  touch-action: none;
 }
 
 .node:hover {
