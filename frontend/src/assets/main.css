@@ -1,0 +1,52 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+.el-main {
+  padding: 0 !important;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+.vue-flow {
+  background-color: #f8f8f8;
+}
+
+.vue-flow__node {
+  padding: 0;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.vue-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: #409EFF;
+  border: 2px solid white;
+}
+
+.vue-flow__edge-path {
+  stroke: #409EFF;
+  stroke-width: 2;
+}
+
+.vue-flow__edge.animated .vue-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+} 

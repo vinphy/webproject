@@ -33,6 +33,7 @@
               :key="conn.id"
               :d="`M ${conn.startPos.x} ${conn.startPos.y} C ${(conn.startPos.x + conn.endPos.x) / 2} ${conn.startPos.y}, ${(conn.startPos.x + conn.endPos.x) / 2} ${conn.endPos.y}, ${conn.endPos.x} ${conn.endPos.y}`"
               class="connection-path"
+              :class="{ 'animated': conn.animated }"
             />
             <path
               v-if="tempLine"
@@ -50,7 +51,8 @@
             :data-type="node.type"
             :style="{
               left: node.x + 'px',
-              top: node.y + 'px'
+              top: node.y + 'px',
+              transform: `scale(${node.scale || 1})`
             }"
             @mousedown="startDrag($event, node)"
           >
@@ -64,9 +66,14 @@
                   v-for="(input, index) in node.inputs" 
                   :key="'input-' + index"
                   class="port input-port"
-                  :class="{ 'connected': input.connected }"
+                  :class="{ 
+                    'connected': input.connected,
+                    'connecting': input.connecting,
+                    'can-connect': isConnecting && !startPort?.isInput
+                  }"
                   :data-port-id="input.id"
-                  @mousedown="startConnection($event, node, input, true)"
+                  @mousedown.stop="startConnection($event, node, input, true)"
+                  @mouseup.stop="handlePortMouseUp($event, node, input, true)"
                 >
                   <div class="port-dot"></div>
                   <span>{{ input.name }}</span>
@@ -77,9 +84,14 @@
                   v-for="(output, index) in node.outputs" 
                   :key="'output-' + index"
                   class="port output-port"
-                  :class="{ 'connected': output.connected }"
+                  :class="{ 
+                    'connected': output.connected,
+                    'connecting': output.connecting,
+                    'can-connect': isConnecting && startPort?.isInput
+                  }"
                   :data-port-id="output.id"
-                  @mousedown="startConnection($event, node, output, false)"
+                  @mousedown.stop="startConnection($event, node, output, false)"
+                  @mouseup.stop="handlePortMouseUp($event, node, output, false)"
                 >
                   <span>{{ output.name }}</span>
                   <div class="port-dot"></div>
@@ -191,7 +203,8 @@ const handleDrop = (event) => {
       ...module,
       id: nodeId++,
       x,
-      y
+      y,
+      scale: 1
     })
   }
 }
@@ -238,13 +251,58 @@ const stopDrag = () => {
 const startConnection = (event, node, port, isInput) => {
   event.stopPropagation()
   
-  if (isInput && port.connected) return
+  // 如果是输入端口，且已经连接，则不允许再次连接
+  if (isInput && port.connected) {
+    return
+  }
   
-  isConnecting = true
-  startPort = { node, port, isInput }
+  // 如果是输出端口，开始拖拽连线
+  if (!isInput) {
+    isConnecting = true
+    startPort = { node, port, isInput }
+    
+    // 添加拖拽时的视觉反馈
+    port.connecting = true
+    
+    // 添加事件监听
+    document.addEventListener('mousemove', handleConnectionMove)
+    document.addEventListener('mouseup', stopConnection)
+    
+    // 立即更新临时连线
+    const startPos = getPortPosition(node, port, isInput)
+    tempLine = {
+      start: startPos,
+      end: startPos
+    }
+  }
+}
+
+// 处理端口鼠标释放
+const handlePortMouseUp = (event, node, port, isInput) => {
+  if (!isConnecting) return
   
-  document.addEventListener('mousemove', handleConnectionMove)
-  document.addEventListener('mouseup', stopConnection)
+  // 如果是输入端口，且起始端口是输出端口，则尝试连接
+  if (isInput && startPort && !startPort.isInput) {
+    const targetPort = { node, port, isInput }
+    if (canConnect(startPort, targetPort)) {
+      createConnection(startPort, targetPort)
+    }
+  }
+  
+  // 清除连接状态
+  isConnecting = false
+  startPort = null
+  tempLine = null
+  
+  // 清除所有端口的连接状态
+  placedNodes.value.forEach(node => {
+    node.inputs.forEach(input => input.connecting = false)
+    node.outputs.forEach(output => output.connecting = false)
+  })
+  
+  // 移除事件监听
+  document.removeEventListener('mousemove', handleConnectionMove)
+  document.removeEventListener('mouseup', stopConnection)
 }
 
 // 处理连线移动
@@ -261,24 +319,20 @@ const handleConnectionMove = (event) => {
     start: getPortPosition(startPort.node, startPort.port, startPort.isInput),
     end: { x, y }
   }
-}
-
-// 停止连线
-const stopConnection = (event) => {
-  if (!isConnecting) return
   
+  // 查找鼠标下方的端口
   const targetPort = findPortAtPosition(event.clientX, event.clientY)
   
+  // 清除所有端口的高亮状态
+  placedNodes.value.forEach(node => {
+    node.inputs.forEach(input => input.connecting = false)
+    node.outputs.forEach(output => output.connecting = false)
+  })
+  
+  // 如果找到目标端口，且可以连接，则高亮显示
   if (targetPort && canConnect(startPort, targetPort)) {
-    createConnection(startPort, targetPort)
+    targetPort.port.connecting = true
   }
-  
-  isConnecting = false
-  startPort = null
-  tempLine = null
-  
-  document.removeEventListener('mousemove', handleConnectionMove)
-  document.removeEventListener('mouseup', stopConnection)
 }
 
 // 获取端口位置
@@ -352,7 +406,10 @@ const createConnection = (start, end) => {
   connections.value.push({
     id: Date.now(),
     start: start.isInput ? end : start,
-    end: start.isInput ? start : end
+    end: start.isInput ? start : end,
+    startPos: getPortPosition(start.isInput ? end.node : start.node, start.isInput ? end.port : start.port, start.isInput),
+    endPos: getPortPosition(start.isInput ? start.node : end.node, start.isInput ? start.port : end.port, start.isInput),
+    animated: true
   })
 }
 
@@ -379,6 +436,7 @@ onUnmounted(() => {
   height: 100%;
   padding: 20px;
   background: #f5f7fa;
+  user-select: none; /* 禁止文字选择 */
 }
 
 .module-container {
@@ -461,9 +519,17 @@ onUnmounted(() => {
   stroke: #409EFF;
   stroke-width: 2;
   pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 .connection-path.temp {
+  stroke-dasharray: 5;
+  animation: dash 1s linear infinite;
+  stroke: #67C23A;
+  stroke-width: 2;
+}
+
+.connection-path.animated {
   stroke-dasharray: 5;
   animation: dash 1s linear infinite;
 }
@@ -484,6 +550,7 @@ onUnmounted(() => {
   cursor: move;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.3s;
+  user-select: none; /* 禁止文字选择 */
 }
 
 .node:hover {
@@ -516,6 +583,8 @@ onUnmounted(() => {
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.3s;
+  user-select: none;
+  position: relative;
 }
 
 .port:hover {
@@ -523,23 +592,27 @@ onUnmounted(() => {
   color: #409EFF;
 }
 
-.input-port {
-  justify-content: flex-start;
+.port.connecting {
+  background: #ecf5ff;
+  color: #409EFF;
 }
 
-.output-port {
-  justify-content: flex-end;
+.port.can-connect {
+  background: #f0f9eb;
+  color: #67C23A;
 }
 
 .port-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   background: #409EFF;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s;
   border: 2px solid #ffffff;
   box-shadow: 0 0 0 1px #409EFF;
+  position: relative;
+  z-index: 1;
 }
 
 .port:hover .port-dot {
@@ -548,9 +621,35 @@ onUnmounted(() => {
   box-shadow: 0 0 0 1px #67C23A;
 }
 
-.port.connected .port-dot {
+.port.connecting .port-dot {
   background: #67C23A;
-  box-shadow: 0 0 0 1px #67C23A;
+  box-shadow: 0 0 0 2px #67C23A;
+}
+
+.port.can-connect .port-dot {
+  background: #67C23A;
+  box-shadow: 0 0 0 2px #67C23A;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(103, 194, 58, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(103, 194, 58, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(103, 194, 58, 0);
+  }
+}
+
+.input-port {
+  justify-content: flex-start;
+}
+
+.output-port {
+  justify-content: flex-end;
 }
 
 .input-port .port-dot {
