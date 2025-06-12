@@ -28,6 +28,21 @@
         <div class="canvas">
           <!-- 连线 -->
           <svg class="connections-layer">
+            <defs>
+              <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="7"
+                refX="9"
+                refY="3.5"
+                orient="auto"
+              >
+                <polygon
+                  points="0 0, 10 3.5, 0 7"
+                  fill="#409EFF"
+                />
+              </marker>
+            </defs>
             <path
               v-for="conn in connections"
               :key="conn.id"
@@ -61,7 +76,7 @@
               <span>{{ node.name }}</span>
             </div>
             <div class="node-ports">
-              <div class="input-ports">
+              <div class="ports-container">
                 <div 
                   v-for="(input, index) in node.inputs" 
                   :key="'input-' + index"
@@ -72,14 +87,15 @@
                     'can-connect': isConnecting && !startPort?.isInput
                   }"
                   :data-port-id="input.id"
+                  :style="{ top: `${(index + 1) * 30}px` }"
                   @mousedown.stop="startConnection($event, node, input, true)"
                   @mouseup.stop="handlePortMouseUp($event, node, input, true)"
                 >
                   <div class="port-dot"></div>
-                  <span>{{ input.name }}</span>
+                  <div class="port-content">
+                    <span class="port-label">{{ input.name }}</span>
+                  </div>
                 </div>
-              </div>
-              <div class="output-ports">
                 <div 
                   v-for="(output, index) in node.outputs" 
                   :key="'output-' + index"
@@ -90,10 +106,13 @@
                     'can-connect': isConnecting && startPort?.isInput
                   }"
                   :data-port-id="output.id"
+                  :style="{ top: `${(index + 1) * 30}px` }"
                   @mousedown.stop="startConnection($event, node, output, false)"
                   @mouseup.stop="handlePortMouseUp($event, node, output, false)"
                 >
-                  <span>{{ output.name }}</span>
+                  <div class="port-content">
+                    <span class="port-label">{{ output.name }}</span>
+                  </div>
                   <div class="port-dot"></div>
                 </div>
               </div>
@@ -403,23 +422,28 @@ const createConnection = (start, end) => {
   inputPort.connected = true
   outputPort.connected = true
   
+  const startPos = getPortPosition(start.isInput ? end.node : start.node, start.isInput ? end.port : start.port, start.isInput)
+  const endPos = getPortPosition(start.isInput ? start.node : end.node, start.isInput ? start.port : end.port, start.isInput)
+  
   connections.value.push({
     id: Date.now(),
     start: start.isInput ? end : start,
     end: start.isInput ? start : end,
-    startPos: getPortPosition(start.isInput ? end.node : start.node, start.isInput ? end.port : start.port, start.isInput),
-    endPos: getPortPosition(start.isInput ? start.node : end.node, start.isInput ? start.port : end.port, start.isInput),
+    startPos,
+    endPos,
     animated: true
   })
 }
 
 // 更新连线位置
 const updateConnections = () => {
-  connections.value = connections.value.map(conn => ({
-    ...conn,
-    startPos: getPortPosition(conn.start.node, conn.start.port, conn.start.isInput),
-    endPos: getPortPosition(conn.end.node, conn.end.port, conn.end.isInput)
-  }))
+  requestAnimationFrame(() => {
+    connections.value = connections.value.map(conn => ({
+      ...conn,
+      startPos: getPortPosition(conn.start.node, conn.start.port, conn.start.isInput),
+      endPos: getPortPosition(conn.end.node, conn.end.port, conn.end.isInput)
+    }))
+  })
 }
 
 // 组件卸载时清理事件监听
@@ -520,6 +544,7 @@ onUnmounted(() => {
   stroke-width: 2;
   pointer-events: none;
   transition: all 0.3s ease;
+  marker-end: url(#arrowhead);
 }
 
 .connection-path.temp {
@@ -550,7 +575,7 @@ onUnmounted(() => {
   cursor: move;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.3s;
-  user-select: none; /* 禁止文字选择 */
+  user-select: none;
 }
 
 .node:hover {
@@ -569,50 +594,86 @@ onUnmounted(() => {
 }
 
 .node-ports {
-  padding: 12px 0;
+  position: relative;
+  min-height: 120px;
+  margin: 0 -12px;
+}
+
+.ports-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .port {
+  position: absolute;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 8px 0;
   color: #606266;
   font-size: 13px;
   cursor: pointer;
+  transition: all 0.3s;
+  user-select: none;
+  z-index: 1;
+}
+
+.input-port {
+  left: 0;
+  transform: translateX(-15%);
+  justify-content: flex-end;
+}
+
+.output-port {
+  right: 0;
+  transform: translateX(15%);
+  justify-content: flex-start;
+}
+
+.port-content {
+  background: transparent;
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.3s;
-  user-select: none;
-  position: relative;
 }
 
-.port:hover {
-  background: #f5f7fa;
+.port:hover .port-content {
+  background: transparent;
+}
+
+.port-label {
+  white-space: nowrap;
+  font-size: 12px;
+  color: #909399;
+  transition: all 0.3s;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.port:hover .port-label {
   color: #409EFF;
-}
-
-.port.connecting {
-  background: #ecf5ff;
-  color: #409EFF;
-}
-
-.port.can-connect {
-  background: #f0f9eb;
-  color: #67C23A;
+  background: rgba(64, 158, 255, 0.1);
 }
 
 .port-dot {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
   background: #409EFF;
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.3s;
-  border: 2px solid #ffffff;
+  border: 1px solid #ffffff;
   box-shadow: 0 0 0 1px #409EFF;
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.input-port .port-dot {
+  margin-right: -4px;
+}
+
+.output-port .port-dot {
+  margin-left: -4px;
 }
 
 .port:hover .port-dot {
@@ -642,22 +703,6 @@ onUnmounted(() => {
   100% {
     box-shadow: 0 0 0 0 rgba(103, 194, 58, 0);
   }
-}
-
-.input-port {
-  justify-content: flex-start;
-}
-
-.output-port {
-  justify-content: flex-end;
-}
-
-.input-port .port-dot {
-  margin-right: 8px;
-}
-
-.output-port .port-dot {
-  margin-left: 8px;
 }
 
 /* 为不同类型的模块添加不同的颜色 */
@@ -692,5 +737,15 @@ onUnmounted(() => {
 
 .node[data-type="analysis"] {
   border-left: 3px solid #F56C6C;
+}
+
+.port.connecting .port-label {
+  color: #67C23A;
+  background: rgba(103, 194, 58, 0.1);
+}
+
+.port.can-connect .port-label {
+  color: #67C23A;
+  background: rgba(103, 194, 58, 0.1);
 }
 </style> 
