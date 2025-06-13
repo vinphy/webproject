@@ -25,7 +25,7 @@
         @dragover.prevent
         @drop="handleDrop"
       >
-        <div class="canvas">
+        <div class="canvas" ref="canvasRef">
           <!-- 连线 -->
           <svg class="connections-layer">
             <defs>
@@ -86,6 +86,7 @@
             }"
             @mousedown="startDrag($event, node)"
             @dblclick="handleNodeDblClick(node)"
+            @contextmenu="showContextMenu($event, node)"
           >
             <div class="node-header">
               <el-icon><component :is="node.icon" /></el-icon>
@@ -210,18 +211,58 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 代码展示面板 -->
+    <div class="code-panel" :class="{ 'code-panel-collapsed': isCodePanelCollapsed }">
+      <div class="code-panel-header" @click="toggleCodePanel">
+        <span>生成的代码</span>
+        <el-icon :class="{ 'is-collapsed': isCodePanelCollapsed }">
+          <ArrowRight />
+        </el-icon>
+      </div>
+      <div class="code-panel-content" v-show="!isCodePanelCollapsed">
+        <div class="code-tabs">
+          <div 
+            v-for="(file, index) in generatedFiles" 
+            :key="index"
+            :class="['code-tab', { active: currentFileIndex === index }]"
+            @click="currentFileIndex = index"
+          >
+            {{ file.name }}
+          </div>
+        </div>
+        <div class="code-content">
+          <pre><code>{{ currentFileContent }}</code></pre>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右键菜单 -->
+    <div 
+      v-show="contextMenuVisible" 
+      class="context-menu"
+      :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+    >
+      <div class="menu-item" @click="handleGenerateCode">
+        <el-icon><Document /></el-icon>
+        生成代码
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { 
   Cpu, 
   Connection, 
   DataLine, 
   Monitor,
-  Histogram
+  Histogram,
+  ArrowRight,
+  Document
 } from '@element-plus/icons-vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 // 可用模块列表
 const availableModules = ref([
@@ -296,6 +337,17 @@ let dragOffset = { x: 0, y: 0 }
 const configDialogVisible = ref(false)
 const activeTab = ref('ports')
 const currentNode = ref(null)
+
+// 代码面板相关
+const isCodePanelCollapsed = ref(false)
+const generatedFiles = ref([])
+const currentFileIndex = ref(0)
+
+// 右键菜单相关
+const contextMenuVisible = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const contextMenuNode = ref(null)
 
 // 更新连线位置
 const updateConnections = () => {
@@ -676,6 +728,212 @@ const saveConfig = () => {
   
   configDialogVisible.value = false
 }
+
+// 切换代码面板
+const toggleCodePanel = () => {
+  isCodePanelCollapsed.value = !isCodePanelCollapsed.value
+}
+
+// 显示右键菜单
+const showContextMenu = (event, node) => {
+  console.log('右键菜单触发，节点数据:', node)
+  event.preventDefault()
+  event.stopPropagation() // 阻止事件冒泡
+  
+  // 深拷贝节点数据
+  contextMenuNode.value = JSON.parse(JSON.stringify(node))
+  contextMenuX.value = event.clientX
+  contextMenuY.value = event.clientY
+  contextMenuVisible.value = true
+}
+
+// 隐藏右键菜单
+const hideContextMenu = () => {
+  contextMenuVisible.value = false
+  // 不要在这里清空节点数据
+  // contextMenuNode.value = null
+}
+
+// 生成代码
+const handleGenerateCode = async () => {
+  console.log('开始生成代码，当前节点:', contextMenuNode.value)
+  
+  if (!contextMenuNode.value) {
+    console.error('节点数据为空')
+    ElMessage.error('未选择节点')
+    return
+  }
+
+  // 检查节点数据结构
+  console.log('节点完整数据:', JSON.stringify(contextMenuNode.value, null, 2))
+  
+  try {
+    // 确保节点名称存在
+    const nodeName = contextMenuNode.value.name || 'unnamed_module'
+    console.log('节点名称:', nodeName)
+    
+    const confirmed = await ElMessageBox.confirm(
+      `确认要为组件 "${nodeName}" 生成代码吗？`,
+      '生成代码',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+    
+    if (confirmed === 'confirm') {
+      // 生成代码文件
+      const moduleName = nodeName.replace(/[^a-zA-Z0-9_]/g, '_') // 替换非法字符
+      console.log('模块名称:', moduleName)
+      
+      // 确保输入输出端口存在，并提供默认值
+      const nodeData = contextMenuNode.value
+      console.log('节点数据:', nodeData)
+      
+      // 检查并初始化输入输出端口
+      if (!nodeData.inputs) {
+        console.log('初始化输入端口')
+        nodeData.inputs = []
+      }
+      if (!nodeData.outputs) {
+        console.log('初始化输出端口')
+        nodeData.outputs = []
+      }
+      if (!nodeData.properties) {
+        console.log('初始化属性')
+        nodeData.properties = {}
+      }
+      
+      const inputs = Array.isArray(nodeData.inputs) ? nodeData.inputs : []
+      const outputs = Array.isArray(nodeData.outputs) ? nodeData.outputs : []
+      const properties = nodeData.properties || {}
+      
+      console.log('处理后的端口数据:', { inputs, outputs, properties })
+      
+      // 如果没有输入输出端口，添加默认端口
+      if (inputs.length === 0) {
+        console.log('添加默认输入端口')
+        inputs.push({ name: 'input1', type: 'number' })
+        inputs.push({ name: 'input2', type: 'number' })
+      }
+      if (outputs.length === 0) {
+        console.log('添加默认输出端口')
+        outputs.push({ name: 'result', type: 'number' })
+      }
+      
+      // 生成 main.c
+      const mainContent = `#include <stdio.h>
+
+// 输入端口
+${inputs.map(input => `double ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)};`).join('\n')}
+
+// 输出端口
+${outputs.map(output => `double ${output.name || 'output_' + Math.random().toString(36).substr(2, 5)};`).join('\n')}
+
+// 属性
+${Object.entries(properties).map(([key, prop]) => 
+  `${prop.type || 'double'} ${prop.name || 'prop_' + key} = ${prop.value || '0'};`
+).join('\n')}
+
+int main() {
+    // 读取输入
+    ${inputs.map(input => 
+      `printf("请输入 ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)}: ");\n    scanf("%lf", &${input.name || 'input_' + Math.random().toString(36).substr(2, 5)});`
+    ).join('\n    ')}
+    
+    // 执行加法运算
+    ${outputs[0]?.name || 'result'} = ${inputs.map(input => input.name || 'input_' + Math.random().toString(36).substr(2, 5)).join(' + ')};
+    
+    // 输出结果
+    printf("计算结果: %lf\\n", ${outputs[0]?.name || 'result'});
+    
+    return 0;
+}`
+      
+      // 生成 README.md
+      const readmeContent = `# ${nodeName} 组件
+
+## 功能说明
+这是一个简单的加法运算组件。
+
+## 输入端口
+${inputs.map(input => `- ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)}: ${input.type || 'number'}`).join('\n')}
+
+## 输出端口
+${outputs.map(output => `- ${output.name || 'output_' + Math.random().toString(36).substr(2, 5)}: ${output.type || 'number'}`).join('\n')}
+
+## 属性
+${Object.entries(properties).map(([key, prop]) => 
+  `- ${prop.name || 'prop_' + key}: ${prop.type || 'number'} = ${prop.value || '0'}`
+).join('\n')}
+
+## 编译运行
+\`\`\`bash
+gcc src/main.c -o ${moduleName}
+./${moduleName}
+\`\`\``
+      
+      console.log('生成的文件内容:', { mainContent, readmeContent })
+      
+      // 创建下载链接
+      const createDownloadLink = (content, filename) => {
+        const blob = new Blob([content], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+      
+      // 下载文件
+      createDownloadLink(mainContent, `${moduleName}/src/main.c`)
+      createDownloadLink(readmeContent, `${moduleName}/README.md`)
+      
+      // 更新代码面板显示
+      generatedFiles.value = [
+        {
+          name: 'main.c',
+          content: mainContent
+        },
+        {
+          name: 'README.md',
+          content: readmeContent
+        }
+      ]
+      
+      currentFileIndex.value = 0
+      isCodePanelCollapsed.value = false
+      
+      ElMessage.success('代码生成成功，文件已下载')
+    }
+  } catch (error) {
+    console.error('代码生成错误:', error)
+    ElMessage.error('代码生成失败：' + (error.message || '未知错误'))
+  }
+}
+
+// 计算当前文件内容
+const currentFileContent = computed(() => {
+  return generatedFiles.value[currentFileIndex.value]?.content || ''
+})
+
+// 监听点击事件，隐藏右键菜单
+onMounted(() => {
+  document.addEventListener('click', (event) => {
+    // 如果点击的不是右键菜单，则隐藏菜单
+    if (!event.target.closest('.context-menu')) {
+      hideContextMenu()
+    }
+  })
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', hideContextMenu)
+})
 </script>
 
 <style scoped>
@@ -1013,5 +1271,103 @@ h3 {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.code-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 400px;
+  background: #ffffff;
+  color: #333;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  border-left: 1px solid #e4e7ed;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.code-panel-collapsed {
+  transform: translateX(380px);
+}
+
+.code-panel-header {
+  height: 40px;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f5f7fa;
+  cursor: pointer;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.code-panel-header .el-icon {
+  transition: transform 0.3s ease;
+  color: #909399;
+}
+
+.code-panel-header .el-icon.is-collapsed {
+  transform: rotate(180deg);
+}
+
+.code-tabs {
+  display: flex;
+  background: #f5f7fa;
+  padding: 0 10px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.code-tab {
+  padding: 8px 15px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #606266;
+}
+
+.code-tab.active {
+  border-bottom-color: #409EFF;
+  color: #409EFF;
+}
+
+.code-content {
+  padding: 15px;
+  height: calc(100% - 90px);
+  overflow: auto;
+  background: #ffffff;
+}
+
+.code-content pre {
+  margin: 0;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.context-menu {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  z-index: 2000;
+}
+
+.menu-item {
+  padding: 8px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-item:hover {
+  background: #f5f7fa;
+}
+
+.menu-item .el-icon {
+  font-size: 16px;
+  color: #909399;
 }
 </style> 
