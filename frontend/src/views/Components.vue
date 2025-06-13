@@ -221,18 +221,79 @@
         </el-icon>
       </div>
       <div class="code-panel-content" v-show="!isCodePanelCollapsed">
-        <div class="code-tabs">
-          <div 
-            v-for="(file, index) in generatedFiles" 
-            :key="index"
-            :class="['code-tab', { active: currentFileIndex === index }]"
-            @click="currentFileIndex = index"
-          >
-            {{ file.name }}
+        <!-- 文件树形结构 -->
+        <div v-if="!currentFile" class="file-tree">
+          <div class="tree-header">
+            <span>文件结构</span>
+          </div>
+          <div class="tree-content">
+            <div class="tree-node">
+              <div class="tree-item workspace">
+                <el-icon><Folder /></el-icon>
+                <span>workspace</span>
+              </div>
+              <div class="tree-children">
+                <div v-for="(module, index) in fileTree" :key="index" class="tree-node">
+                  <div class="tree-item module">
+                    <el-icon 
+                      class="expand-icon"
+                      :class="{ 'is-expanded': module.expanded }"
+                      @click="toggleModule(module)"
+                    >
+                      <ArrowRight />
+                    </el-icon>
+                    <el-icon><Folder /></el-icon>
+                    <span>{{ module.name }}</span>
+                  </div>
+                  <div v-show="module.expanded" class="tree-children">
+                    <!-- src 文件夹 -->
+                    <div class="tree-node">
+                      <div class="tree-item folder">
+                        <el-icon 
+                          class="expand-icon"
+                          :class="{ 'is-expanded': module.srcExpanded }"
+                          @click="toggleSrc(module)"
+                        >
+                          <ArrowRight />
+                        </el-icon>
+                        <el-icon><Folder /></el-icon>
+                        <span>src</span>
+                      </div>
+                      <div v-show="module.srcExpanded" class="tree-children">
+                        <div class="tree-item file" @dblclick="openFile(module.files[0])">
+                          <el-icon><Document /></el-icon>
+                          <span>main.c</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- README.md -->
+                    <div class="tree-item file" @dblclick="openFile(module.files[1])">
+                      <el-icon><Document /></el-icon>
+                      <span>README.md</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="code-content">
-          <pre><code>{{ currentFileContent }}</code></pre>
+        
+        <!-- 文件内容 -->
+        <div v-else class="file-content">
+          <div class="file-header">
+            <el-button 
+              type="text" 
+              class="back-button"
+              @click="backToTree"
+            >
+              <el-icon><Back /></el-icon>
+              返回
+            </el-button>
+            <span class="file-name">{{ currentFile.name }}</span>
+          </div>
+          <div class="file-body">
+            <pre><code>{{ currentFile.content }}</code></pre>
+          </div>
         </div>
       </div>
     </div>
@@ -260,7 +321,9 @@ import {
   Monitor,
   Histogram,
   ArrowRight,
-  Document
+  Document,
+  Back,
+  Folder
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
@@ -348,6 +411,10 @@ const contextMenuVisible = ref(false)
 const contextMenuX = ref(0)
 const contextMenuY = ref(0)
 const contextMenuNode = ref(null)
+
+// 文件树相关
+const fileTree = ref([])
+const currentFile = ref(null)
 
 // 更新连线位置
 const updateConnections = () => {
@@ -754,6 +821,26 @@ const hideContextMenu = () => {
   // contextMenuNode.value = null
 }
 
+// 打开文件
+const openFile = (file) => {
+  currentFile.value = file
+}
+
+// 返回文件树
+const backToTree = () => {
+  currentFile.value = null
+}
+
+// 切换模块展开/折叠
+const toggleModule = (module) => {
+  module.expanded = !module.expanded
+}
+
+// 切换 src 文件夹展开/折叠
+const toggleSrc = (module) => {
+  module.srcExpanded = !module.srcExpanded
+}
+
 // 生成代码
 const handleGenerateCode = async () => {
   console.log('开始生成代码，当前节点:', contextMenuNode.value)
@@ -893,19 +980,27 @@ gcc src/main.c -o ${moduleName}
       createDownloadLink(mainContent, `${moduleName}/src/main.c`)
       createDownloadLink(readmeContent, `${moduleName}/README.md`)
       
-      // 更新代码面板显示
-      generatedFiles.value = [
+      // 更新文件树
+      fileTree.value = [
         {
-          name: 'main.c',
-          content: mainContent
-        },
-        {
-          name: 'README.md',
-          content: readmeContent
+          name: moduleName,
+          expanded: true,
+          srcExpanded: true,
+          files: [
+            {
+              name: 'src/main.c',
+              content: mainContent
+            },
+            {
+              name: 'README.md',
+              content: readmeContent
+            }
+          ]
         }
       ]
       
-      currentFileIndex.value = 0
+      // 重置当前文件
+      currentFile.value = null
       isCodePanelCollapsed.value = false
       
       ElMessage.success('代码生成成功，文件已下载')
@@ -915,11 +1010,6 @@ gcc src/main.c -o ${moduleName}
     ElMessage.error('代码生成失败：' + (error.message || '未知错误'))
   }
 }
-
-// 计算当前文件内容
-const currentFileContent = computed(() => {
-  return generatedFiles.value[currentFileIndex.value]?.content || ''
-})
 
 // 监听点击事件，隐藏右键菜单
 onMounted(() => {
@@ -1369,5 +1459,122 @@ h3 {
 .menu-item .el-icon {
   font-size: 16px;
   color: #909399;
+}
+
+.file-tree {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.tree-header {
+  padding: 10px 15px;
+  border-bottom: 1px solid #e4e7ed;
+  font-weight: bold;
+  color: #606266;
+}
+
+.tree-content {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 0;
+}
+
+.tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-children {
+  padding-left: 20px;
+}
+
+.tree-item {
+  padding: 8px 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #606266;
+}
+
+.tree-item:hover {
+  background: #f5f7fa;
+}
+
+.tree-item .el-icon {
+  color: #909399;
+}
+
+.tree-item.workspace {
+  font-weight: bold;
+  color: #303133;
+}
+
+.tree-item.module {
+  color: #606266;
+}
+
+.tree-item.file {
+  color: #606266;
+}
+
+.expand-icon {
+  transition: transform 0.3s;
+  cursor: pointer;
+}
+
+.expand-icon.is-expanded {
+  transform: rotate(90deg);
+}
+
+.file-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.file-header {
+  padding: 10px 15px;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #409EFF;
+}
+
+.back-button:hover {
+  color: #66b1ff;
+}
+
+.file-name {
+  color: #606266;
+  font-weight: bold;
+}
+
+.file-body {
+  flex: 1;
+  overflow: auto;
+  padding: 15px;
+}
+
+.file-body pre {
+  margin: 0;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.tree-item.folder {
+  color: #606266;
 }
 </style> 
