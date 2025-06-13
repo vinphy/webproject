@@ -24,6 +24,7 @@
         class="canvas-container"
         @dragover.prevent
         @drop="handleDrop"
+        @contextmenu="handleCanvasContextMenu"
       >
         <div class="canvas" ref="canvasRef">
           <!-- 连线 -->
@@ -226,47 +227,92 @@
           <div class="tree-content">
             <div class="tree-node">
               <div class="tree-item workspace">
-                <el-icon><Folder /></el-icon>
+                <el-icon><FolderOpened /></el-icon>
                 <span>workspace</span>
               </div>
               <div class="tree-children">
-                <div v-for="(module, index) in fileTree" :key="index" class="tree-node">
-                  <div class="tree-item module">
+                <div v-for="file in fileStructure" :key="file.path" class="tree-node">
+                  <div 
+                    class="tree-item" 
+                    :class="{ 'is-folder': file.type === 'directory' }"
+                  >
                     <el-icon 
+                      v-if="file.type === 'directory'"
                       class="expand-icon"
-                      :class="{ 'is-expanded': module.expanded }"
-                      @click="toggleModule(module)"
+                      :class="{ 'is-expanded': expandedFolders.has(file.path) }"
+                      @click="toggleFolder(file)"
                     >
                       <ArrowRight />
                     </el-icon>
-                    <el-icon><Folder /></el-icon>
-                    <span>{{ module.name }}</span>
+                    <el-icon v-if="file.type === 'directory'">
+                      <Folder v-if="!expandedFolders.has(file.path)" />
+                      <FolderOpened v-else />
+                    </el-icon>
+                    <el-icon v-else>
+                      <Document />
+                    </el-icon>
+                    <span 
+                      class="file-name"
+                      @dblclick="file.type === 'file' ? openFile(file) : null"
+                      @click="file.type === 'directory' ? toggleFolder(file) : null"
+                    >{{ file.name }}</span>
                   </div>
-                  <div v-show="module.expanded" class="tree-children">
-                    <!-- src 文件夹 -->
-                    <div class="tree-node">
-                      <div class="tree-item folder">
+                  <div v-if="file.type === 'directory' && file.children && expandedFolders.has(file.path)" class="tree-children">
+                    <div v-for="child in file.children" :key="child.path" class="tree-node">
+                      <div 
+                        class="tree-item" 
+                        :class="{ 'is-folder': child.type === 'directory' }"
+                      >
                         <el-icon 
+                          v-if="child.type === 'directory'"
                           class="expand-icon"
-                          :class="{ 'is-expanded': module.srcExpanded }"
-                          @click="toggleSrc(module)"
+                          :class="{ 'is-expanded': expandedFolders.has(child.path) }"
+                          @click="toggleFolder(child)"
                         >
                           <ArrowRight />
                         </el-icon>
-                        <el-icon><Folder /></el-icon>
-                        <span>src</span>
+                        <el-icon v-if="child.type === 'directory'">
+                          <Folder v-if="!expandedFolders.has(child.path)" />
+                          <FolderOpened v-else />
+                        </el-icon>
+                        <el-icon v-else>
+                          <Document />
+                        </el-icon>
+                        <span 
+                          class="file-name"
+                          @dblclick="child.type === 'file' ? openFile(child) : null"
+                          @click="child.type === 'directory' ? toggleFolder(child) : null"
+                        >{{ child.name }}</span>
                       </div>
-                      <div v-show="module.srcExpanded" class="tree-children">
-                        <div class="tree-item file" @dblclick="openFile(module.files[0])">
-                          <el-icon><Document /></el-icon>
-                          <span>main.c</span>
+                      <div v-if="child.type === 'directory' && child.children && expandedFolders.has(child.path)" class="tree-children">
+                        <div v-for="grandChild in child.children" :key="grandChild.path" class="tree-node">
+                          <div 
+                            class="tree-item" 
+                            :class="{ 'is-folder': grandChild.type === 'directory' }"
+                          >
+                            <el-icon 
+                              v-if="grandChild.type === 'directory'"
+                              class="expand-icon"
+                              :class="{ 'is-expanded': expandedFolders.has(grandChild.path) }"
+                              @click="toggleFolder(grandChild)"
+                            >
+                              <ArrowRight />
+                            </el-icon>
+                            <el-icon v-if="grandChild.type === 'directory'">
+                              <Folder v-if="!expandedFolders.has(grandChild.path)" />
+                              <FolderOpened v-else />
+                            </el-icon>
+                            <el-icon v-else>
+                              <Document />
+                            </el-icon>
+                            <span 
+                              class="file-name"
+                              @dblclick="grandChild.type === 'file' ? openFile(grandChild) : null"
+                              @click="grandChild.type === 'directory' ? toggleFolder(grandChild) : null"
+                            >{{ grandChild.name }}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <!-- README.md -->
-                    <div class="tree-item file" @dblclick="openFile(module.files[1])">
-                      <el-icon><Document /></el-icon>
-                      <span>README.md</span>
                     </div>
                   </div>
                 </div>
@@ -306,6 +352,42 @@
         生成代码
       </div>
     </div>
+
+    <!-- 画布右键菜单 -->
+    <div 
+      v-show="showModelMenu" 
+      class="context-menu"
+      :style="{ left: modelMenuX + 'px', top: modelMenuY + 'px' }"
+    >
+      <div class="menu-item" @click="handleGenerateModelFile">
+        <el-icon><Document /></el-icon>
+        生成模型文件
+      </div>
+    </div>
+
+    <!-- 生成模型文件对话框 -->
+    <el-dialog
+      v-model="showModelDialog"
+      title="生成模型文件"
+      width="400px"
+    >
+      <el-form>
+        <el-form-item label="文件名">
+          <el-input 
+            v-model="modelFileName" 
+            placeholder="请输入文件名（不需要.json后缀）"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showModelDialog = false">取消</el-button>
+          <el-button type="primary" @click="generateModelFile">
+            确认
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -320,7 +402,8 @@ import {
   ArrowRight,
   Document,
   Back,
-  Folder
+  Folder,
+  FolderOpened
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
@@ -410,8 +493,43 @@ const contextMenuY = ref(0)
 const contextMenuNode = ref(null)
 
 // 文件树相关
-const fileTree = ref([])
+const fileStructure = ref([])
 const currentFile = ref(null)
+
+// 添加新的状态变量
+const showModelMenu = ref(false)
+const modelMenuX = ref(0)
+const modelMenuY = ref(0)
+const showModelDialog = ref(false)
+const modelFileName = ref('')
+
+// 添加展开状态控制
+const expandedFolders = ref(new Set())
+
+// 添加文件内容缓存
+const fileContentCache = ref(new Map())
+
+// 预加载文件内容
+const preloadFileContents = async (files) => {
+  for (const file of files) {
+    if (file.type === 'file') {
+      try {
+        const response = await fetch(`http://localhost:8000/api/code/read_file?path=${encodeURIComponent(file.path)}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.status === 'success') {
+            fileContentCache.value.set(file.path, data.content)
+          }
+        }
+      } catch (error) {
+        console.error(`预加载文件失败 ${file.path}:`, error)
+      }
+    }
+    if (file.type === 'directory' && file.children) {
+      await preloadFileContents(file.children)
+    }
+  }
+}
 
 // 更新连线位置
 const updateConnections = () => {
@@ -819,8 +937,37 @@ const hideContextMenu = () => {
 }
 
 // 打开文件
-const openFile = (file) => {
-  currentFile.value = file
+const openFile = async (file) => {
+  try {
+    // 检查缓存中是否有文件内容
+    if (fileContentCache.value.has(file.path)) {
+      currentFile.value = {
+        ...file,
+        content: fileContentCache.value.get(file.path)
+      }
+      return
+    }
+
+    // 如果缓存中没有，则从服务器获取
+    const response = await fetch(`http://localhost:8000/api/code/read_file?path=${encodeURIComponent(file.path)}`)
+    if (!response.ok) {
+      throw new Error('读取文件失败')
+    }
+    const data = await response.json()
+    if (data.status === 'success') {
+      // 更新缓存
+      fileContentCache.value.set(file.path, data.content)
+      currentFile.value = {
+        ...file,
+        content: data.content
+      }
+    } else {
+      throw new Error(data.message || '读取文件失败')
+    }
+  } catch (error) {
+    console.error('读取文件失败:', error)
+    ElMessage.error('读取文件失败：' + error.message)
+  }
 }
 
 // 返回文件树
@@ -841,15 +988,30 @@ const toggleSrc = (module) => {
 // 获取文件结构
 const fetchFileStructure = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/code/get_all_modules')
+    const response = await fetch('http://localhost:8000/api/code/get_file_structure')
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error('获取文件结构失败')
     }
-    const result = await response.json()
-    if (result.status === 'success') {
-      fileTree.value = result.data
+    const data = await response.json()
+    if (data.status === 'success') {
+      // 对文件结构进行排序
+      const sortDirectory = (dir) => {
+        if (dir.children) {
+          dir.children = sortFiles(dir.children)
+          dir.children.forEach(child => {
+            if (child.type === 'directory') {
+              sortDirectory(child)
+            }
+          })
+        }
+        return dir
+      }
+      
+      fileStructure.value = sortFiles(data.files).map(sortDirectory)
+      // 异步预加载文件内容
+      preloadFileContents(fileStructure.value)
     } else {
-      throw new Error(result.message || '获取文件结构失败')
+      throw new Error(data.message || '获取文件结构失败')
     }
   } catch (error) {
     console.error('获取文件结构失败:', error)
@@ -1055,6 +1217,115 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu)
 })
+
+// 添加新的方法
+const handleCanvasContextMenu = (event) => {
+  // 检查是否点击在节点上
+  const target = event.target
+  if (target.closest('.node')) {
+    return // 如果点击在节点上，不显示菜单
+  }
+  
+  event.preventDefault()
+  modelMenuX.value = event.clientX
+  modelMenuY.value = event.clientY
+  showModelMenu.value = true
+}
+
+const hideModelMenu = () => {
+  showModelMenu.value = false
+}
+
+const handleGenerateModelFile = () => {
+  showModelDialog.value = true
+  hideModelMenu()
+}
+
+const generateModelFile = async () => {
+  if (!modelFileName.value) {
+    ElMessage.warning('请输入文件名')
+    return
+  }
+
+  try {
+    // 准备模型数据
+    const modelData = {
+      nodes: placedNodes.value.map(node => ({
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        x: node.x,
+        y: node.y,
+        inputs: node.inputs || [],
+        outputs: node.outputs || [],
+        properties: node.properties || {}
+      })),
+      connections: connections.value.map(conn => ({
+        id: conn.id,
+        source: conn.source,
+        target: conn.target,
+        sourceHandle: conn.sourceHandle,
+        targetHandle: conn.targetHandle
+      }))
+    }
+
+    const content = JSON.stringify(modelData, null, 2)
+    const filePath = `app/${modelFileName.value}.json`
+
+    // 调用后端 API 保存文件
+    const response = await fetch('http://localhost:8000/api/code/write_model_file', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        filename: modelFileName.value,
+        content: content
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('保存文件失败')
+    }
+
+    const result = await response.json()
+    if (result.status === 'success') {
+      // 更新缓存
+      fileContentCache.value.set(filePath, content)
+      ElMessage.success(`模型文件生成成功，保存在: ${result.file_path}`)
+      showModelDialog.value = false
+      modelFileName.value = ''
+      // 刷新文件树
+      await fetchFileStructure()
+    } else {
+      throw new Error(result.message || '保存文件失败')
+    }
+  } catch (error) {
+    console.error('生成模型文件失败:', error)
+    ElMessage.error('生成模型文件失败：' + error.message)
+  }
+}
+
+// 添加展开/折叠方法
+const toggleFolder = (file) => {
+  if (expandedFolders.value.has(file.path)) {
+    expandedFolders.value.delete(file.path)
+  } else {
+    expandedFolders.value.add(file.path)
+  }
+}
+
+// 在 script setup 部分添加排序方法
+const sortFiles = (files) => {
+  return files.sort((a, b) => {
+    // 先按类型排序（文件夹在前）
+    if (a.type !== b.type) {
+      return a.type === 'directory' ? -1 : 1
+    }
+    // 同类型按名称排序
+    return a.name.localeCompare(b.name)
+  })
+}
 </script>
 
 <style scoped>
@@ -1471,25 +1742,23 @@ h3 {
   background: #fff;
   border: 1px solid #e4e7ed;
   border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  z-index: 2000;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,.1);
+  padding: 5px 0;
+  z-index: 3000;
 }
 
 .menu-item {
-  padding: 8px 15px;
+  padding: 8px 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #606266;
 }
 
 .menu-item:hover {
   background: #f5f7fa;
-}
-
-.menu-item .el-icon {
-  font-size: 16px;
-  color: #909399;
+  color: #409eff;
 }
 
 .file-tree {
@@ -1515,38 +1784,36 @@ h3 {
 }
 
 .tree-item {
-  padding: 8px 15px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  padding: 4px 8px;
   cursor: pointer;
+  user-select: none;
+  gap: 4px;
   color: #606266;
+  font-size: 14px;
 }
 
 .tree-item:hover {
-  background: #f5f7fa;
+  background-color: #f5f7fa;
 }
 
-.tree-item .el-icon {
-  color: #909399;
-}
-
-.tree-item.workspace {
-  font-weight: bold;
+.tree-item.is-folder {
+  font-weight: 500;
+  font-size: 15px;
   color: #303133;
 }
 
-.tree-item.module {
-  color: #606266;
-}
-
-.tree-item.file {
-  color: #606266;
+.file-name {
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .expand-icon {
   transition: transform 0.3s;
   cursor: pointer;
+  margin-right: 4px;
+  font-size: 14px;
 }
 
 .expand-icon.is-expanded {
@@ -1579,11 +1846,6 @@ h3 {
   color: #66b1ff;
 }
 
-.file-name {
-  color: #606266;
-  font-weight: bold;
-}
-
 .file-body {
   flex: 1;
   overflow: auto;
@@ -1596,9 +1858,5 @@ h3 {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-}
-
-.tree-item.folder {
-  color: #606266;
 }
 </style> 
