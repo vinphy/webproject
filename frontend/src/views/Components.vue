@@ -85,6 +85,7 @@
               transform: `scale(${node.scale || 1})`
             }"
             @mousedown="startDrag($event, node)"
+            @dblclick="handleNodeDblClick(node)"
           >
             <div class="node-header">
               <el-icon><component :is="node.icon" /></el-icon>
@@ -136,6 +137,79 @@
         </div>
       </div>
     </div>
+
+    <!-- 参数配置对话框 -->
+    <el-dialog
+      v-model="configDialogVisible"
+      :title="currentNode?.name + ' 参数配置'"
+      width="800px"
+      destroy-on-close
+    >
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="端口配置" name="ports">
+          <div class="config-content">
+            <div class="ports-section">
+              <h3>输入端口</h3>
+              <div v-for="(input, index) in currentNode?.inputs" :key="'input-' + index" class="port-item">
+                <el-input v-model="input.name" placeholder="端口名称" />
+                <el-select v-model="input.type" placeholder="数据类型">
+                  <el-option label="数值" value="number" />
+                  <el-option label="字符串" value="string" />
+                  <el-option label="布尔值" value="boolean" />
+                  <el-option label="数组" value="array" />
+                  <el-option label="对象" value="object" />
+                </el-select>
+                <el-button type="danger" @click="removePort('input', index)">删除</el-button>
+              </div>
+              <el-button type="primary" @click="addPort('input')">添加输入端口</el-button>
+            </div>
+            
+            <div class="ports-section">
+              <h3>输出端口</h3>
+              <div v-for="(output, index) in currentNode?.outputs" :key="'output-' + index" class="port-item">
+                <el-input v-model="output.name" placeholder="端口名称" />
+                <el-select v-model="output.type" placeholder="数据类型">
+                  <el-option label="数值" value="number" />
+                  <el-option label="字符串" value="string" />
+                  <el-option label="布尔值" value="boolean" />
+                  <el-option label="数组" value="array" />
+                  <el-option label="对象" value="object" />
+                </el-select>
+                <el-button type="danger" @click="removePort('output', index)">删除</el-button>
+              </div>
+              <el-button type="primary" @click="addPort('output')">添加输出端口</el-button>
+            </div>
+          </div>
+        </el-tab-pane>
+        
+        <el-tab-pane label="属性配置" name="properties">
+          <div class="config-content">
+            <div class="properties-section">
+              <div v-for="(prop, key) in currentNode?.properties" :key="key" class="property-item">
+                <el-input v-model="prop.name" placeholder="属性名称" />
+                <el-select v-model="prop.type" placeholder="数据类型">
+                  <el-option label="数值" value="number" />
+                  <el-option label="字符串" value="string" />
+                  <el-option label="布尔值" value="boolean" />
+                  <el-option label="数组" value="array" />
+                  <el-option label="对象" value="object" />
+                </el-select>
+                <el-input v-model="prop.value" placeholder="默认值" />
+                <el-button type="danger" @click="removeProperty(key)">删除</el-button>
+              </div>
+              <el-button type="primary" @click="addProperty">添加属性</el-button>
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="configDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveConfig">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -217,6 +291,11 @@ let tempLine = null
 let isDragging = false
 let currentDragNode = null
 let dragOffset = { x: 0, y: 0 }
+
+// 配置对话框相关
+const configDialogVisible = ref(false)
+const activeTab = ref('ports')
+const currentNode = ref(null)
 
 // 更新连线位置
 const updateConnections = () => {
@@ -529,6 +608,74 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleConnectionMove)
   document.removeEventListener('mouseup', stopConnection)
 })
+
+// 双击节点打开配置对话框
+const handleNodeDblClick = (node) => {
+  currentNode.value = JSON.parse(JSON.stringify(node)) // 深拷贝
+  configDialogVisible.value = true
+}
+
+// 添加端口
+const addPort = (type) => {
+  if (!currentNode.value) return
+  
+  const newPort = {
+    name: '',
+    type: 'number',
+    connected: false,
+    connecting: false
+  }
+  
+  if (type === 'input') {
+    currentNode.value.inputs.push(newPort)
+  } else {
+    currentNode.value.outputs.push(newPort)
+  }
+}
+
+// 删除端口
+const removePort = (type, index) => {
+  if (!currentNode.value) return
+  
+  if (type === 'input') {
+    currentNode.value.inputs.splice(index, 1)
+  } else {
+    currentNode.value.outputs.splice(index, 1)
+  }
+}
+
+// 添加属性
+const addProperty = () => {
+  if (!currentNode.value) return
+  
+  const key = 'prop_' + Date.now()
+  currentNode.value.properties[key] = {
+    name: '',
+    type: 'string',
+    value: ''
+  }
+}
+
+// 删除属性
+const removeProperty = (key) => {
+  if (!currentNode.value) return
+  delete currentNode.value.properties[key]
+}
+
+// 保存配置
+const saveConfig = () => {
+  if (!currentNode.value) return
+  
+  // 更新节点配置
+  const node = placedNodes.value.find(n => n.id === currentNode.value.id)
+  if (node) {
+    Object.assign(node, currentNode.value)
+    // 更新连线
+    updateConnections()
+  }
+  
+  configDialogVisible.value = false
+}
 </script>
 
 <style scoped>
@@ -831,5 +978,40 @@ onUnmounted(() => {
 .port.can-connect .port-label {
   color: #67C23A;
   background: rgba(103, 194, 58, 0.1);
+}
+
+.config-content {
+  padding: 20px;
+}
+
+.ports-section,
+.properties-section {
+  margin-bottom: 20px;
+}
+
+.port-item,
+.property-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.port-item .el-input,
+.port-item .el-select,
+.property-item .el-input,
+.property-item .el-select {
+  width: 200px;
+}
+
+h3 {
+  margin-bottom: 15px;
+  color: #606266;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 </style> 
