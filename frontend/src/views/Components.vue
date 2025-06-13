@@ -223,9 +223,6 @@
       <div class="code-panel-content" v-show="!isCodePanelCollapsed">
         <!-- 文件树形结构 -->
         <div v-if="!currentFile" class="file-tree">
-          <div class="tree-header">
-            <span>文件结构</span>
-          </div>
           <div class="tree-content">
             <div class="tree-node">
               <div class="tree-item workspace">
@@ -1500,13 +1497,6 @@ h3 {
   display: flex;
   flex-direction: column;
   background: #ffffff;
-}
-
-.tree-header {
-  padding: 10px 15px;
-  border-bottom: 1px solid #e4e7ed;
-  font-weight: bold;
-  color: #606266;
 }
 
 .tree-content {
