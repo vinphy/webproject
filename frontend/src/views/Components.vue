@@ -841,7 +841,31 @@ const toggleSrc = (module) => {
   module.srcExpanded = !module.srcExpanded
 }
 
-// 生成代码
+// 获取文件结构
+const fetchFileStructure = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/code/get_all_modules')
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const result = await response.json()
+    if (result.status === 'success') {
+      fileTree.value = result.data
+    } else {
+      throw new Error(result.message || '获取文件结构失败')
+    }
+  } catch (error) {
+    console.error('获取文件结构失败:', error)
+    ElMessage.error('获取文件结构失败：' + error.message)
+  }
+}
+
+// 在组件挂载时获取文件结构
+onMounted(() => {
+  fetchFileStructure()
+})
+
+// 修改生成代码函数中的错误处理部分
 const handleGenerateCode = async () => {
   console.log('开始生成代码，当前节点:', contextMenuNode.value)
   
@@ -989,22 +1013,16 @@ gcc src/main.c -o ${moduleName}
         })
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          const errorData = await response.json()
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
         }
         
         const result = await response.json()
         console.log('文件写入结果:', result)
         
         if (result.status === 'success') {
-          // 更新文件树
-          fileTree.value = [
-            {
-              name: moduleName,
-              expanded: true,
-              srcExpanded: true,
-              files: files
-            }
-          ]
+          // 重新获取文件结构
+          await fetchFileStructure()
           
           // 重置当前文件
           currentFile.value = null
