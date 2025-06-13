@@ -963,52 +963,68 @@ gcc src/main.c -o ${moduleName}
       
       console.log('生成的文件内容:', { mainContent, readmeContent })
       
-      // 创建下载链接
-      const createDownloadLink = (content, filename) => {
-        const blob = new Blob([content], { type: 'text/plain' })
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = filename
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-      }
-      
-      // 下载文件
-      createDownloadLink(mainContent, `${moduleName}/src/main.c`)
-      createDownloadLink(readmeContent, `${moduleName}/README.md`)
-      
-      // 更新文件树
-      fileTree.value = [
+      // 准备文件数据
+      const files = [
         {
-          name: moduleName,
-          expanded: true,
-          srcExpanded: true,
-          files: [
-            {
-              name: 'src/main.c',
-              content: mainContent
-            },
-            {
-              name: 'README.md',
-              content: readmeContent
-            }
-          ]
+          name: 'src/main.c',
+          content: mainContent
+        },
+        {
+          name: 'README.md',
+          content: readmeContent
         }
       ]
       
-      // 重置当前文件
-      currentFile.value = null
-      isCodePanelCollapsed.value = false
-      
-      ElMessage.success('代码生成成功，文件已下载')
+      try {
+        // 调用后端 API 写入文件
+        const response = await fetch('http://localhost:8000/api/code/write_module_files', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            module_name: moduleName,
+            files: files
+          })
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        const result = await response.json()
+        console.log('文件写入结果:', result)
+        
+        if (result.status === 'success') {
+          // 更新文件树
+          fileTree.value = [
+            {
+              name: moduleName,
+              expanded: true,
+              srcExpanded: true,
+              files: files
+            }
+          ]
+          
+          // 重置当前文件
+          currentFile.value = null
+          isCodePanelCollapsed.value = false
+          
+          ElMessage.success('代码生成成功，文件已保存到本地')
+        } else {
+          throw new Error(result.message || '文件写入失败')
+        }
+      } catch (error) {
+        console.error('文件写入失败:', error)
+        ElMessage.error('文件写入失败：' + error.message)
+      }
     }
   } catch (error) {
     console.error('代码生成错误:', error)
     ElMessage.error('代码生成失败：' + (error.message || '未知错误'))
   }
+  
+  hideContextMenu()
 }
 
 // 监听点击事件，隐藏右键菜单
