@@ -405,7 +405,7 @@ import {
   Folder,
   FolderOpened
 } from '@element-plus/icons-vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 
 // 可用模块列表
 const availableModules = ref([
@@ -1041,59 +1041,67 @@ const handleGenerateCode = async () => {
     // 确保节点名称存在
     const nodeName = contextMenuNode.value.name || 'unnamed_module'
     console.log('节点名称:', nodeName)
+  
+    const { value: folderName } = await ElMessageBox.prompt('请输入模块文件夹名称', '生成模块', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^[a-zA-Z][a-zA-Z0-9_]*$/,
+      inputErrorMessage: '文件夹名称只能包含字母、数字和下划线，且必须以字母开头',
+      inputPlaceholder: '请输入文件夹名称',
+      inputValidator: (value) => {
+        if (!value) {
+          return '文件夹名称不能为空'
+        }
+        if (value.length > 50) {
+          return '文件夹名称不能超过50个字符'
+        }
+        return true
+      }
+    })
+
+    if (!folderName) return
     
-    const confirmed = await ElMessageBox.confirm(
-      `确认要为组件 "${nodeName}" 生成代码吗？`,
-      '生成代码',
-      {
-        confirmButtonText: '确认',
-        cancelButtonText: '取消',
-        type: 'info'
-      }
-    )
+    // 生成代码文件
+    const moduleName = folderName
+    console.log('模块名称:', moduleName)
     
-    if (confirmed === 'confirm') {
-      // 生成代码文件
-      const moduleName = nodeName.replace(/[^a-zA-Z0-9_]/g, '_') // 替换非法字符
-      console.log('模块名称:', moduleName)
-      
-      // 确保输入输出端口存在，并提供默认值
-      const nodeData = contextMenuNode.value
-      console.log('节点数据:', nodeData)
-      
-      // 检查并初始化输入输出端口
-      if (!nodeData.inputs) {
-        console.log('初始化输入端口')
-        nodeData.inputs = []
-      }
-      if (!nodeData.outputs) {
-        console.log('初始化输出端口')
-        nodeData.outputs = []
-      }
-      if (!nodeData.properties) {
-        console.log('初始化属性')
-        nodeData.properties = {}
-      }
-      
-      const inputs = Array.isArray(nodeData.inputs) ? nodeData.inputs : []
-      const outputs = Array.isArray(nodeData.outputs) ? nodeData.outputs : []
-      const properties = nodeData.properties || {}
-      
-      console.log('处理后的端口数据:', { inputs, outputs, properties })
-      
-      // 如果没有输入输出端口，添加默认端口
-      if (inputs.length === 0) {
-        console.log('添加默认输入端口')
-        inputs.push({ name: 'input1', type: 'number' })
-        inputs.push({ name: 'input2', type: 'number' })
-      }
-      if (outputs.length === 0) {
-        console.log('添加默认输出端口')
-        outputs.push({ name: 'result', type: 'number' })
-      }
-      
-      // 生成 main.c
-      const mainContent = `#include <stdio.h>
+    // 确保输入输出端口存在，并提供默认值
+    const nodeData = contextMenuNode.value
+    console.log('节点数据:', nodeData)
+    
+    // 检查并初始化输入输出端口
+    if (!nodeData.inputs) {
+      console.log('初始化输入端口')
+      nodeData.inputs = []
+    }
+    if (!nodeData.outputs) {
+      console.log('初始化输出端口')
+      nodeData.outputs = []
+    }
+    if (!nodeData.properties) {
+      console.log('初始化属性')
+      nodeData.properties = {}
+    }
+    
+    const inputs = Array.isArray(nodeData.inputs) ? nodeData.inputs : []
+    const outputs = Array.isArray(nodeData.outputs) ? nodeData.outputs : []
+    const properties = nodeData.properties || {}
+    
+    console.log('处理后的端口数据:', { inputs, outputs, properties })
+    
+    // 如果没有输入输出端口，添加默认端口
+    if (inputs.length === 0) {
+      console.log('添加默认输入端口')
+      inputs.push({ name: 'input1', type: 'number' })
+      inputs.push({ name: 'input2', type: 'number' })
+    }
+    if (outputs.length === 0) {
+      console.log('添加默认输出端口')
+      outputs.push({ name: 'result', type: 'number' })
+    }
+    
+    // 生成 main.c
+    const mainContent = `#include <stdio.h>
 
 // 输入端口
 ${inputs.map(input => `double ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)};`).join('\n')}
@@ -1103,26 +1111,26 @@ ${outputs.map(output => `double ${output.name || 'output_' + Math.random().toStr
 
 // 属性
 ${Object.entries(properties).map(([key, prop]) => 
-  `${prop.type || 'double'} ${prop.name || 'prop_' + key} = ${prop.value || '0'};`
+`${prop.type || 'double'} ${prop.name || 'prop_' + key} = ${prop.value || '0'};`
 ).join('\n')}
 
 int main() {
-    // 读取输入
-    ${inputs.map(input => 
-      `printf("请输入 ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)}: ");\n    scanf("%lf", &${input.name || 'input_' + Math.random().toString(36).substr(2, 5)});`
-    ).join('\n    ')}
-    
-    // 执行加法运算
-    ${outputs[0]?.name || 'result'} = ${inputs.map(input => input.name || 'input_' + Math.random().toString(36).substr(2, 5)).join(' + ')};
-    
-    // 输出结果
-    printf("计算结果: %lf\\n", ${outputs[0]?.name || 'result'});
-    
-    return 0;
+  // 读取输入
+  ${inputs.map(input => 
+    `printf("请输入 ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)}: ");\n    scanf("%lf", &${input.name || 'input_' + Math.random().toString(36).substr(2, 5)});`
+  ).join('\n    ')}
+  
+  // 执行加法运算
+  ${outputs[0]?.name || 'result'} = ${inputs.map(input => input.name || 'input_' + Math.random().toString(36).substr(2, 5)).join(' + ')};
+  
+  // 输出结果
+  printf("计算结果: %lf\\n", ${outputs[0]?.name || 'result'});
+  
+  return 0;
 }`
-      
-      // 生成 README.md
-      const readmeContent = `# ${nodeName} 组件
+    
+    // 生成 README.md
+    const readmeContent = `# ${nodeName} 组件
 
 ## 功能说明
 这是一个简单的加法运算组件。
@@ -1135,7 +1143,7 @@ ${outputs.map(output => `- ${output.name || 'output_' + Math.random().toString(3
 
 ## 属性
 ${Object.entries(properties).map(([key, prop]) => 
-  `- ${prop.name || 'prop_' + key}: ${prop.type || 'number'} = ${prop.value || '0'}`
+`- ${prop.name || 'prop_' + key}: ${prop.type || 'number'} = ${prop.value || '0'}`
 ).join('\n')}
 
 ## 编译运行
@@ -1143,59 +1151,59 @@ ${Object.entries(properties).map(([key, prop]) =>
 gcc src/main.c -o ${moduleName}
 ./${moduleName}
 \`\`\``
-      
-      console.log('生成的文件内容:', { mainContent, readmeContent })
-      
-      // 准备文件数据
-      const files = [
-        {
-          name: 'src/main.c',
-          content: mainContent
-        },
-        {
-          name: 'README.md',
-          content: readmeContent
-        }
-      ]
-      
-      try {
-        // 调用后端 API 写入文件
-        const response = await fetch('http://localhost:8000/api/code/write_module_files', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            module_name: moduleName,
-            files: files
-          })
-        })
-        
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
-        }
-        
-        const result = await response.json()
-        console.log('文件写入结果:', result)
-        
-        if (result.status === 'success') {
-          // 重新获取文件结构
-          await fetchFileStructure()
-          
-          // 重置当前文件
-          currentFile.value = null
-          isCodePanelCollapsed.value = false
-          
-          ElMessage.success('代码生成成功，文件已保存到本地')
-        } else {
-          throw new Error(result.message || '文件写入失败')
-        }
-      } catch (error) {
-        console.error('文件写入失败:', error)
-        ElMessage.error('文件写入失败：' + error.message)
+    
+    console.log('生成的文件内容:', { mainContent, readmeContent })
+    
+    // 准备文件数据
+    const files = [
+      {
+        name: 'src/main.c',
+        content: mainContent
+      },
+      {
+        name: 'README.md',
+        content: readmeContent
       }
+    ]
+    
+    try {
+      // 调用后端 API 写入文件
+      const response = await fetch('http://localhost:8000/api/code/write_module_files', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          module_name: moduleName,
+          files: files
+        })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      console.log('文件写入结果:', result)
+      
+      if (result.status === 'success') {
+        // 重新获取文件结构
+        await fetchFileStructure()
+        
+        // 重置当前文件
+        currentFile.value = null
+        isCodePanelCollapsed.value = false
+        
+        ElMessage.success('代码生成成功，文件已保存到本地')
+      } else {
+        throw new Error(result.message || '文件写入失败')
+      }
+    } catch (error) {
+      console.error('文件写入失败:', error)
+      ElMessage.error('文件写入失败：' + error.message)
     }
+
   } catch (error) {
     console.error('代码生成错误:', error)
     ElMessage.error('代码生成失败：' + (error.message || '未知错误'))
@@ -1325,6 +1333,69 @@ const sortFiles = (files) => {
     // 同类型按名称排序
     return a.name.localeCompare(b.name)
   })
+}
+
+// 修改 generateModule 方法
+const generateModule = async () => {
+  try {
+    // 先弹出输入框让用户输入文件夹名称
+    const { value: folderName } = await ElMessageBox.prompt('请输入模块文件夹名称', '生成模块', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^[a-zA-Z][a-zA-Z0-9_]*$/,
+      inputErrorMessage: '文件夹名称只能包含字母、数字和下划线，且必须以字母开头',
+      inputPlaceholder: '请输入文件夹名称',
+      inputValidator: (value) => {
+        if (!value) {
+          return '文件夹名称不能为空'
+        }
+        if (value.length > 50) {
+          return '文件夹名称不能超过50个字符'
+        }
+        return true
+      }
+    })
+
+    if (!folderName) return
+
+    // 显示加载中
+    const loading = ElLoading.service({
+      lock: true,
+      text: '正在生成模块...',
+      background: 'rgba(0, 0, 0, 0.7)'
+    })
+
+    // 发送请求生成模块
+    const response = await fetch('http://localhost:8000/api/code/generate_module', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        module_name: folderName,
+        module_type: selectedModuleType.value
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('生成模块失败')
+    }
+
+    const data = await response.json()
+    if (data.status === 'success') {
+      ElMessage.success('模块生成成功')
+      // 重新获取文件结构
+      await fetchFileStructure()
+    } else {
+      throw new Error(data.message || '生成模块失败')
+    }
+  } catch (error) {
+    console.error('生成模块失败:', error)
+    ElMessage.error('生成模块失败：' + error.message)
+  } finally {
+    // 关闭加载中
+    ElLoading.service().close()
+  }
 }
 </script>
 
