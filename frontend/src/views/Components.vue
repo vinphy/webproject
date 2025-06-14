@@ -1218,12 +1218,14 @@ onMounted(() => {
     // 如果点击的不是右键菜单，则隐藏菜单
     if (!event.target.closest('.context-menu')) {
       hideContextMenu()
+      hideModelMenu()
     }
   })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu)
+  document.removeEventListener('click', hideModelMenu)
 })
 
 // 添加新的方法
