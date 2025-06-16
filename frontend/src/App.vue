@@ -30,6 +30,10 @@
             <el-icon><Goods /></el-icon>
             <span>测试</span>
           </el-menu-item>
+          <el-menu-item index="4" @click="handleMenuClick('bitTest')">
+            <el-icon><Goods /></el-icon>
+            <span>符合性测试</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -88,7 +92,8 @@ const handleMenuClick = (route) => {
     dashboard: '仪表盘',
     components: '模块管理',
     logs: '日志管理',
-    test: '测试'
+    test: '测试',
+    bitTest:'bit测试'
   }
   currentPage.value = pageNames[route]
 }
