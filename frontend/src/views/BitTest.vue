@@ -35,7 +35,7 @@
       </el-table-column>
       <el-table-column prop="result" label="结果" width="120">
         <template #default="{ row }">
-          <el-tag :type="getResultTag(row.result)">{{ row.result }}</el-tag>
+          <el-tag :type="getResultTag(row.result)">{{ row.result == 0 ? '不通过' : '通过' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="description" label="描述" min-width="300" show-overflow-tooltip />
