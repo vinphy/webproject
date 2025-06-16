@@ -112,8 +112,8 @@
                   <div class="port-dot"></div>
                   <div class="port-content">
                     <span class="port-label">{{ input.name }}</span>
-                  </div>
                 </div>
+              </div>
                 <div 
                   v-for="(output, index) in node.outputs" 
                   :key="'output-' + index"
@@ -162,7 +162,7 @@
                   <el-option label="对象" value="object" />
                 </el-select>
                 <el-button type="danger" @click="removePort('input', index)">删除</el-button>
-              </div>
+  </div>
               <el-button type="primary" @click="addPort('input')">添加输入端口</el-button>
             </div>
             

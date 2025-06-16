@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from control.codeFile import router as code_file_router
+from control.bit_test_control import router as bit_test_router
 
 app = FastAPI()
 
@@ -15,6 +16,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(code_file_router, prefix="/api/code", tags=["code"])
+app.include_router(bit_test_router, prefix="/api/test", tags=["test"])
 
 @app.get("/")
 async def root():
