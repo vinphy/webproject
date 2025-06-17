@@ -42,17 +42,32 @@ async def stop_test():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/export/excel")
-async def export_excel():
+@router.post("/export/excel")
+async def export_excel(file_data: dict):
     try:
-        excel_data = bit_test_service.export_excel()
-        return FileResponse(
-            io.BytesIO(excel_data),
-            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            filename='符合性测试报告.xlsx'
-        )
+        file_path = file_data.get('filePath')
+        if not file_path:
+            return {
+                'status': 'error',
+                'message': '未提供文件路径'
+            }
+            
+        result = bit_test_service.export_excel(file_path)
+        if result:
+            return {
+                'status': 'success',
+                'message': 'Excel导出成功'
+            }
+        else:
+            return {
+                'status': 'error',
+                'message': 'Excel导出失败'
+            }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
 
 @router.get("/export/word")
 async def export_word():
