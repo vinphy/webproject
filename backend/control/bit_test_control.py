@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from service.bit_test_service import BitTestService
 import io
+from util.FileUtil import FileUtil
+import os
 
 router = APIRouter()
 bit_test_service = BitTestService()
@@ -45,7 +47,10 @@ async def stop_test():
 @router.post("/export/excel")
 async def export_excel(file_data: dict):
     try:
+        workspace_path = FileUtil.get_workspace_path()
         file_path = file_data.get('filePath')
+        file_path = os.path.join(workspace_path,'excel',file_path)
+        print(f"保存路径:{file_path}")
         if not file_path:
             return {
                 'status': 'error',
