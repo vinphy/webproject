@@ -361,7 +361,7 @@
     >
       <div class="menu-item" @click="handleGenerateModelFile">
         <el-icon><Document /></el-icon>
-        生成模型文件
+        生成测试文件
       </div>
     </div>
 
@@ -437,7 +437,7 @@ const availableModules = ref([
   },
   {
     id: 3,
-    name: '数据处理',
+    name: 'select模块',
     icon: 'Monitor',
     type: 'monitor',
     inputs: [
@@ -449,7 +449,7 @@ const availableModules = ref([
   },
   {
     id: 4,
-    name: '分析模块',
+    name: '自定义',
     icon: 'Histogram',
     type: 'analysis',
     inputs: [

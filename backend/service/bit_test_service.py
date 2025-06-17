@@ -141,19 +141,19 @@ class BitTestService:
             logger.error(f"错误详情: {traceback.format_exc()}")
             raise Exception(f"导出Excel失败: {str(e)}")
 
-    def export_word(self):
+    def export_word(self, file_path):
         try:
-            logger.info("Starting Word export")
+            logger.info(f"Starting Word export to {file_path}")
             conn = self.get_connection()
             
             with conn.cursor(pymysql.cursors.DictCursor) as cursor:
                 logger.debug("Executing SQL query")
                 cursor.execute("""
                     SELECT 
-                        item,
-                        project_type,
-                        status,
-                        info
+                        item as projectName,
+                        project_type as type,
+                        status as result,
+                        info as description
                     FROM pms_sca
                     ORDER BY id DESC
                 """)
@@ -187,21 +187,20 @@ class BitTestService:
                 logger.debug("Adding data rows to table")
                 for row in data:
                     cells = table.add_row().cells
-                    cells[0].text = str(row['item'])
-                    cells[1].text = str(row['project_type'])
-                    cells[2].text = str(row['status'])
-                    cells[3].text = str(row['info'])
+                    cells[0].text = str(row['projectName'])
+                    cells[1].text = str(row['type'])
+                    cells[2].text = str(row['result'])
+                    cells[3].text = str(row['description'])
                 
-                # 保存到内存
-                logger.debug("Saving Word document to memory")
-                output = io.BytesIO()
-                doc.save(output)
-                output.seek(0)
-                word_data = output.getvalue()
-                logger.debug(f"Word data size: {len(word_data)} bytes")
+                # 确保目录存在
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                
+                # 保存到文件
+                logger.debug(f"Saving Word document to {file_path}")
+                doc.save(file_path)
                 
                 logger.info("Word export completed successfully")
-                return word_data
+                return True
                 
         except Exception as e:
             logger.error(f"导出Word失败: {str(e)}")

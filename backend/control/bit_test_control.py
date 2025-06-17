@@ -74,14 +74,31 @@ async def export_excel(file_data: dict):
             'message': str(e)
         }
 
-@router.get("/export/word")
-async def export_word():
+@router.post("/export/word")
+async def export_word(file_data: dict):
     try:
-        word_data = bit_test_service.export_word()
-        return FileResponse(
-            io.BytesIO(word_data),
-            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            filename='符合性测试报告.docx'
-        )
+        workspace_path = FileUtil.get_workspace_path()
+        file_path = file_data.get('filePath')
+        file_path = os.path.join(workspace_path,'excel',file_path)
+        print(f"保存路径:{file_path}")
+        if not file_path:
+            return {
+                'status': 'error',
+                'message': '未提供文件路径'
+            }
+        result = bit_test_service.export_word(file_path)
+        if result:
+            return {
+                'status': 'success',
+                'message': 'Word导出成功'
+            }
+        else:
+            return {
+                'status': 'error',
+                'message': 'Word导出失败'
+            }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        return {
+            'status': 'error',
+            'message': str(e)
+        }

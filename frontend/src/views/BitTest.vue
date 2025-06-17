@@ -195,23 +195,48 @@ const exportExcel = async () => {
 // 导出Word
 const exportWord = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/test/export/word')
+     // 弹出文件保存对话框
+     const { value: fileName } = await ElMessageBox.prompt('请输入文件全路径', '保存Excel文件', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /^[\w\u4e00-\u9fa5-]+$/,  // 只允许字母、数字、中文、下划线和横线
+      inputErrorMessage: '文件名只能包含字母、数字、中文、下划线和横线',
+      inputPlaceholder: '请输入文件名（不需要输入.word后缀）',
+      inputValidator: (value) => {
+        if (!value) {
+          return '文件名不能为空'
+        }
+        if (value.length > 50) {
+          return '文件名不能超过50个字符'
+        }
+        return true
+      }
+    })
+
+    if (!fileName) return // 用户取消输入
+
+    const filePath = `${fileName}.doc`
+    const response = await fetch('http://localhost:8000/api/test/export/word',{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ filePath })
+    })
     if (!response.ok) {
       throw new Error('导出Word失败')
     }
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = '符合性测试报告.docx'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    ElMessage.success('Word导出成功')
+    const data = await response.json()
+    if (data.status === 'success') {
+      ElMessage.success('Word导出成功')
+    } else {
+      throw new Error(data.message || '导出Word失败')
+    }
   } catch (error) {
-    console.error('导出Word失败:', error)
-    ElMessage.error('导出Word失败：' + error.message)
+    if (error.message !== 'cancel') { // 忽略用户取消的错误
+      console.error('导出Word失败:', error)
+      ElMessage.error('导出Word失败：' + error.message)
+    }
   }
 }
 
