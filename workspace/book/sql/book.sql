@@ -1,1 +1,0 @@
-INSERT INTO book (name, price) VALUES ('once', '28');

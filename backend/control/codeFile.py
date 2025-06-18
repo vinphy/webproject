@@ -33,6 +33,7 @@ class NodeData(BaseModel):
     name: str
     type: str
     tableName: str
+    databaseName: Optional[str] = None
     parameters: List[Parameter]
     condition: Optional[str] = None
 
@@ -190,9 +191,68 @@ def generate_sql(node_data: NodeData) -> str:
     # 获取列名和值
     columns = [param.name for param in node_data.parameters]
     values = [f"'{param.value}'" for param in node_data.parameters]  # 添加引号
+    type = node_data.type
     
-    # 构建SQL语句
-    sql = f"INSERT INTO {node_data.tableName} ({', '.join(columns)}) VALUES ({', '.join(values)});"
+    if type == 'insert':
+        # 构建SQL语句
+        sql = f"INSERT INTO {node_data.tableName} ({', '.join(columns)}) VALUES ({', '.join(values)});"
+    elif type == 'update':
+        # 构建SET子句
+        set_clauses = [f"{col} = {val}" for col, val in zip(columns, values)]
+        # 添加WHERE条件（如果有）
+        where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
+        sql = f"UPDATE {node_data.tableName} SET {', '.join(set_clauses)}{where_clause};"
+    elif type == 'select':
+        # 构建SELECT子句
+        select_clause = ', '.join(columns) if columns else '*'
+        # 添加WHERE条件（如果有）
+        where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
+        sql = f"SELECT {select_clause} FROM {node_data.tableName}{where_clause};"
+    elif type == 'delete':
+        # 添加WHERE条件（如果有）
+        where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
+        sql = f"DELETE FROM {node_data.tableName}{where_clause};"
+    elif type == 'create':
+        sql_parts = []
+        
+        # 如果有数据库名，先创建数据库
+        if node_data.databaseName:
+            save_database_name(node_data.databaseName)
+            sql_parts.append(f"CREATE DATABASE IF NOT EXISTS {node_data.databaseName};")
+            sql_parts.append(f"USE {node_data.databaseName};")
+        
+        # 构建字段定义
+        field_definitions = []
+        for param in node_data.parameters:
+            # 根据参数值判断字段类型
+            value = param.value.lower()
+            if value in ['int', 'integer']:
+                field_type = 'INT'
+            elif value in ['varchar', 'char', 'string', 'text']:
+                field_type = 'VARCHAR(255)'
+            elif value in ['float', 'double', 'decimal']:
+                field_type = 'DECIMAL(10,2)'
+            elif value in ['date', 'datetime', 'timestamp']:
+                field_type = 'DATETIME'
+            elif value in ['bool', 'boolean']:
+                field_type = 'BOOLEAN'
+            else:
+                field_type = 'VARCHAR(255)'  # 默认类型
+            
+            # 添加字段定义
+            field_definitions.append(f"{param.name} {field_type}")
+        
+        # 构建CREATE TABLE语句
+        create_table_sql = f"CREATE TABLE {node_data.tableName} (\n    " + \
+                          ",\n    ".join(field_definitions) + \
+                          "\n);"
+        sql_parts.append(create_table_sql)
+        
+        # 保存表名到对应关系
+        if node_data.databaseName and node_data.tableName:
+            save_table_name(node_data.databaseName, node_data.tableName)
+        
+        sql = "\n".join(sql_parts)
     return sql
 
 def generate_xml(node_data: NodeData) -> str:
@@ -209,6 +269,111 @@ def generate_header(node_data: NodeData) -> str:
     """生成C++头文件"""
     # TODO: 实现头文件生成
     return ""
+
+@router.get("/databases")
+async def get_databases():
+    """获取数据库列表"""
+    try:
+        workspace_path = FileUtil.get_workspace_path()
+        database_file = os.path.join(workspace_path, "database.txt")
+        
+        databases = []
+        if os.path.exists(database_file):
+            with open(database_file, 'r', encoding='utf-8') as f:
+                databases = [line.strip() for line in f.readlines() if line.strip()]
+        
+        return {
+            'status': 'success',
+            'databases': databases
+        }
+    except Exception as e:
+        logger.error(f"获取数据库列表失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+def save_database_name(database_name: str):
+    """保存数据库名到文件"""
+    try:
+        workspace_path = FileUtil.get_workspace_path()
+        database_file = os.path.join(workspace_path, "database.txt")
+        
+        # 确保目录存在
+        os.makedirs(os.path.dirname(database_file), exist_ok=True)
+        
+        # 读取现有数据库列表
+        existing_databases = []
+        if os.path.exists(database_file):
+            with open(database_file, 'r', encoding='utf-8') as f:
+                existing_databases = [line.strip() for line in f.readlines() if line.strip()]
+        
+        # 如果数据库名不存在，则添加
+        if database_name not in existing_databases:
+            with open(database_file, 'a', encoding='utf-8') as f:
+                f.write(f"{database_name}\n")
+        
+        return True
+    except Exception as e:
+        logger.error(f"保存数据库名失败: {str(e)}")
+        return False
+
+def save_table_name(database_name: str, table_name: str):
+    """保存表名到数据库表对应关系文件"""
+    try:
+        workspace_path = FileUtil.get_workspace_path()
+        tables_file = os.path.join(workspace_path, "tables.json")
+        
+        # 读取现有的数据库表对应关系
+        database_tables = {}
+        if os.path.exists(tables_file):
+            with open(tables_file, 'r', encoding='utf-8') as f:
+                database_tables = json.load(f)
+        
+        # 确保数据库存在
+        if database_name not in database_tables:
+            database_tables[database_name] = []
+        
+        # 如果表名不存在，则添加
+        if table_name not in database_tables[database_name]:
+            database_tables[database_name].append(table_name)
+        
+        # 保存更新后的对应关系
+        with open(tables_file, 'w', encoding='utf-8') as f:
+            json.dump(database_tables, f, ensure_ascii=False, indent=2)
+        
+        return True
+    except Exception as e:
+        logger.error(f"保存表名失败: {str(e)}")
+        return False
+
+@router.get("/tables")
+async def get_tables(database_name: str = None):
+    """获取表列表"""
+    try:
+        workspace_path = FileUtil.get_workspace_path()
+        tables_file = os.path.join(workspace_path, "tables.json")
+        
+        database_tables = {}
+        if os.path.exists(tables_file):
+            with open(tables_file, 'r', encoding='utf-8') as f:
+                database_tables = json.load(f)
+        
+        if database_name:
+            # 返回指定数据库的表列表
+            tables = database_tables.get(database_name, [])
+            return {
+                'status': 'success',
+                'tables': tables
+            }
+        else:
+            # 返回所有数据库表对应关系
+            return {
+                'status': 'success',
+                'database_tables': database_tables
+            }
+    except Exception as e:
+        logger.error(f"获取表列表失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/generate")
 async def generate_code(node_data: NodeData):

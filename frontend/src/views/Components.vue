@@ -172,9 +172,40 @@
         <!-- 表名配置 -->
         <div class="config-section">
           <div class="section-header">
-            <div class="table-name-row">
-              <span class="label">表名：</span>
-              <el-input v-model="currentNode.tableName" placeholder="请输入表名" style="width: 300px" />
+            <div class="table-name-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span class="label" style="min-width: 60px;">数据库：</span>
+              <el-select 
+                v-model="currentNode.databaseName" 
+                :placeholder="currentNode.type === 'create' ? '选择或输入数据库名称' : '选择数据库'"
+                :filterable="currentNode.type === 'create'"
+                :allow-create="currentNode.type === 'create'"
+                :default-first-option="currentNode.type === 'create'"
+                style="width: 200px"
+                @change="onDatabaseChange"
+              >
+                <el-option 
+                  v-for="db in databaseList" 
+                  :key="db" 
+                  :label="db" 
+                  :value="db" 
+                />
+              </el-select>
+              <span class="label" style="min-width: 60px;">表名：</span>
+              <el-select 
+                v-model="currentNode.tableName" 
+                :placeholder="currentNode.type === 'create' ? '选择或输入表名' : '选择表名'"
+                :filterable="currentNode.type === 'create'"
+                :allow-create="currentNode.type === 'create'"
+                :default-first-option="currentNode.type === 'create'"
+                style="width: 200px"
+              >
+                <el-option 
+                  v-for="table in getTablesByDatabase(currentNode.databaseName)" 
+                  :key="table" 
+                  :label="table" 
+                  :value="table" 
+                />
+              </el-select>
             </div>
           </div>
         </div>
@@ -182,7 +213,7 @@
         <!-- 参数配置 -->
         <div class="config-section">
           <div class="section-header">
-            <h4>参数</h4>
+            <h4>字段配置</h4>
             <el-button type="primary" size="small" @click="addParameter">添加参数</el-button>
           </div>
           <div class="section-content">
@@ -192,8 +223,8 @@
               <span class="param-col">操作</span>
             </div>
             <div v-for="(param, index) in currentNode.parameters" :key="index" class="parameter-item">
-              <el-input v-model="param.name" placeholder="列名" class="param-col" />
-              <el-input v-model="param.value" placeholder="值" class="param-col" />
+              <el-input v-model="param.name" placeholder="字段名" class="param-col" />
+              <el-input v-model="param.value" placeholder="字段值/类型" class="param-col" />
               <div class="param-col">
                 <el-button type="danger" size="small" @click="removeParameter(index)">删除</el-button>
               </div>
@@ -204,14 +235,14 @@
         <!-- 条件配置 -->
         <div class="config-section">
           <div class="section-header">
-            <h4>条件</h4>
+            <h4>条件语句</h4>
           </div>
           <div class="section-content">
             <el-input
               v-model="currentNode.condition"
               type="textarea"
               :rows="3"
-              placeholder="请输入条件"
+              placeholder="请输入WHERE条件，例如: id = 1 AND status = 'active'"
             />
           </div>
         </div>
@@ -426,7 +457,7 @@ const availableModules = ref({
       id: 1,
       name: 'insert',
       icon: WaveIcon,
-      type: 'cpu',
+      type: 'insert',
       category: 'basic',
       inputs: [
         { name: '输入1', connected: false, id: 'input1' }
@@ -439,7 +470,7 @@ const availableModules = ref({
       id: 2,
       name: 'update',
       icon: WaveIcon,
-      type: 'data',
+      type: 'update',
       category: 'basic',
       inputs: [
         { name: '数据输入', connected: false, id: 'input1' }
@@ -452,7 +483,7 @@ const availableModules = ref({
       id: 3,
       name: 'select',
       icon: WaveIcon,
-      type: 'monitor',
+      type: 'select',
       category: 'basic',
       inputs: [
         { name: '信号输入', connected: false, id: 'input1' }
@@ -465,7 +496,20 @@ const availableModules = ref({
       id: 4,
       name: 'create',
       icon: WaveIcon,
-      type: 'document',
+      type: 'create',
+      category: 'basic',
+      inputs: [
+        { name: '数据输入', connected: false, id: 'input1' }
+      ],
+      outputs: [
+        { name: '创建结果', connected: false, id: 'output1' }
+      ]
+    },
+    {
+      id: 6,
+      name: 'delete',
+      icon: WaveIcon,
+      type: 'delete',
       category: 'basic',
       inputs: [
         { name: '数据输入', connected: false, id: 'input1' }
@@ -480,7 +524,7 @@ const availableModules = ref({
       id: 5,
       name: 'custom',
       icon: WaveIcon,
-      type: 'analysis',
+      type: 'custom',
       category: 'custom',
       inputs: [
         { name: '数据输入', connected: false, id: 'input1' }
@@ -527,6 +571,15 @@ const contextMenuNode = ref(null)
 const fileStructure = ref([])
 const currentFile = ref(null)
 
+// 添加数据库列表状态
+const databaseList = ref([])
+const databaseCache = ref(new Map())
+
+// 添加表列表状态
+const tableList = ref([])
+const tableCache = ref(new Map())
+const databaseTables = ref({})
+
 // 添加新的状态变量
 const showModelMenu = ref(false)
 const modelMenuX = ref(0)
@@ -539,6 +592,55 @@ const expandedFolders = ref(new Set())
 
 // 添加文件内容缓存
 const fileContentCache = ref(new Map())
+
+// 预加载数据库列表
+const preloadDatabases = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/code/databases')
+    if (response.ok) {
+      const data = await response.json()
+      if (data.status === 'success') {
+        databaseList.value = data.databases
+        // 缓存数据库列表
+        databaseCache.value.set('databases', data.databases)
+      }
+    }
+  } catch (error) {
+    console.error('预加载数据库列表失败:', error)
+  }
+}
+
+// 预加载表列表
+const preloadTables = async (databaseName = null) => {
+  try {
+    const url = databaseName 
+      ? `http://localhost:8000/api/code/tables?database_name=${encodeURIComponent(databaseName)}`
+      : 'http://localhost:8000/api/code/tables'
+    
+    const response = await fetch(url)
+    if (response.ok) {
+      const data = await response.json()
+      if (data.status === 'success') {
+        if (databaseName) {
+          // 获取指定数据库的表列表
+          tableList.value = data.tables
+          tableCache.value.set(databaseName, data.tables)
+        } else {
+          // 获取所有数据库表对应关系
+          databaseTables.value = data.database_tables
+          tableCache.value.set('all', data.database_tables)
+        }
+      }
+    }
+  } catch (error) {
+    console.error('预加载表列表失败:', error)
+  }
+}
+
+// 根据数据库名获取表列表
+const getTablesByDatabase = (databaseName) => {
+  return databaseTables.value[databaseName] || []
+}
 
 // 预加载文件内容
 const preloadFileContents = async (files) => {
@@ -878,7 +980,13 @@ onUnmounted(() => {
 
 // 双击节点打开配置对话框
 const handleNodeDblClick = (node) => {
-  currentNode.value = JSON.parse(JSON.stringify(node)) // 深拷贝
+  openConfigDialog(node)
+}
+
+// 打开配置对话框
+const openConfigDialog = (node) => {
+  currentNode.value = { ...node }
+  
   // 确保parameters数组存在且至少有一个元素
   if (!currentNode.value.parameters) {
     currentNode.value.parameters = [{
@@ -886,6 +994,23 @@ const handleNodeDblClick = (node) => {
       value: ''
     }]
   }
+  
+  // 如果不是create类型，设置默认的数据库和表名
+  if (node.type !== 'create') {
+    // 如果没有设置数据库名，选择第一个数据库
+    if (!currentNode.value.databaseName && databaseList.value.length > 0) {
+      currentNode.value.databaseName = databaseList.value[0]
+    }
+    
+    // 如果有数据库名，设置默认表名
+    if (currentNode.value.databaseName) {
+      const tables = getTablesByDatabase(currentNode.value.databaseName)
+      if (tables.length > 0 && !currentNode.value.tableName) {
+        currentNode.value.tableName = tables[0]
+      }
+    }
+  }
+  
   configDialogVisible.value = true
 }
 
@@ -1029,39 +1154,24 @@ const toggleSrc = (module) => {
 const fetchFileStructure = async () => {
   try {
     const response = await fetch('http://localhost:8000/api/code/get_file_structure')
-    if (!response.ok) {
-      throw new Error('获取文件结构失败')
-    }
-    const data = await response.json()
-    if (data.status === 'success') {
-      // 对文件结构进行排序
-      const sortDirectory = (dir) => {
-        if (dir.children) {
-          dir.children = sortFiles(dir.children)
-          dir.children.forEach(child => {
-            if (child.type === 'directory') {
-              sortDirectory(child)
-            }
-          })
-        }
-        return dir
+    if (response.ok) {
+      const data = await response.json()
+      if (data.status === 'success') {
+        fileStructure.value = data.files
+        // 预加载文件内容
+        await preloadFileContents(data.files)
       }
-      
-      fileStructure.value = sortFiles(data.files).map(sortDirectory)
-      // 异步预加载文件内容
-      preloadFileContents(fileStructure.value)
-    } else {
-      throw new Error(data.message || '获取文件结构失败')
     }
   } catch (error) {
     console.error('获取文件结构失败:', error)
-    ElMessage.error('获取文件结构失败：' + error.message)
   }
 }
 
-// 在组件挂载时获取文件结构
-onMounted(() => {
-  fetchFileStructure()
+// 初始化
+onMounted(async () => {
+  await fetchFileStructure()
+  await preloadDatabases()
+  await preloadTables()
 })
 
 // 修改生成代码函数中的错误处理部分
@@ -1101,6 +1211,7 @@ const handleGenerateCode = async () => {
       name: moduleName,
       type: contextMenuNode.value.type,
       tableName: contextMenuNode.value.tableName,
+      databaseName:contextMenuNode.value.databaseName,
       parameters: contextMenuNode.value.parameters || [],
       condition: contextMenuNode.value.condition
     }
@@ -1146,6 +1257,12 @@ const handleGenerateCode = async () => {
     
     // 刷新文件树
     await fetchFileStructure()
+    
+    // 如果是create类型，刷新数据库列表和表列表
+    if (nodeData.type === 'create') {
+      await preloadDatabases()
+      await preloadTables()
+    }
     
     // 自动展开新生成的模块
     const newModulePath = moduleName
@@ -1363,6 +1480,25 @@ const generateModule = async () => {
     ElLoading.service().close()
   }
 }
+
+// 添加新的方法
+const onDatabaseChange = async () => {
+  // 清空当前表名
+  currentNode.value.tableName = ''
+  
+  // 如果选择了数据库，加载该数据库的表列表
+  if (currentNode.value.databaseName) {
+    await preloadTables(currentNode.value.databaseName)
+    
+    // 如果不是create类型，自动选择第一个表
+    if (currentNode.value.type !== 'create') {
+      const tables = getTablesByDatabase(currentNode.value.databaseName)
+      if (tables.length > 0) {
+        currentNode.value.tableName = tables[0]
+      }
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -1425,44 +1561,52 @@ const generateModule = async () => {
 }
 
 /* 为不同类型的模块添加不同的颜色 */
-.module-item[data-type="cpu"] {
+.module-item[data-type="insert"] {
   border-left: 3px solid #409EFF;
 }
 
-.module-item[data-type="data"] {
+.module-item[data-type="update"] {
   border-left: 3px solid #67C23A;
 }
 
-.module-item[data-type="monitor"] {
+.module-item[data-type="select"] {
   border-left: 3px solid #E6A23C;
 }
 
-.module-item[data-type="document"] {
+.module-item[data-type="create"] {
   border-left: 3px solid #F56C6C;
 }
+.module-item[data-type="delete"] {
+  border-left: 3px solid #722ED1;
+}
 
-.module-item[data-type="analysis"] {
+.module-item[data-type="custom"] {
   border-left: 3px solid #909399;
 }
 
+
+
 /* 节点类型对应的颜色 */
-.node[data-type="cpu"] {
+.node[data-type="insert"] {
   border-left: 3px solid #409EFF;
 }
 
-.node[data-type="data"] {
+.node[data-type="update"] {
   border-left: 3px solid #67C23A;
 }
 
-.node[data-type="monitor"] {
+.node[data-type="select"] {
   border-left: 3px solid #E6A23C;
 }
 
-.node[data-type="document"] {
+.node[data-type="create"] {
   border-left: 3px solid #F56C6C;
 }
+.node[data-type="delete"] {
+  border-left: 3px solid #722ED1;
+}
 
-.node[data-type="analysis"] {
+.node[data-type="custom"] {
   border-left: 3px solid #909399;
 }
 
