@@ -4,6 +4,7 @@
       <!-- 左侧模块列表 -->
       <div class="module-list">
         <h3>模块列表</h3>
+        
         <!-- 基础模块 -->
         <div class="module-category">
           <h4>基础模块</h4>
@@ -21,6 +22,7 @@
             </div>
           </div>
         </div>
+        
         <!-- 自定义模块 -->
         <div class="module-category">
           <h4>自定义模块</h4>
@@ -40,150 +42,157 @@
         </div>
       </div>
 
-      <!-- 右侧画布区域 -->
-      <div 
-        ref="canvas"
-        class="canvas-container"
-        @dragover.prevent
-        @drop="handleDrop"
-        @contextmenu="handleCanvasContextMenu"
-        @keydown="handleKeyDown"
-        @click="handleCanvasClick"
-        tabindex="0"
-      >
-        <div class="canvas" ref="canvasRef" @drop="handleFileDrop" @dragover="handleDragOver" @dragenter="handleDragEnter">
-          <!-- 连线 -->
-          <svg class="connections-layer">
-            <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="8"
-                markerHeight="6"
-                refX="7"
-                refY="3"
-                orient="auto"
+      <!-- 右侧绘制区域 -->
+      <div class="canvas-area">
+        <!-- 标签页组件 -->
+        <div class="tabs-container">
+          <div class="tabs-header">
+            <div 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              class="tab-item"
+              :class="{ 'active': tab.active }"
+              @click="switchTab(tab.id)"
+            >
+              <span class="tab-title">{{ tab.title }}</span>
+              <span 
+                v-if="tabs.length > 1" 
+                class="tab-close"
+                @click.stop="closeTab(tab.id)"
               >
-                <polygon
-                  points="0 0, 8 3, 0 6"
-                  fill="#409EFF"
-                />
-              </marker>
-              <marker
-                id="arrowhead-temp"
-                markerWidth="8"
-                markerHeight="6"
-                refX="7"
-                refY="3"
-                orient="auto"
-              >
-                <polygon
-                  points="0 0, 8 3, 0 6"
-                  fill="#67C23A"
-                />
-              </marker>
-            </defs>
-            <g v-for="conn in connections" :key="conn.id" class="connection-group">
-              <path
-                :d="getConnectionPath(conn.startPos, conn.endPos)"
-                class="connection-path"
-                :class="{ 'animated': conn.animated }"
-                @click="selectConnection(conn)"
-              />
-            </g>
-            <g v-if="tempLine" class="connection-group">
-              <path
-                :d="getConnectionPath(tempLine.start, tempLine.end)"
-                class="connection-path temp"
-              />
-            </g>
-          </svg>
-
-          <!-- 节点 -->
-          <div
-            v-for="node in placedNodes"
-            :key="node.id"
-            class="node"
-            :data-node-id="node.id"
-            :data-type="node.type"
-            :style="{
-              left: node.x + 'px',
-              top: node.y + 'px',
-              transform: `scale(${node.scale || 1})`
-            }"
-            @mousedown="startDrag($event, node)"
-            @click="selectNode(node)"
-            @dblclick="handleNodeDblClick(node)"
-            @contextmenu="showContextMenu($event, node)"
-            :class="{ 'selected': selectedNode && selectedNode.id === node.id }"
-          >
-            <div class="node-header">
-              <img :src="node.icon" class="node-icon" alt="节点图标" />
-              <span>{{ node.name }}</span>
+                ×
+              </span>
             </div>
+            <div class="tab-add" @click="addNewTab('新绘制界面')">
+              +
+            </div>
+          </div>
+        </div>
+
+        <!-- 画布区域 - 为每个标签页创建独立的canvas -->
+        <div 
+          v-for="tab in tabs" 
+          :key="tab.id"
+          class="canvas-container"
+          :class="{ 'active': tab.active }"
+          @dragover.prevent
+          @drop="handleDrop"
+          @contextmenu="handleCanvasContextMenu"
+          @keydown="handleKeyDown"
+          @click="handleCanvasClick"
+          tabindex="0"
+        >
+          <div class="canvas" ref="canvasRef" @drop="handleFileDrop" @dragover="handleDragOver" @dragenter="handleDragEnter">
+            <!-- 连线层 -->
+            <svg class="connections-layer">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#409EFF" />
+                </marker>
+                <marker id="arrowhead-temp" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#67C23A" />
+                </marker>
+              </defs>
+              
+              <g class="connection-group">
+                <path
+                  v-for="connection in connections"
+                  :key="connection.id"
+                  :d="`M ${connection.startPos.x} ${connection.startPos.y} L ${connection.endPos.x} ${connection.endPos.y}`"
+                  class="connection-path"
+                  :class="{ 'animated': connection.animated }"
+                />
+              </g>
+            </svg>
             
-            <div class="node-ports">
-              <div class="ports-container">
-                <div 
-                  v-for="(input, index) in node.inputs" 
-                  :key="'input-' + index"
-                  class="port input-port"
-                  :class="{ 
-                    'connected': input.connected,
-                    'connecting': input.connecting,
-                    'can-connect': isConnecting && !startPort?.isInput
-                  }"
-                  :data-port-id="input.id"
-                  :style="{ top: `${(index + 1) * 30}px` }"
-                  @mousedown.stop="startConnection($event, node, input, true)"
-                  @mouseup.stop="handlePortMouseUp($event, node, input, true)"
-                >
-                  <div class="port-dot"></div>
-                  <div class="port-content">
-                    <span class="port-label">{{ input.name }}</span>
-                  </div>
-                </div>
-                <div
-                  v-for="(output, index) in node.outputs" 
-                  :key="'output-' + index"
-                  class="port output-port"
-                  :class="{ 
-                    'connected': output.connected,
-                    'connecting': output.connecting,
-                    'can-connect': isConnecting && startPort?.isInput
-                  }"
-                  :data-port-id="output.id"
-                  :style="{ top: `${(index + 1) * 30}px` }"
-                  @mousedown.stop="startConnection($event, node, output, false)"
-                  @mouseup.stop="handlePortMouseUp($event, node, output, false)"
-                >
-                  <div class="port-content">
-                    <span class="port-label">{{ output.name }}</span>
-                  </div>
-                  <div class="port-dot"></div>
-                </div>
+            <!-- 节点 -->
+            <div
+              v-for="node in placedNodes"
+              :key="node.id"
+              class="node"
+              :data-node-id="node.id"
+              :data-type="node.type"
+              :style="{
+                left: node.x + 'px',
+                top: node.y + 'px',
+                transform: `scale(${node.scale || 1})`
+              }"
+              @mousedown="startDrag($event, node)"
+              @click="selectNode(node)"
+              @dblclick="handleNodeDblClick(node)"
+              @contextmenu="showContextMenu($event, node)"
+              :class="{ 'selected': selectedNode && selectedNode.id === node.id }"
+            >
+              <div class="node-header">
+                <img :src="node.icon" class="node-icon" alt="节点图标" />
+                <span>{{ node.name }}</span>
+                <span class="node-type">({{ node.type }})</span>
               </div>
               
-              <!-- 参数信息显示在端口区域内 -->
-              <div v-if="node.databaseName || node.tableName || (node.parameters && node.parameters.length > 0) || node.condition" class="node-params-display">
-                <div v-if="node.databaseName" class="param-line">
-                  <span class="param-label">DB:</span>
-                  <span class="param-text">{{ node.databaseName }}</span>
+              <div class="node-ports">
+                <div class="ports-container">
+                  <div 
+                    v-for="(input, index) in node.inputs" 
+                    :key="'input-' + index"
+                    class="port input-port"
+                    :class="{ 
+                      'connected': input.connected,
+                      'connecting': input.connecting,
+                      'can-connect': isConnecting && !startPort?.isInput
+                    }"
+                    :data-port-id="input.id"
+                    :style="{ top: `${(index + 1) * 30}px` }"
+                    @mousedown.stop="startConnection($event, node, input, true)"
+                    @mouseup.stop="handlePortMouseUp($event, node, input, true)"
+                  >
+                    <div class="port-dot"></div>
+                    <div class="port-content">
+                      <span class="port-label">{{ input.name }}</span>
+                    </div>
+                  </div>
+                  <div
+                    v-for="(output, index) in node.outputs" 
+                    :key="'output-' + index"
+                    class="port output-port"
+                    :class="{ 
+                      'connected': output.connected,
+                      'connecting': output.connecting,
+                      'can-connect': isConnecting && startPort?.isInput
+                    }"
+                    :data-port-id="output.id"
+                    :style="{ top: `${(index + 1) * 30}px` }"
+                    @mousedown.stop="startConnection($event, node, output, false)"
+                    @mouseup.stop="handlePortMouseUp($event, node, output, false)"
+                  >
+                    <div class="port-content">
+                      <span class="port-label">{{ output.name }}</span>
+                    </div>
+                    <div class="port-dot"></div>
+                  </div>
                 </div>
-                <div v-if="node.tableName" class="param-line">
-                  <span class="param-label">表:</span>
-                  <span class="param-text">{{ node.tableName }}</span>
-                </div>
-                <div v-if="node.parameters && node.parameters.length > 0" class="param-line">
-                  <span class="param-label">列:</span>
-                  <span class="param-text">
-                    {{ node.parameters.slice(0, 2).map(p => p.name).join(', ') }}{{ node.parameters.length > 2 ? '...' : '' }}
-                  </span>
-                </div>
-                <div v-if="node.condition" class="param-line">
-                  <span class="param-label">条件:</span>
-                  <span class="param-text">
-                    {{ node.condition.length > 20 ? node.condition.substring(0, 20) + '...' : node.condition }}
-                  </span>
+                
+                <!-- 参数信息显示在端口区域内 -->
+                <div v-if="node.databaseName || node.tableName || (node.parameters && node.parameters.length > 0) || node.condition" class="node-params-display">
+                  <div v-if="node.databaseName" class="param-line">
+                    <span class="param-label">DB:</span>
+                    <span class="param-text">{{ node.databaseName }}</span>
+                  </div>
+                  <div v-if="node.tableName" class="param-line">
+                    <span class="param-label">表:</span>
+                    <span class="param-text">{{ node.tableName }}</span>
+                  </div>
+                  <div v-if="node.parameters && node.parameters.length > 0" class="param-line">
+                    <span class="param-label">列:</span>
+                    <span class="param-text">
+                      {{ node.parameters.slice(0, 2).map(p => p.name).join(', ') }}{{ node.parameters.length > 2 ? '...' : '' }}
+                    </span>
+                  </div>
+                  <div v-if="node.condition" class="param-line">
+                    <span class="param-label">条件:</span>
+                    <span class="param-text">
+                      {{ node.condition.length > 20 ? node.condition.substring(0, 20) + '...' : node.condition }}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -478,7 +487,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { 
   Cpu, 
   Connection, 
@@ -643,6 +652,19 @@ const canvasRef = ref(null)
 // 添加选中节点状态
 const selectedNode = ref(null)
 
+// 多标签页相关状态
+const tabs = ref([
+  {
+    id: 'main',
+    title: '主绘制界面',
+    active: true,
+    nodes: [],
+    connections: [],
+    selectedNode: null
+  }
+])
+const activeTabId = ref('main')
+
 // 预加载数据库列表
 const preloadDatabases = async () => {
   try {
@@ -719,12 +741,17 @@ const preloadFileContents = async (files) => {
 
 // 更新连线位置
 const updateConnections = () => {
-  const canvas = document.querySelector('.canvas')
+  const activeCanvas = document.querySelector('.canvas-container.active')
+  if (!activeCanvas) return
+  
+  const canvas = activeCanvas.querySelector('.canvas')
+  if (!canvas) return
+  
   const rect = canvas.getBoundingClientRect()
   
   connections.value = connections.value.map(conn => {
-    const startNode = document.querySelector(`[data-node-id="${conn.start.node.id}"]`)
-    const endNode = document.querySelector(`[data-node-id="${conn.end.node.id}"]`)
+    const startNode = activeCanvas.querySelector(`[data-node-id="${conn.start.node.id}"]`)
+    const endNode = activeCanvas.querySelector(`[data-node-id="${conn.end.node.id}"]`)
     
     if (!startNode || !endNode) return conn
     
@@ -822,7 +849,11 @@ const handleDrop = (event) => {
                 availableModules.value.custom.find(m => m.id === moduleId)
   
   if (module) {
-    const rect = event.target.getBoundingClientRect()
+    // 获取当前活动的canvas容器
+    const activeCanvas = event.target.closest('.canvas-container.active') || event.target.closest('.canvas-container')
+    if (!activeCanvas) return
+    
+    const rect = activeCanvas.getBoundingClientRect()
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
     
@@ -1228,6 +1259,12 @@ onMounted(async () => {
   await fetchFileStructure()
   await preloadDatabases()
   await preloadTables()
+  
+  // 确保第一个标签页是活动的
+  if (tabs.value.length > 0) {
+    tabs.value[0].active = true
+    activeTabId.value = tabs.value[0].id
+  }
 })
 
 // 修改生成代码函数中的错误处理部分
@@ -1399,25 +1436,47 @@ const generateModelFile = async () => {
   }
 
   try {
-    // 准备模型数据
+    // 准备完整的模型数据，包含所有参数信息
     const modelData = {
       nodes: placedNodes.value.map(node => ({
         id: node.id,
         name: node.name,
         type: node.type,
+        icon: node.icon,
         x: node.x,
         y: node.y,
+        scale: node.scale || 1,
         inputs: node.inputs || [],
         outputs: node.outputs || [],
+        // 包含完整的参数信息
+        databaseName: node.databaseName,
+        tableName: node.tableName,
+        parameters: node.parameters || [],
+        condition: node.condition,
         properties: node.properties || {}
       })),
       connections: connections.value.map(conn => ({
         id: conn.id,
-        source: conn.source,
-        target: conn.target,
-        sourceHandle: conn.sourceHandle,
-        targetHandle: conn.targetHandle
-      }))
+        start: {
+          node: { id: conn.start.node.id },
+          port: { id: conn.start.port.id },
+          isInput: conn.start.isInput
+        },
+        end: {
+          node: { id: conn.end.node.id },
+          port: { id: conn.end.port.id },
+          isInput: conn.end.isInput
+        },
+        startPos: conn.startPos,
+        endPos: conn.endPos
+      })),
+      // 添加元数据
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        totalNodes: placedNodes.value.length,
+        totalConnections: connections.value.length,
+        description: `包含 ${placedNodes.value.length} 个节点和 ${connections.value.length} 个连线的模型文件`
+      }
     }
 
     const content = JSON.stringify(modelData, null, 2)
@@ -1599,7 +1658,10 @@ const handleFileDrop = async (event) => {
       
       if (result.status === 'success') {
         // 获取拖拽位置
-        const rect = canvasRef.value.getBoundingClientRect()
+        const activeCanvas = event.target.closest('.canvas-container.active') || event.target.closest('.canvas-container')
+        if (!activeCanvas) return
+        
+        const rect = activeCanvas.getBoundingClientRect()
         const x = event.clientX - rect.left
         const y = event.clientY - rect.top
         
@@ -1678,7 +1740,10 @@ const handleFileDrop = async (event) => {
     
     if (result.status === 'success') {
       // 获取拖拽位置
-      const rect = canvasRef.value.getBoundingClientRect()
+      const activeCanvas = event.target.closest('.canvas-container.active') || event.target.closest('.canvas-container')
+      if (!activeCanvas) return
+      
+      const rect = activeCanvas.getBoundingClientRect()
       const x = event.clientX - rect.left
       const y = event.clientY - rect.top
       
@@ -1831,6 +1896,78 @@ const handleCanvasClick = (event) => {
 }
 
 // 删除重复的onDatabaseChange函数，保留第1536行的函数
+
+// 标签页管理函数
+const getCurrentTab = () => {
+  return tabs.value.find(tab => tab.id === activeTabId.value)
+}
+
+const addNewTab = (title, modelData = null) => {
+  const newTabId = `tab_${Date.now()}`
+  const newTab = {
+    id: newTabId,
+    title: title,
+    active: false,
+    nodes: modelData ? modelData.nodes || [] : [],
+    connections: modelData ? modelData.connections || [] : [],
+    selectedNode: null
+  }
+  
+  tabs.value.push(newTab)
+  switchTab(newTabId)
+  
+  return newTabId
+}
+
+const switchTab = (tabId) => {
+  // 保存当前标签页的数据
+  const currentTab = getCurrentTab()
+  if (currentTab) {
+    currentTab.nodes = [...placedNodes.value]
+    currentTab.connections = [...connections.value]
+    currentTab.selectedNode = selectedNode.value
+  }
+  
+  // 切换到新标签页
+  activeTabId.value = tabId
+  const targetTab = tabs.value.find(tab => tab.id === tabId)
+  
+  if (targetTab) {
+    // 更新所有标签页的active状态
+    tabs.value.forEach(tab => tab.active = tab.id === tabId)
+    
+    // 加载目标标签页的数据
+    placedNodes.value = [...targetTab.nodes]
+    connections.value = [...targetTab.connections]
+    selectedNode.value = targetTab.selectedNode
+    
+    // 更新连线位置
+    nextTick(() => {
+      updateConnections()
+    })
+  }
+}
+
+const closeTab = (tabId) => {
+  const index = tabs.value.findIndex(tab => tab.id === tabId)
+  if (index === -1) return
+  
+  // 如果关闭的是当前标签页，切换到其他标签页
+  if (tabId === activeTabId.value) {
+    const nextTab = tabs.value[index + 1] || tabs.value[index - 1]
+    if (nextTab) {
+      switchTab(nextTab.id)
+    }
+  }
+  
+  // 移除标签页
+  tabs.value.splice(index, 1)
+  
+  // 如果没有标签页了，创建一个新的
+  if (tabs.value.length === 0) {
+    addNewTab('新绘制界面')
+  }
+}
 </script>
 
 <style scoped>
@@ -1948,12 +2085,35 @@ const handleCanvasClick = (event) => {
   border-color: #409EFF;
 }
 
-.canvas-container {
+.canvas-area {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   background: #ffffff;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+}
+
+.tabs-container {
+  background: #fafafa;
+  border-bottom: 1px solid #e4e7ed;
+  flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.canvas-container {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  box-shadow: none;
+  display: block;
+  position: relative;
+}
+
+.canvas-container:not(.active) {
+  display: none;
 }
 
 .canvas {
@@ -2540,5 +2700,100 @@ h3 {
 .node:hover {
   box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
   border-color: #409EFF;
+}
+
+.node-type {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 5px;
+}
+
+.tabs-container {
+  background: #fafafa;
+  border-bottom: 1px solid #e4e7ed;
+  flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.tabs-header {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  background: transparent;
+  border-radius: 8px 8px 0 0;
+}
+
+.tab-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #606266;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  background: transparent;
+  border-radius: 4px 4px 0 0;
+  margin-right: 2px;
+}
+
+.tab-item.active {
+  border-bottom-color: #409EFF;
+  color: #409EFF;
+  background: #fff;
+  box-shadow: 0 -2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.tab-item:hover {
+  background: #f0f9ff;
+  color: #409EFF;
+}
+
+.tab-title {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  cursor: pointer;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+  color: #909399;
+}
+
+.tab-close:hover {
+  background: #f56c6c;
+  color: white;
+}
+
+.tab-add {
+  cursor: pointer;
+  font-size: 18px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: #909399;
+  transition: all 0.3s;
+  margin-left: 10px;
+  background: transparent;
+}
+
+.tab-add:hover {
+  background: #409EFF;
+  color: white;
 }
 </style> 

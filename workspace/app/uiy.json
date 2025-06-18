@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "node_1750240135834",
+      "name": "demo",
+      "type": "create",
+      "icon": "/src/assets/wave-icon.svg",
+      "x": 205.00518798828125,
+      "y": 221.11631774902344,
+      "scale": 1,
+      "inputs": [
+        {
+          "name": "输入",
+          "connected": false,
+          "id": "input",
+          "connecting": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "输出",
+          "connected": true,
+          "id": "output",
+          "connecting": false
+        }
+      ],
+      "databaseName": "demo",
+      "tableName": "person",
+      "parameters": [
+        {
+          "name": "name",
+          "value": "char"
+        }
+      ],
+      "condition": null,
+      "properties": {}
+    },
+    {
+      "id": "node_1750240137709",
+      "name": "select",
+      "type": "select",
+      "icon": "/src/assets/test.svg",
+      "x": 547.0051879882812,
+      "y": 291.11631774902344,
+      "scale": 1,
+      "inputs": [
+        {
+          "name": "输入",
+          "connected": true,
+          "id": "input",
+          "connecting": false
+        }
+      ],
+      "outputs": [
+        {
+          "name": "输出",
+          "connected": false,
+          "id": "output",
+          "connecting": false
+        }
+      ],
+      "databaseName": "demo",
+      "tableName": "test",
+      "parameters": [
+        {
+          "name": "name",
+          "value": ""
+        }
+      ],
+      "condition": null,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": 1750240141144,
+      "start": {
+        "node": {
+          "id": "node_1750240135834"
+        },
+        "port": {
+          "id": "output"
+        },
+        "isInput": false
+      },
+      "end": {
+        "node": {
+          "id": "node_1750240137709"
+        },
+        "port": {
+          "id": "input"
+        },
+        "isInput": true
+      },
+      "startPos": {
+        "x": 355.76388359069824,
+        "y": 294.54863357543945
+      },
+      "endPos": {
+        "x": 545.78125,
+        "y": 364.54863357543945
+      }
+    }
+  ],
+  "metadata": {
+    "generatedAt": "2025-06-18T09:49:08.260Z",
+    "totalNodes": 2,
+    "totalConnections": 1,
+    "description": "包含 2 个节点和 1 个连线的模型文件"
+  }
+}
