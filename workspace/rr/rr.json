@@ -1,0 +1,20 @@
+{
+  "module_info": {
+    "name": "rr",
+    "type": "update",
+    "description": "UPDATE 模块配置信息"
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "test"
+  },
+  "parameters": [
+    {
+      "name": "sf",
+      "value": "sdf"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-18 16:55:20",
+  "version": "1.0"
+}

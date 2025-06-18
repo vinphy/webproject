@@ -1,0 +1,37 @@
+{
+  "type": "draggable_model",
+  "version": "1.0",
+  "model_config": {
+    "name": "rr",
+    "type": "update",
+    "icon": "/src/assets/Data.svg",
+    "category": "basic",
+    "inputs": [
+      {
+        "name": "输入",
+        "connected": false,
+        "id": "input"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "输出",
+        "connected": false,
+        "id": "output"
+      }
+    ]
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "test"
+  },
+  "parameters": [
+    {
+      "name": "sf",
+      "value": "sdf"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-18 16:55:20",
+  "description": "预配置的 UPDATE 模型"
+}

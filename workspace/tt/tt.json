@@ -1,0 +1,20 @@
+{
+  "module_info": {
+    "name": "tt",
+    "type": "insert",
+    "description": "INSERT 模块配置信息"
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "test"
+  },
+  "parameters": [
+    {
+      "name": "sdf",
+      "value": "sdfs"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-18 16:39:28",
+  "version": "1.0"
+}

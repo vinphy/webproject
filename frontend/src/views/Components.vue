@@ -42,12 +42,13 @@
 
       <!-- 右侧画布区域 -->
       <div 
+        ref="canvas"
         class="canvas-container"
         @dragover.prevent
         @drop="handleDrop"
         @contextmenu="handleCanvasContextMenu"
       >
-        <div class="canvas" ref="canvasRef">
+        <div class="canvas" ref="canvasRef" @drop="handleFileDrop" @dragover="handleDragOver" @dragenter="handleDragEnter">
           <!-- 连线 -->
           <svg class="connections-layer">
             <defs>
@@ -320,8 +321,11 @@
                     </el-icon>
                     <span 
                       class="file-name"
+                      :class="{ 'draggable-file': file.name.endsWith('_model.json') }"
                       @dblclick="file.type === 'file' ? openFile(file) : null"
                       @click="file.type === 'directory' ? toggleFolder(file) : null"
+                      @dragstart="handleFileDragStart($event, file)"
+                      draggable="true"
                     >{{ file.name }}</span>
                   </div>
                   <div v-if="file.type === 'directory' && file.children && expandedFolders.has(file.path)" class="tree-children">
@@ -347,8 +351,11 @@
                         </el-icon>
                         <span 
                           class="file-name"
+                          :class="{ 'draggable-file': child.name.endsWith('_model.json') }"
                           @dblclick="child.type === 'file' ? openFile(child) : null"
                           @click="child.type === 'directory' ? toggleFolder(child) : null"
+                          @dragstart="handleFileDragStart($event, child)"
+                          draggable="true"
                         >{{ child.name }}</span>
                       </div>
                       <div v-if="child.type === 'directory' && child.children && expandedFolders.has(child.path)" class="tree-children">
@@ -374,8 +381,11 @@
                             </el-icon>
                             <span 
                               class="file-name"
+                              :class="{ 'draggable-file': grandChild.name.endsWith('_model.json') }"
                               @dblclick="grandChild.type === 'file' ? openFile(grandChild) : null"
                               @click="grandChild.type === 'directory' ? toggleFolder(grandChild) : null"
+                              @dragstart="handleFileDragStart($event, grandChild)"
+                              draggable="true"
                             >{{ grandChild.name }}</span>
                           </div>
                         </div>
@@ -473,7 +483,6 @@ import {
   FolderOpened
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
-import WaveIcon from '../assets/波形.svg'
 
 // 可用模块列表
 const availableModules = ref({
@@ -481,7 +490,7 @@ const availableModules = ref({
     {
       id: 1,
       name: 'insert',
-      icon: WaveIcon,
+      icon: '/src/assets/demo.svg',
       type: 'insert',
       category: 'basic',
       inputs: [
@@ -494,7 +503,7 @@ const availableModules = ref({
     {
       id: 2,
       name: 'update',
-      icon: WaveIcon,
+      icon: '/src/assets/Data.svg',
       type: 'update',
       category: 'basic',
       inputs: [
@@ -507,7 +516,7 @@ const availableModules = ref({
     {
       id: 3,
       name: 'select',
-      icon: WaveIcon,
+      icon: '/src/assets/test.svg',
       type: 'select',
       category: 'basic',
       inputs: [
@@ -520,7 +529,7 @@ const availableModules = ref({
     {
       id: 4,
       name: 'create',
-      icon: WaveIcon,
+      icon: '/src/assets/wave-icon.svg',
       type: 'create',
       category: 'basic',
       inputs: [
@@ -533,7 +542,7 @@ const availableModules = ref({
     {
       id: 6,
       name: 'delete',
-      icon: WaveIcon,
+      icon: '/src/assets/wave-icon.svg',
       type: 'delete',
       category: 'basic',
       inputs: [
@@ -548,7 +557,7 @@ const availableModules = ref({
     {
       id: 5,
       name: 'custom',
-      icon: WaveIcon,
+      icon: '/src/assets/wave-icon.svg',
       type: 'custom',
       category: 'custom',
       inputs: [
@@ -617,6 +626,9 @@ const expandedFolders = ref(new Set())
 
 // 添加文件内容缓存
 const fileContentCache = ref(new Map())
+
+// 添加canvas引用
+const canvasRef = ref(null)
 
 // 预加载数据库列表
 const preloadDatabases = async () => {
@@ -797,6 +809,9 @@ const handleDrop = (event) => {
     const rect = event.target.getBoundingClientRect()
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
+    
+    console.log('拖拽的模块信息:', module)
+    console.log('模块图标:', module.icon)
     
     placedNodes.value.push({
       ...module,
@@ -1236,11 +1251,13 @@ const handleGenerateCode = async () => {
       name: moduleName,
       type: contextMenuNode.value.type,
       tableName: contextMenuNode.value.tableName,
-      databaseName:contextMenuNode.value.databaseName,
+      databaseName: contextMenuNode.value.databaseName,
       parameters: contextMenuNode.value.parameters || [],
-      condition: contextMenuNode.value.condition
+      condition: contextMenuNode.value.condition,
+      icon: contextMenuNode.value.icon || "/src/assets/wave-icon.svg"  // 添加图标信息
     }
     
+    console.log('节点图标信息:', contextMenuNode.value.icon)
     console.log('发送到后端的数据:', JSON.stringify(nodeData, null, 2))
     
     const response = await fetch('http://localhost:8000/api/code/generate', {
@@ -1271,6 +1288,7 @@ const handleGenerateCode = async () => {
       `生成的文件路径：\n\n` +
       `SQL文件：${result.files.sql}\n` +
       `JSON文件：${result.files.json}\n` +
+      `可拖拽模型：${result.files.draggable}\n` +
       `C++源文件：${result.files.cpp}\n` +
       `头文件：${result.files.header}`,
       '生成成功',
@@ -1298,6 +1316,7 @@ const handleGenerateCode = async () => {
     const newFiles = [
       { path: `${newModulePath}/sql/${moduleName}.sql`, type: 'file' },
       { path: `${newModulePath}/${moduleName}.json`, type: 'file' },
+      { path: `${newModulePath}/${moduleName}_model.json`, type: 'file' },
       { path: `${newModulePath}/src/${moduleName}.cpp`, type: 'file' },
       { path: `${newModulePath}/src/${moduleName}.h`, type: 'file' }
     ]
@@ -1522,6 +1541,207 @@ const onDatabaseChange = async () => {
         currentNode.value.tableName = tables[0]
       }
     }
+  }
+}
+
+// 拖拽文件处理
+const handleFileDrop = async (event) => {
+  event.preventDefault()
+  
+  console.log('拖拽文件事件触发')
+  
+  // 检查是否有拖拽的文件数据
+  const jsonData = event.dataTransfer.getData('application/json')
+  const fileName = event.dataTransfer.getData('text/plain')
+  
+  if (jsonData && fileName && fileName.endsWith('_model.json')) {
+    console.log('从文件树拖拽的模型文件:', fileName)
+    
+    try {
+      // 发送到后端解析
+      const response = await fetch('http://localhost:8000/api/code/parse_draggable_model', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ file_content: jsonData })
+      })
+      
+      console.log('后端响应状态:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || '解析模型文件失败')
+      }
+      
+      const result = await response.json()
+      console.log('解析结果:', result)
+      
+      if (result.status === 'success') {
+        // 获取拖拽位置
+        const rect = canvasRef.value.getBoundingClientRect()
+        const x = event.clientX - rect.left
+        const y = event.clientY - rect.top
+        
+        console.log('拖拽位置:', { x, y })
+        
+        // 设置节点位置
+        result.node_data.x = x
+        result.node_data.y = y
+        
+        // 确保节点有必要的属性
+        if (!result.node_data.inputs) {
+          result.node_data.inputs = []
+        }
+        if (!result.node_data.outputs) {
+          result.node_data.outputs = []
+        }
+        if (!result.node_data.parameters) {
+          result.node_data.parameters = []
+        }
+        
+        // 添加到绘制面板
+        placedNodes.value.push(result.node_data)
+        
+        console.log('节点已添加到面板，当前节点数量:', placedNodes.value.length)
+        
+        ElMessage.success(`成功导入模型：${result.description}`)
+        return
+      }
+      
+    } catch (error) {
+      console.error('拖拽文件处理失败:', error)
+      ElMessage.error('拖拽文件处理失败：' + error.message)
+      return
+    }
+  }
+  
+  // 处理从外部文件系统拖拽的文件
+  const files = event.dataTransfer.files
+  if (files.length === 0) {
+    console.log('没有拖拽文件')
+    return
+  }
+  
+  const file = files[0]
+  console.log('从外部拖拽文件:', file.name, file.type)
+  
+  // 检查文件类型
+  if (!file.name.endsWith('_model.json')) {
+    ElMessage.error('请拖拽有效的模型文件（*_model.json）')
+    return
+  }
+  
+  try {
+    // 读取文件内容
+    const content = await file.text()
+    console.log('文件内容:', content.substring(0, 200) + '...')
+    
+    // 发送到后端解析
+    const response = await fetch('http://localhost:8000/api/code/parse_draggable_model', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file_content: content })
+    })
+    
+    console.log('后端响应状态:', response.status)
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.detail || '解析模型文件失败')
+    }
+    
+    const result = await response.json()
+    console.log('解析结果:', result)
+    
+    if (result.status === 'success') {
+      // 获取拖拽位置
+      const rect = canvasRef.value.getBoundingClientRect()
+      const x = event.clientX - rect.left
+      const y = event.clientY - rect.top
+      
+      console.log('拖拽位置:', { x, y })
+      
+      // 设置节点位置
+      result.node_data.x = x
+      result.node_data.y = y
+      
+      // 确保节点有必要的属性
+      if (!result.node_data.inputs) {
+        result.node_data.inputs = []
+      }
+      if (!result.node_data.outputs) {
+        result.node_data.outputs = []
+      }
+      if (!result.node_data.parameters) {
+        result.node_data.parameters = []
+      }
+      
+      // 添加到绘制面板
+      placedNodes.value.push(result.node_data)
+      
+      console.log('节点已添加到面板，当前节点数量:', placedNodes.value.length)
+      
+      ElMessage.success(`成功导入模型：${result.description}`)
+    }
+    
+  } catch (error) {
+    console.error('拖拽文件处理失败:', error)
+    ElMessage.error('拖拽文件处理失败：' + error.message)
+  }
+}
+
+// 拖拽事件处理
+const handleDragOver = (event) => {
+  event.preventDefault()
+}
+
+const handleDragEnter = (event) => {
+  event.preventDefault()
+}
+
+// 文件拖拽开始处理
+const handleFileDragStart = async (event, file) => {
+  // 只处理_model.json文件
+  if (!file.name.endsWith('_model.json')) {
+    event.preventDefault()
+    return
+  }
+  
+  console.log('开始拖拽文件:', file.name)
+  
+  try {
+    // 从缓存或服务器获取文件内容
+    let content
+    if (fileContentCache.value.has(file.path)) {
+      content = fileContentCache.value.get(file.path)
+    } else {
+      const response = await fetch(`http://localhost:8000/api/code/read_file?path=${encodeURIComponent(file.path)}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.status === 'success') {
+          content = data.content
+          fileContentCache.value.set(file.path, content)
+        }
+      }
+    }
+    
+    if (content) {
+      // 设置拖拽数据
+      event.dataTransfer.setData('application/json', content)
+      event.dataTransfer.setData('text/plain', file.name)
+      event.dataTransfer.effectAllowed = 'copy'
+      
+      console.log('拖拽数据已设置')
+    } else {
+      console.error('无法获取文件内容')
+      event.preventDefault()
+    }
+  } catch (error) {
+    console.error('文件拖拽准备失败:', error)
+    event.preventDefault()
   }
 }
 </script>
@@ -2207,4 +2427,20 @@ h3 {
 }
 
 /* 节点样式 */
+
+/* 可拖拽文件样式 */
+.draggable-file {
+  cursor: grab;
+  color: #409EFF;
+  font-weight: 500;
+}
+
+.draggable-file:hover {
+  color: #66b1ff;
+  text-decoration: underline;
+}
+
+.draggable-file:active {
+  cursor: grabbing;
+}
 </style> 

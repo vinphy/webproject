@@ -7,6 +7,7 @@ import logging
 import os
 import json
 from datetime import datetime
+import time
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
@@ -37,6 +38,10 @@ class NodeData(BaseModel):
     databaseName: Optional[str] = None
     parameters: List[Parameter]
     condition: Optional[str] = None
+    icon: Optional[str] = None
+
+class DraggableModelRequest(BaseModel):
+    file_content: str
 
 @router.post("/write_module_files")
 async def write_module_files(module_files: ModuleFiles):
@@ -296,6 +301,52 @@ def generate_header(node_data: NodeData) -> str:
     # TODO: 实现头文件生成
     return ""
 
+def generate_draggable_model(node_data: NodeData) -> str:
+    """生成可拖拽的模型文件"""
+
+    
+    # 优先使用传入的图标，如果没有则根据类型获取默认图标
+    if node_data.icon:
+        icon_path = node_data.icon
+    else:
+        icon_path = "/src/assets/Data.svg"
+    
+    # 构建可拖拽模型的数据结构
+    draggable_model = {
+        "type": "draggable_model",
+        "version": "1.0",
+        "model_config": {
+            "name": node_data.name,
+            "type": node_data.type,
+            "icon": icon_path,  # 使用动态图标路径
+            "category": "basic" if node_data.type in ["insert", "update", "select", "create", "delete"] else "custom",
+            "inputs": [
+                { "name": "输入", "connected": False, "id": "input" }
+            ],
+            "outputs": [
+                { "name": "输出", "connected": False, "id": "output" }
+            ]
+        },
+        "database_config": {
+            "database_name": node_data.databaseName,
+            "table_name": node_data.tableName
+        },
+        "parameters": [
+            {
+                "name": param.name,
+                "value": param.value
+            }
+            for param in node_data.parameters
+        ],
+        "condition": node_data.condition,
+        "generated_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "description": f"预配置的 {node_data.type.upper()} 模型"
+    }
+    
+    # 转换为格式化的JSON字符串
+    json_content = json.dumps(draggable_model, ensure_ascii=False, indent=2)
+    return json_content
+
 @router.get("/databases")
 async def get_databases():
     """获取数据库列表"""
@@ -430,6 +481,12 @@ async def generate_code(node_data: NodeData):
         with open(json_file_path, "w", encoding="utf-8") as f:
             f.write(json_content)
         
+        # 生成可拖拽模型文件
+        draggable_content = generate_draggable_model(node_data)
+        draggable_file_path = os.path.join(module_dir, f"{node_data.name}_model.json")
+        with open(draggable_file_path, "w", encoding="utf-8") as f:
+            f.write(draggable_content)
+        
         # 生成C++文件
         cpp_content = generate_cpp(node_data)
         cpp_file_path = os.path.join(src_dir, f"{node_data.name}.cpp")
@@ -448,10 +505,58 @@ async def generate_code(node_data: NodeData):
             "files": {
                 "sql": sql_file_path,
                 "json": json_file_path,
+                "draggable": draggable_file_path,
                 "cpp": cpp_file_path,
                 "header": header_file_path
             }
         }
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/parse_draggable_model")
+async def parse_draggable_model(request: DraggableModelRequest):
+    """解析可拖拽模型文件"""
+    try:
+        # 解析JSON内容
+        model_data = json.loads(request.file_content)
+        
+        # 验证文件格式
+        if model_data.get("type") != "draggable_model":
+            raise HTTPException(status_code=400, detail="不是有效的可拖拽模型文件")
+        
+        # 提取模型配置
+        model_config = model_data.get("model_config", {})
+        database_config = model_data.get("database_config", {})
+        parameters = model_data.get("parameters", [])
+        condition = model_data.get("condition")
+        logger.info(f'-----图标地址：{model_config.get("icon", "/src/assets/Data.svg")}')
+        
+        # 构建节点数据
+        node_data = {
+            "name": model_config.get("name", "unnamed"),
+            "type": model_config.get("type", "custom"),
+            "icon": model_config.get("icon", "/src/assets/Data.svg"),
+            "category": model_config.get("category", "custom"),
+            "inputs": model_config.get("inputs", []),
+            "outputs": model_config.get("outputs", []),
+            "databaseName": database_config.get("database_name"),
+            "tableName": database_config.get("table_name"),
+            "parameters": parameters,
+            "condition": condition,
+            "x": 100,  # 默认位置
+            "y": 100,
+            "id": f"node_{int(time.time() * 1000)}"  # 生成唯一ID
+        }
+        
+        return {
+            "status": "success",
+            "node_data": node_data,
+            "description": model_data.get("description", "预配置模型")
+        }
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="JSON格式错误")
+    except Exception as e:
+        logger.error(f"解析拖拽模型文件失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

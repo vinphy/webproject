@@ -1,0 +1,37 @@
+{
+  "type": "draggable_model",
+  "version": "1.0",
+  "model_config": {
+    "name": "yy",
+    "type": "insert",
+    "icon": "WaveIcon",
+    "category": "basic",
+    "inputs": [
+      {
+        "name": "输入",
+        "connected": false,
+        "id": "input"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "输出",
+        "connected": false,
+        "id": "output"
+      }
+    ]
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "test"
+  },
+  "parameters": [
+    {
+      "name": "tt",
+      "value": "uu"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-18 16:06:57",
+  "description": "预配置的 INSERT 模型"
+}
