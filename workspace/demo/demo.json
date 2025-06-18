@@ -1,0 +1,21 @@
+{
+  "module_info": {
+    "name": "demo",
+    "type": "create",
+    "description": "CREATE 模块配置信息"
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "test"
+  },
+  "parameters": [
+    {
+      "name": "name",
+      "value": "vinphy",
+      "type": "field"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-18 15:54:26",
+  "version": "1.0"
+}

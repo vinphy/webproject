@@ -6,6 +6,7 @@ import traceback
 import logging
 import os
 import json
+from datetime import datetime
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
@@ -256,9 +257,34 @@ def generate_sql(node_data: NodeData) -> str:
     return sql
 
 def generate_xml(node_data: NodeData) -> str:
-    """生成XML描述文件"""
-    # TODO: 实现XML生成
-    return ""
+    """生成JSON描述文件"""
+    # 构建JSON数据结构
+    json_data = {
+        "module_info": {
+            "name": node_data.name,
+            "type": node_data.type,
+            "description": f"{node_data.type.upper()} 模块配置信息"
+        },
+        "database_config": {
+            "database_name": node_data.databaseName,
+            "table_name": node_data.tableName
+        },
+        "parameters": [
+            {
+                "name": param.name,
+                "value": param.value,
+                # "type": "field" if node_data.type == "create" else "value"
+            }
+            for param in node_data.parameters
+        ],
+        "condition": node_data.condition,
+        "generated_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "version": "1.0"
+    }
+    
+    # 转换为格式化的JSON字符串
+    json_content = json.dumps(json_data, ensure_ascii=False, indent=2)
+    return json_content
 
 def generate_cpp(node_data: NodeData) -> str:
     """生成C++源文件"""
@@ -398,11 +424,11 @@ async def generate_code(node_data: NodeData):
         with open(sql_file_path, "w", encoding="utf-8") as f:
             f.write(sql_content)
         
-        # 生成XML文件
-        xml_content = generate_xml(node_data)
-        xml_file_path = os.path.join(module_dir, f"{node_data.name}.xml")
-        with open(xml_file_path, "w", encoding="utf-8") as f:
-            f.write(xml_content)
+        # 生成JSON文件
+        json_content = generate_xml(node_data)
+        json_file_path = os.path.join(module_dir, f"{node_data.name}.json")
+        with open(json_file_path, "w", encoding="utf-8") as f:
+            f.write(json_content)
         
         # 生成C++文件
         cpp_content = generate_cpp(node_data)
@@ -421,7 +447,7 @@ async def generate_code(node_data: NodeData):
             "message": "代码生成成功",
             "files": {
                 "sql": sql_file_path,
-                "xml": xml_file_path,
+                "json": json_file_path,
                 "cpp": cpp_file_path,
                 "header": header_file_path
             }

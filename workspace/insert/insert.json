@@ -1,0 +1,21 @@
+{
+  "module_info": {
+    "name": "insert",
+    "type": "insert",
+    "description": "INSERT 模块配置信息"
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "test"
+  },
+  "parameters": [
+    {
+      "name": "python",
+      "value": "4",
+      "type": "value"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-18 15:55:38",
+  "version": "1.0"
+}

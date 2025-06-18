@@ -1270,7 +1270,7 @@ const handleGenerateCode = async () => {
     await ElMessageBox.alert(
       `生成的文件路径：\n\n` +
       `SQL文件：${result.files.sql}\n` +
-      `XML文件：${result.files.xml}\n` +
+      `JSON文件：${result.files.json}\n` +
       `C++源文件：${result.files.cpp}\n` +
       `头文件：${result.files.header}`,
       '生成成功',
@@ -1297,7 +1297,7 @@ const handleGenerateCode = async () => {
     // 预加载新生成的文件内容
     const newFiles = [
       { path: `${newModulePath}/sql/${moduleName}.sql`, type: 'file' },
-      { path: `${newModulePath}/${moduleName}.xml`, type: 'file' },
+      { path: `${newModulePath}/${moduleName}.json`, type: 'file' },
       { path: `${newModulePath}/src/${moduleName}.cpp`, type: 'file' },
       { path: `${newModulePath}/src/${moduleName}.h`, type: 'file' }
     ]
