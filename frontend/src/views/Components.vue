@@ -1066,18 +1066,10 @@ onMounted(() => {
 
 // 修改生成代码函数中的错误处理部分
 const handleGenerateCode = async () => {
-  console.log('开始生成代码，当前节点:', contextMenuNode.value)
-  
-  if (!contextMenuNode.value) {
-    console.error('节点数据为空')
-    ElMessage.error('未选择节点')
-    return
-  }
-
-  // 检查节点数据结构
-  console.log('节点完整数据:', JSON.stringify(contextMenuNode.value, null, 2))
-  
   try {
+    // 检查节点数据结构
+    console.log('节点完整数据:', JSON.stringify(contextMenuNode.value, null, 2))
+    
     // 确保节点名称存在
     const nodeName = contextMenuNode.value.name || 'unnamed_module'
     console.log('节点名称:', nodeName)
@@ -1098,158 +1090,68 @@ const handleGenerateCode = async () => {
         return true
       }
     })
-
     if (!folderName) return
     
     // 生成代码文件
     const moduleName = folderName
     console.log('模块名称:', moduleName)
     
-    // 确保输入输出端口存在，并提供默认值
-    const nodeData = contextMenuNode.value
-    console.log('节点数据:', nodeData)
-    
-    // 检查并初始化输入输出端口
-    if (!nodeData.inputs) {
-      console.log('初始化输入端口')
-      nodeData.inputs = []
-    }
-    if (!nodeData.outputs) {
-      console.log('初始化输出端口')
-      nodeData.outputs = []
-    }
-    if (!nodeData.properties) {
-      console.log('初始化属性')
-      nodeData.properties = {}
+    // 准备节点数据
+    const nodeData = {
+      name: moduleName,
+      type: contextMenuNode.value.type,
+      tableName: contextMenuNode.value.tableName,
+      parameters: contextMenuNode.value.parameters || [],
+      condition: contextMenuNode.value.condition
     }
     
-    const inputs = Array.isArray(nodeData.inputs) ? nodeData.inputs : []
-    const outputs = Array.isArray(nodeData.outputs) ? nodeData.outputs : []
-    const properties = nodeData.properties || {}
+    console.log('发送到后端的数据:', JSON.stringify(nodeData, null, 2))
     
-    console.log('处理后的端口数据:', { inputs, outputs, properties })
-    
-    // 如果没有输入输出端口，添加默认端口
-    if (inputs.length === 0) {
-      console.log('添加默认输入端口')
-      inputs.push({ name: 'input1', type: 'number' })
-      inputs.push({ name: 'input2', type: 'number' })
-    }
-    if (outputs.length === 0) {
-      console.log('添加默认输出端口')
-      outputs.push({ name: 'result', type: 'number' })
-    }
-    
-    // 生成 main.c
-    const mainContent = `#include <stdio.h>
-
-// 输入端口
-${inputs.map(input => `double ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)};`).join('\n')}
-
-// 输出端口
-${outputs.map(output => `double ${output.name || 'output_' + Math.random().toString(36).substr(2, 5)};`).join('\n')}
-
-// 属性
-${Object.entries(properties).map(([key, prop]) => 
-`${prop.type || 'double'} ${prop.name || 'prop_' + key} = ${prop.value || '0'};`
-).join('\n')}
-
-int main() {
-  // 读取输入
-  ${inputs.map(input => 
-    `printf("请输入 ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)}: ");\n    scanf("%lf", &${input.name || 'input_' + Math.random().toString(36).substr(2, 5)});`
-  ).join('\n    ')}
-  
-  // 执行加法运算
-  ${outputs[0]?.name || 'result'} = ${inputs.map(input => input.name || 'input_' + Math.random().toString(36).substr(2, 5)).join(' + ')};
-  
-  // 输出结果
-  printf("计算结果: %lf\\n", ${outputs[0]?.name || 'result'});
-  
-  return 0;
-}`
-    
-    // 生成 README.md
-    const readmeContent = `# ${nodeName} 组件
-
-## 功能说明
-这是一个简单的加法运算组件。
-
-## 输入端口
-${inputs.map(input => `- ${input.name || 'input_' + Math.random().toString(36).substr(2, 5)}: ${input.type || 'number'}`).join('\n')}
-
-## 输出端口
-${outputs.map(output => `- ${output.name || 'output_' + Math.random().toString(36).substr(2, 5)}: ${output.type || 'number'}`).join('\n')}
-
-## 属性
-${Object.entries(properties).map(([key, prop]) => 
-`- ${prop.name || 'prop_' + key}: ${prop.type || 'number'} = ${prop.value || '0'}`
-).join('\n')}
-
-## 编译运行
-\`\`\`bash
-gcc src/main.c -o ${moduleName}
-./${moduleName}
-\`\`\``
-    
-    console.log('生成的文件内容:', { mainContent, readmeContent })
-    
-    // 准备文件数据
-    const files = [
-      {
-        name: 'src/main.c',
-        content: mainContent
+    const response = await fetch('http://localhost:8000/api/code/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      {
-        name: 'README.md',
-        content: readmeContent
-      }
-    ]
+      body: JSON.stringify(nodeData)
+    })
     
-    try {
-      // 调用后端 API 写入文件
-      const response = await fetch('http://localhost:8000/api/code/write_module_files', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          module_name: moduleName,
-          files: files
-        })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
-      }
-      
-      const result = await response.json()
-      console.log('文件写入结果:', result)
-      
-      if (result.status === 'success') {
-        // 重新获取文件结构
-        await fetchFileStructure()
-        
-        // 重置当前文件
-        currentFile.value = null
-        isCodePanelCollapsed.value = false
-        
-        ElMessage.success('代码生成成功，文件已保存到本地')
-      } else {
-        throw new Error(result.message || '文件写入失败')
-      }
-    } catch (error) {
-      console.error('文件写入失败:', error)
-      ElMessage.error('文件写入失败：' + error.message)
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.detail || '代码生成失败')
     }
-
+    
+    const result = await response.json()
+    console.log('代码生成结果:', result)
+    
+    // 显示成功消息和文件路径
+    ElMessage({
+      type: 'success',
+      message: '代码生成成功',
+      duration: 5000
+    })
+    
+    // 显示生成的文件路径
+    ElMessageBox.alert(
+      `生成的文件路径：\n\n` +
+      `SQL文件：${result.files.sql}\n` +
+      `XML文件：${result.files.xml}\n` +
+      `C++源文件：${result.files.cpp}\n` +
+      `头文件：${result.files.header}`,
+      '生成成功',
+      {
+        confirmButtonText: '确定',
+        type: 'success'
+      }
+    )
+    
   } catch (error) {
     console.error('代码生成错误:', error)
-    ElMessage.error('代码生成失败：' + (error.message || '未知错误'))
+    ElMessage({
+      type: 'error',
+      message: error.message || '代码生成失败',
+      duration: 5000
+    })
   }
-  
-  hideContextMenu()
 }
 
 // 监听点击事件，隐藏右键菜单

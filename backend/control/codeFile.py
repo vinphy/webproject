@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from util.FileUtil import FileUtil
 import traceback
 import logging
 import os
+import json
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
@@ -23,6 +24,17 @@ class ModuleFiles(BaseModel):
 class ModelFile(BaseModel):
     filename: str
     content: str
+
+class Parameter(BaseModel):
+    name: str
+    value: str
+
+class NodeData(BaseModel):
+    name: str
+    type: str
+    tableName: str
+    parameters: List[Parameter]
+    condition: Optional[str] = None
 
 @router.post("/write_module_files")
 async def write_module_files(module_files: ModuleFiles):
@@ -171,4 +183,84 @@ async def read_file(path: str):
     except Exception as e:
         logger.error(f"读取文件失败: {str(e)}")
         logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+def generate_sql(node_data: NodeData) -> str:
+    """生成SQL插入语句"""
+    # 获取列名和值
+    columns = [param.name for param in node_data.parameters]
+    values = [f"'{param.value}'" for param in node_data.parameters]  # 添加引号
+    
+    # 构建SQL语句
+    sql = f"INSERT INTO {node_data.tableName} ({', '.join(columns)}) VALUES ({', '.join(values)});"
+    return sql
+
+def generate_xml(node_data: NodeData) -> str:
+    """生成XML描述文件"""
+    # TODO: 实现XML生成
+    return ""
+
+def generate_cpp(node_data: NodeData) -> str:
+    """生成C++源文件"""
+    # TODO: 实现C++生成
+    return ""
+
+def generate_header(node_data: NodeData) -> str:
+    """生成C++头文件"""
+    # TODO: 实现头文件生成
+    return ""
+
+@router.post("/generate")
+async def generate_code(node_data: NodeData):
+    try:
+        # 获取工作空间路径
+        workspace_path = FileUtil.get_workspace_path()
+        if not workspace_path:
+            raise HTTPException(status_code=500, detail="工作空间路径未配置")
+
+        # 创建必要的目录
+        module_dir = os.path.join(workspace_path, node_data.name)
+        sql_dir = os.path.join(module_dir, "sql")
+        src_dir = os.path.join(module_dir, "src")
+        
+        # 确保目录存在
+        os.makedirs(sql_dir, exist_ok=True)
+        os.makedirs(src_dir, exist_ok=True)
+        
+        # 生成SQL文件
+        sql_content = generate_sql(node_data)
+        sql_file_path = os.path.join(sql_dir, f"{node_data.name}.sql")
+        with open(sql_file_path, "w", encoding="utf-8") as f:
+            f.write(sql_content)
+        
+        # 生成XML文件
+        xml_content = generate_xml(node_data)
+        xml_file_path = os.path.join(module_dir, f"{node_data.name}.xml")
+        with open(xml_file_path, "w", encoding="utf-8") as f:
+            f.write(xml_content)
+        
+        # 生成C++文件
+        cpp_content = generate_cpp(node_data)
+        cpp_file_path = os.path.join(src_dir, f"{node_data.name}.cpp")
+        with open(cpp_file_path, "w", encoding="utf-8") as f:
+            f.write(cpp_content)
+        
+        # 生成头文件
+        header_content = generate_header(node_data)
+        header_file_path = os.path.join(src_dir, f"{node_data.name}.h")
+        with open(header_file_path, "w", encoding="utf-8") as f:
+            f.write(header_content)
+        
+        return {
+            "status": "success", 
+            "message": "代码生成成功",
+            "files": {
+                "sql": sql_file_path,
+                "xml": xml_file_path,
+                "cpp": cpp_file_path,
+                "header": header_file_path
+            }
+        }
+    
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
