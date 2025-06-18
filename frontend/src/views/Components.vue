@@ -168,68 +168,58 @@
       width="800px"
       destroy-on-close
     >
-      <el-tabs v-model="activeTab">
-        <el-tab-pane label="端口配置" name="ports">
-          <div class="config-content">
-            <div class="ports-section">
-              <h3>输入端口</h3>
-              <div v-for="(input, index) in currentNode?.inputs" :key="'input-' + index" class="port-item">
-                <el-input v-model="input.name" placeholder="端口名称" />
-                <el-select v-model="input.type" placeholder="数据类型">
-                  <el-option label="数值" value="number" />
-                  <el-option label="字符串" value="string" />
-                  <el-option label="布尔值" value="boolean" />
-                  <el-option label="数组" value="array" />
-                  <el-option label="对象" value="object" />
-                </el-select>
-                <el-button type="danger" @click="removePort('input', index)">删除</el-button>
-  </div>
-              <el-button type="primary" @click="addPort('input')">添加输入端口</el-button>
-            </div>
-            
-            <div class="ports-section">
-              <h3>输出端口</h3>
-              <div v-for="(output, index) in currentNode?.outputs" :key="'output-' + index" class="port-item">
-                <el-input v-model="output.name" placeholder="端口名称" />
-                <el-select v-model="output.type" placeholder="数据类型">
-                  <el-option label="数值" value="number" />
-                  <el-option label="字符串" value="string" />
-                  <el-option label="布尔值" value="boolean" />
-                  <el-option label="数组" value="array" />
-                  <el-option label="对象" value="object" />
-                </el-select>
-                <el-button type="danger" @click="removePort('output', index)">删除</el-button>
-              </div>
-              <el-button type="primary" @click="addPort('output')">添加输出端口</el-button>
+      <div class="config-content">
+        <!-- 表名配置 -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="table-name-row">
+              <span class="label">表名：</span>
+              <el-input v-model="currentNode.tableName" placeholder="请输入表名" style="width: 300px" />
             </div>
           </div>
-        </el-tab-pane>
-        
-        <el-tab-pane label="属性配置" name="properties">
-          <div class="config-content">
-            <div class="properties-section">
-              <div v-for="(prop, key) in currentNode?.properties" :key="key" class="property-item">
-                <el-input v-model="prop.name" placeholder="属性名称" />
-                <el-select v-model="prop.type" placeholder="数据类型">
-                  <el-option label="数值" value="number" />
-                  <el-option label="字符串" value="string" />
-                  <el-option label="布尔值" value="boolean" />
-                  <el-option label="数组" value="array" />
-                  <el-option label="对象" value="object" />
-                </el-select>
-                <el-input v-model="prop.value" placeholder="默认值" />
-                <el-button type="danger" @click="removeProperty(key)">删除</el-button>
+        </div>
+
+        <!-- 参数配置 -->
+        <div class="config-section">
+          <div class="section-header">
+            <h4>参数</h4>
+            <el-button type="primary" size="small" @click="addParameter">添加参数</el-button>
+          </div>
+          <div class="section-content">
+            <div class="parameter-header">
+              <span class="param-col">列名</span>
+              <span class="param-col">值</span>
+              <span class="param-col">操作</span>
+            </div>
+            <div v-for="(param, index) in currentNode.parameters" :key="index" class="parameter-item">
+              <el-input v-model="param.name" placeholder="列名" class="param-col" />
+              <el-input v-model="param.value" placeholder="值" class="param-col" />
+              <div class="param-col">
+                <el-button type="danger" size="small" @click="removeParameter(index)">删除</el-button>
               </div>
-              <el-button type="primary" @click="addProperty">添加属性</el-button>
             </div>
           </div>
-        </el-tab-pane>
-      </el-tabs>
-      
+        </div>
+
+        <!-- 条件配置 -->
+        <div class="config-section">
+          <div class="section-header">
+            <h4>条件</h4>
+          </div>
+          <div class="section-content">
+            <el-input
+              v-model="currentNode.condition"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入条件"
+            />
+          </div>
+        </div>
+      </div>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="configDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveConfig">保存</el-button>
+          <el-button type="primary" @click="saveConfig">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -434,7 +424,7 @@ const availableModules = ref({
   basic: [
     {
       id: 1,
-      name: 'insert模块',
+      name: 'insert',
       icon: WaveIcon,
       type: 'cpu',
       category: 'basic',
@@ -447,7 +437,7 @@ const availableModules = ref({
     },
     {
       id: 2,
-      name: 'update模块',
+      name: 'update',
       icon: WaveIcon,
       type: 'data',
       category: 'basic',
@@ -460,7 +450,7 @@ const availableModules = ref({
     },
     {
       id: 3,
-      name: 'select模块',
+      name: 'select',
       icon: WaveIcon,
       type: 'monitor',
       category: 'basic',
@@ -473,7 +463,7 @@ const availableModules = ref({
     },
     {
       id: 4,
-      name: 'create模块',
+      name: 'create',
       icon: WaveIcon,
       type: 'document',
       category: 'basic',
@@ -488,7 +478,7 @@ const availableModules = ref({
   custom: [
     {
       id: 5,
-      name: '自定义模块',
+      name: 'custom',
       icon: WaveIcon,
       type: 'analysis',
       category: 'custom',
@@ -889,6 +879,13 @@ onUnmounted(() => {
 // 双击节点打开配置对话框
 const handleNodeDblClick = (node) => {
   currentNode.value = JSON.parse(JSON.stringify(node)) // 深拷贝
+  // 确保parameters数组存在且至少有一个元素
+  if (!currentNode.value.parameters) {
+    currentNode.value.parameters = [{
+      name: '',
+      value: ''
+    }]
+  }
   configDialogVisible.value = true
 }
 
@@ -921,22 +918,24 @@ const removePort = (type, index) => {
   }
 }
 
-// 添加属性
-const addProperty = () => {
+// 添加参数
+const addParameter = () => {
   if (!currentNode.value) return
   
-  const key = 'prop_' + Date.now()
-  currentNode.value.properties[key] = {
-    name: '',
-    type: 'string',
-    value: ''
+  if (!currentNode.value.parameters) {
+    currentNode.value.parameters = []
   }
+  
+  currentNode.value.parameters.push({
+    name: '',
+    value: ''
+  })
 }
 
-// 删除属性
-const removeProperty = (key) => {
+// 删除参数
+const removeParameter = (index) => {
   if (!currentNode.value) return
-  delete currentNode.value.properties[key]
+  currentNode.value.parameters.splice(index, 1)
 }
 
 // 保存配置
@@ -947,8 +946,6 @@ const saveConfig = () => {
   const node = placedNodes.value.find(n => n.id === currentNode.value.id)
   if (node) {
     Object.assign(node, currentNode.value)
-    // 更新连线
-    updateConnections()
   }
   
   configDialogVisible.value = false
@@ -1459,7 +1456,7 @@ const generateModule = async () => {
 }
 
 .module-list {
-  width: 200px;
+  width: 130px;
   background: #ffffff;
   border-radius: 8px;
   padding: 15px;
@@ -1998,5 +1995,80 @@ h3 {
   object-fit: contain;
   display: inline-block;
   vertical-align: middle;
+}
+
+.config-section {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  position: relative;
+  padding-left: 12px;
+}
+
+.section-header h4::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #409EFF;
+  border-radius: 2px;
+}
+
+.table-name-row .label {
+  font-size: 16px;
+  color: #303133;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.parameter-header {
+  display: flex;
+  padding: 8px 0;
+  border-bottom: 1px solid #e4e7ed;
+  margin-bottom: 10px;
+}
+
+.parameter-header span {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.parameter-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.param-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.param-col:last-child {
+  flex: 0 0 80px;
+  text-align: center;
+}
+
+.section-content {
+  padding: 15px;
+  background: #f5f7fa;
+  border-radius: 4px;
 }
 </style> 
