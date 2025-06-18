@@ -3,18 +3,39 @@
     <div class="module-container">
       <!-- 左侧模块列表 -->
       <div class="module-list">
-        <h3>可用模块</h3>
-        <div class="module-items">
-          <div
-            v-for="module in availableModules"
-            :key="module.id"
-            class="module-item"
-            :data-type="module.type"
-            draggable="true"
-            @dragstart="handleDragStart($event, module)"
-          >
-            <el-icon><component :is="module.icon" /></el-icon>
-            <span>{{ module.name }}</span>
+        <h3>模块列表</h3>
+        <!-- 基础模块 -->
+        <div class="module-category">
+          <h4>基础模块</h4>
+          <div class="module-items">
+            <div
+              v-for="module in availableModules.basic"
+              :key="module.id"
+              class="module-item"
+              :data-type="module.type"
+              draggable="true"
+              @dragstart="handleDragStart($event, module)"
+            >
+              <img :src="module.icon" class="module-icon" alt="模块图标" />
+              <span>{{ module.name }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- 自定义模块 -->
+        <div class="module-category">
+          <h4>自定义模块</h4>
+          <div class="module-items">
+            <div
+              v-for="module in availableModules.custom"
+              :key="module.id"
+              class="module-item"
+              :data-type="module.type"
+              draggable="true"
+              @dragstart="handleDragStart($event, module)"
+            >
+              <img :src="module.icon" class="module-icon" alt="模块图标" />
+              <span>{{ module.name }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -90,7 +111,7 @@
             @contextmenu="showContextMenu($event, node)"
           >
             <div class="node-header">
-              <el-icon><component :is="node.icon" /></el-icon>
+              <img :src="node.icon" class="node-icon" alt="节点图标" />
               <span>{{ node.name }}</span>
             </div>
             <div class="node-ports">
@@ -406,60 +427,80 @@ import {
   FolderOpened
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
+import WaveIcon from '../assets/波形.svg'
 
 // 可用模块列表
-const availableModules = ref([
-  {
-    id: 1,
-    name: 'insert模块',
-    icon: 'Cpu',
-    type: 'cpu',
-    inputs: [
-      { name: '输入1', connected: false, id: 'input1' },
-      { name: '输入2', connected: false, id: 'input2' }
-    ],
-    outputs: [
-      { name: '输出1', connected: false, id: 'output1' },
-      { name: '输出2', connected: false, id: 'output2' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'update模块',
-    icon: 'DataLine',
-    type: 'data',
-    inputs: [
-      { name: '数据输入', connected: false, id: 'input1' }
-    ],
-    outputs: [
-      { name: '处理结果', connected: false, id: 'output1' }
-    ]
-  },
-  {
-    id: 3,
-    name: 'select模块',
-    icon: 'Monitor',
-    type: 'monitor',
-    inputs: [
-      { name: '信号输入', connected: false, id: 'input1' }
-    ],
-    outputs: [
-      { name: '监控输出', connected: false, id: 'output1' }
-    ]
-  },
-  {
-    id: 4,
-    name: '自定义',
-    icon: 'Histogram',
-    type: 'analysis',
-    inputs: [
-      { name: '数据输入', connected: false, id: 'input1' }
-    ],
-    outputs: [
-      { name: '分析结果', connected: false, id: 'output1' }
-    ]
-  }
-])
+const availableModules = ref({
+  basic: [
+    {
+      id: 1,
+      name: 'insert模块',
+      icon: WaveIcon,
+      type: 'cpu',
+      category: 'basic',
+      inputs: [
+        { name: '输入1', connected: false, id: 'input1' }
+      ],
+      outputs: [
+        { name: '输出1', connected: false, id: 'output1' }
+      ]
+    },
+    {
+      id: 2,
+      name: 'update模块',
+      icon: WaveIcon,
+      type: 'data',
+      category: 'basic',
+      inputs: [
+        { name: '数据输入', connected: false, id: 'input1' }
+      ],
+      outputs: [
+        { name: '处理结果', connected: false, id: 'output1' }
+      ]
+    },
+    {
+      id: 3,
+      name: 'select模块',
+      icon: WaveIcon,
+      type: 'monitor',
+      category: 'basic',
+      inputs: [
+        { name: '信号输入', connected: false, id: 'input1' }
+      ],
+      outputs: [
+        { name: '监控输出', connected: false, id: 'output1' }
+      ]
+    },
+    {
+      id: 4,
+      name: 'create模块',
+      icon: WaveIcon,
+      type: 'document',
+      category: 'basic',
+      inputs: [
+        { name: '数据输入', connected: false, id: 'input1' }
+      ],
+      outputs: [
+        { name: '创建结果', connected: false, id: 'output1' }
+      ]
+    }
+  ],
+  custom: [
+    {
+      id: 5,
+      name: '自定义模块',
+      icon: WaveIcon,
+      type: 'analysis',
+      category: 'custom',
+      inputs: [
+        { name: '数据输入', connected: false, id: 'input1' }
+      ],
+      outputs: [
+        { name: '分析结果', connected: false, id: 'output1' }
+      ]
+    }
+  ]
+})
 
 // 已放置的节点
 const placedNodes = ref([])
@@ -631,7 +672,9 @@ const handleDragStart = (event, module) => {
 // 处理模块放置
 const handleDrop = (event) => {
   const moduleId = parseInt(event.dataTransfer.getData('moduleId'))
-  const module = availableModules.value.find(m => m.id === moduleId)
+  // 在basic和custom分类中查找模块
+  const module = availableModules.value.basic.find(m => m.id === moduleId) || 
+                availableModules.value.custom.find(m => m.id === moduleId)
   
   if (module) {
     const rect = event.target.getBoundingClientRect()
@@ -1430,10 +1473,21 @@ const generateModule = async () => {
   font-weight: 600;
 }
 
+.module-category {
+  margin-bottom: 20px;
+}
+
+.module-category h4 {
+  margin: 0 0 10px 0;
+  color: #606266;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .module-items {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .module-item {
@@ -1447,6 +1501,48 @@ const generateModule = async () => {
   color: #606266;
   transition: all 0.3s;
   border: 1px solid #e4e7ed;
+}
+
+/* 为不同类型的模块添加不同的颜色 */
+.module-item[data-type="cpu"] {
+  border-left: 3px solid #409EFF;
+}
+
+.module-item[data-type="data"] {
+  border-left: 3px solid #67C23A;
+}
+
+.module-item[data-type="monitor"] {
+  border-left: 3px solid #E6A23C;
+}
+
+.module-item[data-type="document"] {
+  border-left: 3px solid #F56C6C;
+}
+
+.module-item[data-type="analysis"] {
+  border-left: 3px solid #909399;
+}
+
+/* 节点类型对应的颜色 */
+.node[data-type="cpu"] {
+  border-left: 3px solid #409EFF;
+}
+
+.node[data-type="data"] {
+  border-left: 3px solid #67C23A;
+}
+
+.node[data-type="monitor"] {
+  border-left: 3px solid #E6A23C;
+}
+
+.node[data-type="document"] {
+  border-left: 3px solid #F56C6C;
+}
+
+.node[data-type="analysis"] {
+  border-left: 3px solid #909399;
 }
 
 .module-item:hover {
@@ -1540,11 +1636,13 @@ const generateModule = async () => {
 .node-header {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e4e7ed;
   color: #303133;
   font-weight: 500;
+  text-align: center;
 }
 
 .node-ports {
@@ -1572,40 +1670,58 @@ const generateModule = async () => {
 }
 
 .input-port {
-  left: 0;
-  transform: translateX(-15%);
+  left: -4px;
+  top: 60%;
+  transform: translateY(-50%);
   justify-content: flex-end;
 }
 
 .output-port {
-  right: 0;
-  transform: translateX(15%);
+  right: -4px;
+  top: 60%;
+  transform: translateY(-50%);
   justify-content: flex-start;
 }
 
 .port-content {
+  position: relative;
   background: transparent;
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.3s;
-}
-
-.port:hover .port-content {
-  background: transparent;
+  display: flex;
+  align-items: center;
 }
 
 .port-label {
   white-space: nowrap;
   font-size: 12px;
-  color: #909399;
+  color: white;
   transition: all 0.3s;
-  padding: 2px 4px;
-  border-radius: 2px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  position: absolute;
+  background: rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  transform: translateY(-50%);
+  top: 50%;
 }
 
 .port:hover .port-label {
-  color: #409EFF;
-  background: rgba(64, 158, 255, 0.1);
+  opacity: 1;
+}
+
+.input-port .port-label {
+  right: 100%;
+  margin-right: 8px;
+}
+
+.output-port .port-label {
+  left: 100%;
+  margin-left: 8px;
 }
 
 .port-dot {
@@ -1622,75 +1738,10 @@ const generateModule = async () => {
   flex-shrink: 0;
 }
 
-.input-port .port-dot {
-  margin-right: -4px;
-}
-
-.output-port .port-dot {
-  margin-left: -4px;
-}
-
 .port:hover .port-dot {
   transform: scale(1.2);
   background: #67C23A;
   box-shadow: 0 0 0 1px #67C23A;
-}
-
-.port.connecting .port-dot {
-  background: #67C23A;
-  box-shadow: 0 0 0 2px #67C23A;
-}
-
-.port.can-connect .port-dot {
-  background: #67C23A;
-  box-shadow: 0 0 0 2px #67C23A;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(103, 194, 58, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 6px rgba(103, 194, 58, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(103, 194, 58, 0);
-  }
-}
-
-/* 为不同类型的模块添加不同的颜色 */
-.module-item[data-type="cpu"] {
-  border-left: 3px solid #409EFF;
-}
-
-.module-item[data-type="data"] {
-  border-left: 3px solid #67C23A;
-}
-
-.module-item[data-type="monitor"] {
-  border-left: 3px solid #E6A23C;
-}
-
-.module-item[data-type="analysis"] {
-  border-left: 3px solid #F56C6C;
-}
-
-/* 节点类型对应的颜色 */
-.node[data-type="cpu"] {
-  border-left: 3px solid #409EFF;
-}
-
-.node[data-type="data"] {
-  border-left: 3px solid #67C23A;
-}
-
-.node[data-type="monitor"] {
-  border-left: 3px solid #E6A23C;
-}
-
-.node[data-type="analysis"] {
-  border-left: 3px solid #F56C6C;
 }
 
 .port.connecting .port-label {
@@ -1931,5 +1982,21 @@ h3 {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
+}
+
+.module-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  object-fit: contain; 
+}
+
+.node-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
 }
 </style> 
