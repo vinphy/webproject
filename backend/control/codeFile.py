@@ -194,6 +194,11 @@ async def read_file(path: str):
 
 def generate_sql(node_data: NodeData) -> str:
     """生成SQL插入语句"""
+    # 如果有数据库名和表名，保存表名对应关系
+    if node_data.databaseName and node_data.tableName:
+        save_table_name(node_data.databaseName, node_data.tableName)
+
+    
     # 获取列名和值
     columns = [param.name for param in node_data.parameters]
     values = [f"'{param.value}'" for param in node_data.parameters]  # 添加引号
@@ -223,7 +228,7 @@ def generate_sql(node_data: NodeData) -> str:
         
         # 如果有数据库名，先创建数据库
         if node_data.databaseName:
-            save_database_name(node_data.databaseName)
+            # save_database_name(node_data.databaseName)
             sql_parts.append(f"CREATE DATABASE IF NOT EXISTS {node_data.databaseName};")
             sql_parts.append(f"USE {node_data.databaseName};")
         
@@ -254,9 +259,7 @@ def generate_sql(node_data: NodeData) -> str:
                           "\n);"
         sql_parts.append(create_table_sql)
         
-        # 保存表名到对应关系
-        if node_data.databaseName and node_data.tableName:
-            save_table_name(node_data.databaseName, node_data.tableName)
+        
         
         sql = "\n".join(sql_parts)
     return sql
@@ -352,12 +355,15 @@ async def get_databases():
     """获取数据库列表"""
     try:
         workspace_path = FileUtil.get_workspace_path()
-        database_file = os.path.join(workspace_path, "database.txt")
+        tables_file = os.path.join(workspace_path, "tables.json")
         
         databases = []
-        if os.path.exists(database_file):
-            with open(database_file, 'r', encoding='utf-8') as f:
-                databases = [line.strip() for line in f.readlines() if line.strip()]
+        
+        # 从tables.json中提取数据库列表
+        if os.path.exists(tables_file):
+            with open(tables_file, 'r', encoding='utf-8') as f:
+                database_tables = json.load(f)
+                databases = list(database_tables.keys())
         
         return {
             'status': 'success',
@@ -368,36 +374,14 @@ async def get_databases():
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-def save_database_name(database_name: str):
-    """保存数据库名到文件"""
-    try:
-        workspace_path = FileUtil.get_workspace_path()
-        database_file = os.path.join(workspace_path, "database.txt")
-        
-        # 确保目录存在
-        os.makedirs(os.path.dirname(database_file), exist_ok=True)
-        
-        # 读取现有数据库列表
-        existing_databases = []
-        if os.path.exists(database_file):
-            with open(database_file, 'r', encoding='utf-8') as f:
-                existing_databases = [line.strip() for line in f.readlines() if line.strip()]
-        
-        # 如果数据库名不存在，则添加
-        if database_name not in existing_databases:
-            with open(database_file, 'a', encoding='utf-8') as f:
-                f.write(f"{database_name}\n")
-        
-        return True
-    except Exception as e:
-        logger.error(f"保存数据库名失败: {str(e)}")
-        return False
-
 def save_table_name(database_name: str, table_name: str):
     """保存表名到数据库表对应关系文件"""
     try:
         workspace_path = FileUtil.get_workspace_path()
         tables_file = os.path.join(workspace_path, "tables.json")
+        
+        # 确保目录存在
+        os.makedirs(workspace_path, exist_ok=True)
         
         # 读取现有的数据库表对应关系
         database_tables = {}
@@ -475,11 +459,11 @@ async def generate_code(node_data: NodeData):
         with open(sql_file_path, "w", encoding="utf-8") as f:
             f.write(sql_content)
         
-        # 生成JSON文件
-        json_content = generate_xml(node_data)
-        json_file_path = os.path.join(module_dir, f"{node_data.name}.json")
-        with open(json_file_path, "w", encoding="utf-8") as f:
-            f.write(json_content)
+        # # 生成JSON文件
+        # json_content = generate_xml(node_data)
+        # json_file_path = os.path.join(module_dir, f"{node_data.name}.json")
+        # with open(json_file_path, "w", encoding="utf-8") as f:
+        #     f.write(json_content)
         
         # 生成可拖拽模型文件
         draggable_content = generate_draggable_model(node_data)
@@ -504,7 +488,7 @@ async def generate_code(node_data: NodeData):
             "message": "代码生成成功",
             "files": {
                 "sql": sql_file_path,
-                "json": json_file_path,
+                # "json": json_file_path,
                 "draggable": draggable_file_path,
                 "cpp": cpp_file_path,
                 "header": header_file_path

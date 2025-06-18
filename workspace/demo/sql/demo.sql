@@ -1,5 +1,5 @@
 CREATE DATABASE IF NOT EXISTS demo;
 USE demo;
-CREATE TABLE test (
+CREATE TABLE person (
     name VARCHAR(255)
 );

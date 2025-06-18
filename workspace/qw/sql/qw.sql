@@ -1,1 +1,0 @@
-UPDATE test SET sd = 'df';

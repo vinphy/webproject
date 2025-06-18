@@ -1,1 +1,0 @@
-UPDATE test SET sf = 'sdf';

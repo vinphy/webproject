@@ -47,6 +47,9 @@
         @dragover.prevent
         @drop="handleDrop"
         @contextmenu="handleCanvasContextMenu"
+        @keydown="handleKeyDown"
+        @click="handleCanvasClick"
+        tabindex="0"
       >
         <div class="canvas" ref="canvasRef" @drop="handleFileDrop" @dragover="handleDragOver" @dragenter="handleDragEnter">
           <!-- 连线 -->
@@ -108,8 +111,10 @@
               transform: `scale(${node.scale || 1})`
             }"
             @mousedown="startDrag($event, node)"
+            @click="selectNode(node)"
             @dblclick="handleNodeDblClick(node)"
             @contextmenu="showContextMenu($event, node)"
+            :class="{ 'selected': selectedNode && selectedNode.id === node.id }"
           >
             <div class="node-header">
               <img :src="node.icon" class="node-icon" alt="节点图标" />
@@ -428,6 +433,10 @@
         <el-icon><Document /></el-icon>
         生成代码
       </div>
+      <div class="menu-item" @click="handleDeleteNode">
+        <el-icon><Delete /></el-icon>
+        删除节点
+      </div>
     </div>
 
     <!-- 画布右键菜单 -->
@@ -480,7 +489,8 @@ import {
   Document,
   Back,
   Folder,
-  FolderOpened
+  FolderOpened,
+  Delete
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 
@@ -630,6 +640,9 @@ const fileContentCache = ref(new Map())
 // 添加canvas引用
 const canvasRef = ref(null)
 
+// 添加选中节点状态
+const selectedNode = ref(null)
+
 // 预加载数据库列表
 const preloadDatabases = async () => {
   try {
@@ -640,6 +653,7 @@ const preloadDatabases = async () => {
         databaseList.value = data.databases
         // 缓存数据库列表
         databaseCache.value.set('databases', data.databases)
+        console.log('数据库列表加载成功:', data.databases)
       }
     }
   } catch (error) {
@@ -662,10 +676,12 @@ const preloadTables = async (databaseName = null) => {
           // 获取指定数据库的表列表
           tableList.value = data.tables
           tableCache.value.set(databaseName, data.tables)
+          console.log(`数据库 ${databaseName} 的表列表加载成功:`, data.tables)
         } else {
           // 获取所有数据库表对应关系
           databaseTables.value = data.database_tables
           tableCache.value.set('all', data.database_tables)
+          console.log('所有数据库表对应关系加载成功:', data.database_tables)
         }
       }
     }
@@ -1527,6 +1543,8 @@ const generateModule = async () => {
 
 // 添加新的方法
 const onDatabaseChange = async () => {
+  console.log('数据库切换:', currentNode.value.databaseName)
+  
   // 清空当前表名
   currentNode.value.tableName = ''
   
@@ -1537,8 +1555,10 @@ const onDatabaseChange = async () => {
     // 如果不是create类型，自动选择第一个表
     if (currentNode.value.type !== 'create') {
       const tables = getTablesByDatabase(currentNode.value.databaseName)
+      console.log(`数据库 ${currentNode.value.databaseName} 的表列表:`, tables)
       if (tables.length > 0) {
         currentNode.value.tableName = tables[0]
+        console.log('自动选择第一个表:', tables[0])
       }
     }
   }
@@ -1744,6 +1764,73 @@ const handleFileDragStart = async (event, file) => {
     event.preventDefault()
   }
 }
+
+// 添加新的方法
+const handleKeyDown = (event) => {
+  // 处理Delete键删除选中的节点
+  if (event.key === 'Delete' && selectedNode.value) {
+    deleteSelectedNode()
+  }
+}
+
+const selectNode = (node) => {
+  selectedNode.value = node
+  console.log('选中节点:', node)
+}
+
+const handleDeleteNode = () => {
+  if (!contextMenuNode.value) return
+  
+  // 删除与节点相关的连线
+  connections.value = connections.value.filter(conn => 
+    conn.start.node.id !== contextMenuNode.value.id && conn.end.node.id !== contextMenuNode.value.id
+  )
+  
+  // 删除节点
+  const index = placedNodes.value.findIndex(node => node.id === contextMenuNode.value.id)
+  if (index !== -1) {
+    placedNodes.value.splice(index, 1)
+  }
+  
+  // 如果删除的是当前选中的节点，清除选中状态
+  if (selectedNode.value && selectedNode.value.id === contextMenuNode.value.id) {
+    selectedNode.value = null
+  }
+  
+  // 隐藏右键菜单
+  hideContextMenu()
+  
+  ElMessage.success('节点已删除')
+}
+
+const deleteSelectedNode = () => {
+  if (!selectedNode.value) return
+  
+  // 删除与节点相关的连线
+  connections.value = connections.value.filter(conn => 
+    conn.start.node.id !== selectedNode.value.id && conn.end.node.id !== selectedNode.value.id
+  )
+  
+  // 删除节点
+  const index = placedNodes.value.findIndex(node => node.id === selectedNode.value.id)
+  if (index !== -1) {
+    placedNodes.value.splice(index, 1)
+  }
+  
+  // 清除选中状态
+  selectedNode.value = null
+  
+  ElMessage.success('节点已删除')
+}
+
+const handleCanvasClick = (event) => {
+  // 如果点击的是画布空白区域，取消选中
+  if (event.target.classList.contains('canvas-container') || event.target.classList.contains('canvas')) {
+    selectedNode.value = null
+  }
+}
+
+// 删除重复的onDatabaseChange函数，保留第1536行的函数
 </script>
 
 <style scoped>
@@ -2442,5 +2529,16 @@ h3 {
 
 .draggable-file:active {
   cursor: grabbing;
+}
+
+/* 选中节点样式 */
+.node.selected {
+  box-shadow: 0 0 0 2px #409EFF;
+  border-color: #409EFF;
+}
+
+.node:hover {
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+  border-color: #409EFF;
 }
 </style> 

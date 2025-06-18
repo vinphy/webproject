@@ -1,1 +1,0 @@
-INSERT INTO test (python) VALUES ('4');
