@@ -1131,7 +1131,7 @@ const handleGenerateCode = async () => {
     })
     
     // 显示生成的文件路径
-    ElMessageBox.alert(
+    await ElMessageBox.alert(
       `生成的文件路径：\n\n` +
       `SQL文件：${result.files.sql}\n` +
       `XML文件：${result.files.xml}\n` +
@@ -1143,6 +1143,28 @@ const handleGenerateCode = async () => {
         type: 'success'
       }
     )
+    
+    // 刷新文件树
+    await fetchFileStructure()
+    
+    // 自动展开新生成的模块
+    const newModulePath = moduleName
+    expandedFolders.value.add(newModulePath)
+    expandedFolders.value.add(`${newModulePath}/src`)
+    
+    // 预加载新生成的文件内容
+    const newFiles = [
+      { path: `${newModulePath}/sql/${moduleName}.sql`, type: 'file' },
+      { path: `${newModulePath}/${moduleName}.xml`, type: 'file' },
+      { path: `${newModulePath}/src/${moduleName}.cpp`, type: 'file' },
+      { path: `${newModulePath}/src/${moduleName}.h`, type: 'file' }
+    ]
+    await preloadFileContents(newFiles)
+    
+    // // 自动打开第一个文件
+    // if (newFiles.length > 0) {
+    //   await openFile(newFiles[0])
+    // }
     
   } catch (error) {
     console.error('代码生成错误:', error)
