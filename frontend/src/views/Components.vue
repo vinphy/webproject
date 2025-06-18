@@ -114,6 +114,7 @@
               <img :src="node.icon" class="node-icon" alt="节点图标" />
               <span>{{ node.name }}</span>
             </div>
+            
             <div class="node-ports">
               <div class="ports-container">
                 <div 
@@ -133,9 +134,9 @@
                   <div class="port-dot"></div>
                   <div class="port-content">
                     <span class="port-label">{{ input.name }}</span>
+                  </div>
                 </div>
-              </div>
-                <div 
+                <div
                   v-for="(output, index) in node.outputs" 
                   :key="'output-' + index"
                   class="port output-port"
@@ -153,6 +154,30 @@
                     <span class="port-label">{{ output.name }}</span>
                   </div>
                   <div class="port-dot"></div>
+                </div>
+              </div>
+              
+              <!-- 参数信息显示在端口区域内 -->
+              <div v-if="node.databaseName || node.tableName || (node.parameters && node.parameters.length > 0) || node.condition" class="node-params-display">
+                <div v-if="node.databaseName" class="param-line">
+                  <span class="param-label">DB:</span>
+                  <span class="param-text">{{ node.databaseName }}</span>
+                </div>
+                <div v-if="node.tableName" class="param-line">
+                  <span class="param-label">表:</span>
+                  <span class="param-text">{{ node.tableName }}</span>
+                </div>
+                <div v-if="node.parameters && node.parameters.length > 0" class="param-line">
+                  <span class="param-label">列:</span>
+                  <span class="param-text">
+                    {{ node.parameters.slice(0, 2).map(p => p.name).join(', ') }}{{ node.parameters.length > 2 ? '...' : '' }}
+                  </span>
+                </div>
+                <div v-if="node.condition" class="param-line">
+                  <span class="param-label">条件:</span>
+                  <span class="param-text">
+                    {{ node.condition.length > 20 ? node.condition.substring(0, 20) + '...' : node.condition }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1681,7 +1706,7 @@ const onDatabaseChange = async () => {
 
 .node {
   position: absolute;
-  width: 220px;
+  width: 120px;
   background: #ffffff;
   border: 1px solid #e4e7ed;
   border-radius: 8px;
@@ -1712,8 +1737,9 @@ const onDatabaseChange = async () => {
 
 .node-ports {
   position: relative;
-  min-height: 120px;
+  min-height: 50px;
   margin: 0 -12px;
+  border-bottom: none;
 }
 
 .ports-container {
@@ -2139,4 +2165,46 @@ h3 {
   background: #f5f7fa;
   border-radius: 4px;
 }
+
+/* 节点参数信息显示样式 */
+.node-params-display {
+  position: absolute;
+  left: 10px;
+  right: 0;
+  top: 0;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 9px;
+  line-height: 1.2;
+  border-radius: 8px 8px 0 0;
+}
+
+.param-line {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1px;
+  color: #606266;
+}
+
+.param-line:last-child {
+  margin-bottom: 0;
+}
+
+.param-label {
+  font-weight: 600;
+  color: #909399;
+  min-width: 25px;
+  margin-right: 3px;
+  font-size: 9px;
+}
+
+.param-text {
+  color: #409EFF;
+  font-weight: 500;
+  word-break: break-all;
+  flex: 1;
+  font-size: 9px;
+}
+
+/* 节点样式 */
 </style> 
