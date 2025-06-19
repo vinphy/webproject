@@ -85,21 +85,18 @@
           <div class="canvas" ref="canvasRef" @drop="handleFileDrop" @dragover="handleDragOver" @dragenter="handleDragEnter">
             <!-- 连线层 -->
             <svg class="connections-layer">
-              <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <defs v-if="tab.id === tabs[0].id">
+                <marker id="arrowhead-global" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                   <polygon points="0 0, 10 3.5, 0 7" fill="#409EFF" />
-                </marker>
-                <marker id="arrowhead-temp" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#67C23A" />
                 </marker>
               </defs>
               <g class="connection-group">
                 <path
                   v-for="connection in connections"
                   :key="connection.id"
-                  :d="`M ${connection.startPos.x} ${connection.startPos.y} L ${connection.endPos.x} ${connection.endPos.y}`"
-                  class="connection-path"
-                  :class="{ 'animated': connection.animated }"
+                  :d="bezierPath(connection.startPos, connection.endPos)"
+                  class="connection-path animated"
+                  :marker-end="globalArrowheadUrl"
                 />
               </g>
             </svg>
@@ -661,6 +658,9 @@ const tabs = ref([
   }
 ])
 const activeTabId = ref('main')
+
+// 绝对路径 marker-end 兼容写法
+const globalArrowheadUrl = computed(() => `url('${window.location.origin + window.location.pathname}#arrowhead-global')`)
 
 // 预加载数据库列表
 const preloadDatabases = async () => {
@@ -2026,6 +2026,13 @@ const openTestGraphTab = (nodes, connections, fileName) => {
   tabs.value[tabs.value.length - 1].active = true
   switchTab(newTabId)
 }
+
+// 贝塞尔曲线路径生成函数
+const bezierPath = (start, end) => {
+  if (!start || !end) return ''
+  const offset = Math.max(Math.abs(end.x - start.x) / 2, 40)
+  return `M ${start.x} ${start.y} C ${start.x + offset} ${start.y}, ${end.x - offset} ${end.y}, ${end.x} ${end.y}`
+}
 </script>
 
 <style scoped>
@@ -2206,7 +2213,7 @@ const openTestGraphTab = (nodes, connections, fileName) => {
   stroke-width: 2;
   pointer-events: none;
   transition: none;
-  marker-end: url(#arrowhead);
+  marker-end: url(#arrowhead-global);
   will-change: d;
 }
 
@@ -2221,6 +2228,9 @@ const openTestGraphTab = (nodes, connections, fileName) => {
 .connection-path.animated {
   stroke-dasharray: 5;
   animation: dash 1s linear infinite;
+  stroke: #409EFF;
+  stroke-width: 2;
+  fill: none;
 }
 
 @keyframes dash {
