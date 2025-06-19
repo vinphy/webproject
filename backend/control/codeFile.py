@@ -194,15 +194,17 @@ async def read_file(path: str):
 
 def generate_sql(node_data: NodeData) -> str:
     """生成SQL插入语句"""
-    # 如果有数据库名和表名，保存表名对应关系
-    if node_data.databaseName and node_data.tableName:
-        save_table_name(node_data.databaseName, node_data.tableName)
+    
 
     
     # 获取列名和值
     columns = [param.name for param in node_data.parameters]
     values = [f"'{param.value}'" for param in node_data.parameters]  # 添加引号
     type = node_data.type
+
+    # 如果有数据库名和表名，保存表名对应关系
+    if node_data.databaseName and node_data.tableName:
+        save_table_name(node_data.databaseName, node_data.tableName,columns)
     
     if type == 'insert':
         # 构建SQL语句
@@ -374,33 +376,24 @@ async def get_databases():
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-def save_table_name(database_name: str, table_name: str):
-    """保存表名到数据库表对应关系文件"""
+def save_table_name(database_name: str, table_name: str, columns: list):
+    """保存表名和字段到数据库表对应关系文件，结构为 {db: {table: [columns]}}"""
     try:
         workspace_path = FileUtil.get_workspace_path()
         tables_file = os.path.join(workspace_path, "tables.json")
-        
-        # 确保目录存在
         os.makedirs(workspace_path, exist_ok=True)
-        
         # 读取现有的数据库表对应关系
         database_tables = {}
         if os.path.exists(tables_file):
             with open(tables_file, 'r', encoding='utf-8') as f:
                 database_tables = json.load(f)
-        
-        # 确保数据库存在
+        # 只用新结构
         if database_name not in database_tables:
-            database_tables[database_name] = []
-        
-        # 如果表名不存在，则添加
-        if table_name not in database_tables[database_name]:
-            database_tables[database_name].append(table_name)
-        
-        # 保存更新后的对应关系
+            database_tables[database_name] = {}
+        database_tables[database_name][table_name] = columns or []
+        # 保存更新
         with open(tables_file, 'w', encoding='utf-8') as f:
             json.dump(database_tables, f, ensure_ascii=False, indent=2)
-        
         return True
     except Exception as e:
         logger.error(f"保存表名失败: {str(e)}")

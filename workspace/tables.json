@@ -5,5 +5,12 @@
   ],
   "demo1": [
     "tbale"
-  ]
+  ],
+  "demo3": {
+    "person": [
+      "name",
+      "age",
+      "gender"
+    ]
+  }
 }

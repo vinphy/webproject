@@ -258,7 +258,22 @@
             </div>
             <div v-for="(param, index) in currentNode.parameters" :key="index" class="parameter-item">
               <el-input v-model="param.name" placeholder="字段名" class="param-col" />
-              <el-input v-model="param.value" placeholder="字段值/类型" class="param-col" />
+              <template v-if="currentNode.type === 'create'">
+                <el-select v-model="param.value" placeholder="字段类型" class="param-col" style="width: 100%">
+                  <el-option label="INT" value="INT" />
+                  <el-option label="VARCHAR" value="VARCHAR" />
+                  <el-option label="CHAR" value="CHAR" />
+                  <el-option label="TEXT" value="TEXT" />
+                  <el-option label="DATE" value="DATE" />
+                  <el-option label="DATETIME" value="DATETIME" />
+                  <el-option label="FLOAT" value="FLOAT" />
+                  <el-option label="DOUBLE" value="DOUBLE" />
+                  <el-option label="BOOLEAN" value="BOOLEAN" />
+                </el-select>
+              </template>
+              <template v-else>
+                <el-input v-model="param.value" placeholder="字段值" class="param-col" />
+              </template>
               <div class="param-col">
                 <el-button type="danger" size="small" @click="removeParameter(index)">删除</el-button>
               </div>
@@ -267,7 +282,7 @@
         </div>
 
         <!-- 条件配置 -->
-        <div class="config-section">
+        <div class="config-section" v-if="currentNode.type !== 'create'">
           <div class="section-header">
             <h4>条件语句</h4>
           </div>
