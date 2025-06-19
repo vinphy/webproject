@@ -1,0 +1,37 @@
+{
+  "type": "draggable_model",
+  "version": "1.0",
+  "model_config": {
+    "name": "t",
+    "type": "insert",
+    "icon": "/src/assets/demo.svg",
+    "category": "basic",
+    "inputs": [
+      {
+        "name": "输入",
+        "connected": false,
+        "id": "input"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "输出",
+        "connected": false,
+        "id": "output"
+      }
+    ]
+  },
+  "database_config": {
+    "database_name": "demo1",
+    "table_name": "tbale"
+  },
+  "parameters": [
+    {
+      "name": "yy",
+      "value": "ee"
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-19 09:48:13",
+  "description": "预配置的 INSERT 模型"
+}

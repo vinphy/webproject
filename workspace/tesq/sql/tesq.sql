@@ -1,0 +1,5 @@
+CREATE DATABASE IF NOT EXISTS demo1;
+USE demo1;
+CREATE TABLE tbale (
+    name VARCHAR(255)
+);

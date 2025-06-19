@@ -1,0 +1,1 @@
+INSERT INTO tbale (yy) VALUES ('ee');

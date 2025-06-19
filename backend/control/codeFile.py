@@ -544,3 +544,22 @@ async def parse_draggable_model(request: DraggableModelRequest):
     except Exception as e:
         logger.error(f"解析拖拽模型文件失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/parse_draggable_test")
+async def parse_draggable_test(request: DraggableModelRequest):
+    """解析 test.json 文件，提取 nodes 和 connections"""
+    try:
+        data = json.loads(request.file_content)
+        nodes = data.get("nodes", [])
+        connections = data.get("connections", [])
+        return {
+            "status": "success",
+            "nodes": nodes,
+            "connections": connections,
+            "description": data.get("metadata", {}).get("description", "模型图")
+        }
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="JSON格式错误")
+    except Exception as e:
+        logger.error(f"解析 test.json 文件失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

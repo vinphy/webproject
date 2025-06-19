@@ -93,7 +93,6 @@
                   <polygon points="0 0, 10 3.5, 0 7" fill="#67C23A" />
                 </marker>
               </defs>
-              
               <g class="connection-group">
                 <path
                   v-for="connection in connections"
@@ -104,7 +103,6 @@
                 />
               </g>
             </svg>
-            
             <!-- 节点 -->
             <div
               v-for="node in placedNodes"
@@ -128,7 +126,6 @@
                 <span>{{ node.name }}</span>
                 <span class="node-type">({{ node.type }})</span>
               </div>
-              
               <div class="node-ports">
                 <div class="ports-container">
                   <div 
@@ -335,7 +332,7 @@
                     </el-icon>
                     <span 
                       class="file-name"
-                      :class="{ 'draggable-file': file.name.endsWith('_model.json') }"
+                      :class="{ 'draggable-file': file.name.endsWith('_model.json') || file.name.endsWith('_test.json') }"
                       @dblclick="file.type === 'file' ? openFile(file) : null"
                       @click="file.type === 'directory' ? toggleFolder(file) : null"
                       @dragstart="handleFileDragStart($event, file)"
@@ -365,7 +362,7 @@
                         </el-icon>
                         <span 
                           class="file-name"
-                          :class="{ 'draggable-file': child.name.endsWith('_model.json') }"
+                          :class="{ 'draggable-file': child.name.endsWith('_model.json') || child.name.endsWith('_test.json')  }"
                           @dblclick="child.type === 'file' ? openFile(child) : null"
                           @click="child.type === 'directory' ? toggleFolder(child) : null"
                           @dragstart="handleFileDragStart($event, child)"
@@ -395,7 +392,7 @@
                             </el-icon>
                             <span 
                               class="file-name"
-                              :class="{ 'draggable-file': grandChild.name.endsWith('_model.json') }"
+                              :class="{ 'draggable-file': grandChild.name.endsWith('_model.json') || grandChild.name.endsWith('_test.json')  }"
                               @dblclick="grandChild.type === 'file' ? openFile(grandChild) : null"
                               @click="grandChild.type === 'directory' ? toggleFolder(grandChild) : null"
                               @dragstart="handleFileDragStart($event, grandChild)"
@@ -1790,8 +1787,12 @@ const handleDragEnter = (event) => {
 // 文件拖拽开始处理
 const handleFileDragStart = async (event, file) => {
   // 只处理_model.json文件
-  if (!file.name.endsWith('_model.json')) {
+  if (!file.name.endsWith('_model.json') &&  !file.name.endsWith('_test.json') ) {
     event.preventDefault()
+    return
+  }
+  if(file.name.endsWith('_test.json')){
+    handleTestJsonDrag(event, file)
     return
   }
   
@@ -1967,6 +1968,63 @@ const closeTab = (tabId) => {
   if (tabs.value.length === 0) {
     addNewTab('新绘制界面')
   }
+}
+
+// 封装 _test.json 拖拽处理
+const handleTestJsonDrag = async (event, file) => {
+  try {
+    let content
+    if (fileContentCache.value.has(file.path)) {
+      content = fileContentCache.value.get(file.path)
+    } else {
+      const response = await fetch(`http://localhost:8000/api/code/read_file?path=${encodeURIComponent(file.path)}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.status === 'success') {
+          content = data.content
+          fileContentCache.value.set(file.path, content)
+        }
+      }
+    }
+    if (content) {
+      // 调用后端解析接口
+      const response = await fetch('http://localhost:8000/api/code/parse_draggable_test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_content: content })
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || '解析 test.json 文件失败')
+      }
+      const result = await response.json()
+      if (result.status === 'success') {
+        // 新开一个tab或页面，传递 nodes/connections
+        openTestGraphTab(result.nodes, result.connections, file.name)
+      }
+    } else {
+      event.preventDefault()
+    }
+  } catch (error) {
+    console.error('_test.json文件拖拽准备失败：', error)
+    event.preventDefault()
+  }
+}
+
+// 新开tab并绘制test.json
+const openTestGraphTab = (nodes, connections, fileName) => {
+  const newTabId = `tab_${Date.now()}`
+  tabs.value.push({
+    id: newTabId,
+    title: fileName.replace('.json', ''),
+    active: true,
+    nodes,
+    connections,
+    selectedNode: null
+  })
+  tabs.value.forEach(tab => tab.active = false)
+  tabs.value[tabs.value.length - 1].active = true
+  switchTab(newTabId)
 }
 </script>
 
