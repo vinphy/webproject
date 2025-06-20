@@ -1,0 +1,41 @@
+{
+  "type": "draggable_model",
+  "version": "1.0",
+  "model_config": {
+    "name": "select_7",
+    "type": "select",
+    "icon": "/src/assets/test.svg",
+    "category": "basic",
+    "inputs": [
+      {
+        "name": "输入",
+        "connected": false,
+        "id": "input"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "输出",
+        "connected": false,
+        "id": "output"
+      }
+    ]
+  },
+  "database_config": {
+    "database_name": "demo3",
+    "table_name": "test1"
+  },
+  "parameters": [
+    {
+      "name": "yu",
+      "value": ""
+    },
+    {
+      "name": "yu",
+      "value": ""
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-20 10:27:16",
+  "description": "预配置的 SELECT 模型"
+}

@@ -556,3 +556,28 @@ async def parse_draggable_test(request: DraggableModelRequest):
     except Exception as e:
         logger.error(f"解析 test.json 文件失败: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/columns")
+async def get_columns(database_name: str, table_name: str):
+    """获取指定数据库和表的列名"""
+    try:
+        workspace_path = FileUtil.get_workspace_path()
+        tables_file = os.path.join(workspace_path, "tables.json")
+        if not os.path.exists(tables_file):
+            raise HTTPException(status_code=404, detail="tables.json不存在")
+        with open(tables_file, 'r', encoding='utf-8') as f:
+            database_tables = json.load(f)
+        if database_name not in database_tables:
+            raise HTTPException(status_code=404, detail=f"数据库 {database_name} 不存在")
+        tables = database_tables[database_name]
+        if table_name not in tables:
+            raise HTTPException(status_code=404, detail=f"表 {table_name} 不存在于数据库 {database_name}")
+        columns = tables[table_name]
+        return {
+            'status': 'success',
+            'columns': columns
+        }
+    except Exception as e:
+        logger.error(f"获取列名失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))

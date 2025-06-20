@@ -253,12 +253,32 @@
           <div class="section-content">
             <div class="parameter-header">
               <span class="param-col">列名</span>
-              <span class="param-col">值</span>
+              <span v-if="currentNode.type !== 'select'" class="param-col">值</span>
               <span class="param-col">操作</span>
             </div>
             <div v-for="(param, index) in currentNode.parameters" :key="index" class="parameter-item">
-              <el-input v-model="param.name" placeholder="字段名" class="param-col" />
-              <template v-if="currentNode.type === 'create'">
+              <!-- select类型节点，列名下拉，值字段隐藏 -->
+              <template v-if="currentNode.type === 'select'">
+                <el-select
+                  v-model="param.name"
+                  placeholder="选择列名"
+                  class="param-col"
+                  style="width: 100%"
+                  :disabled="!currentNode.databaseName || !currentNode.tableName || currentNode.parameters.some((p, i) => p.name === col && i !== index)"
+                  filterable
+                  @focus="async () => { param._columns = await getColumnsByDatabaseTable(currentNode.databaseName, currentNode.tableName) }"
+                >
+                  <el-option
+                    v-for="col in param._columns || []"
+                    :key="col"
+                    :label="col"
+                    :value="col"
+                  />
+                </el-select>
+                <!-- 值字段隐藏 -->
+              </template>
+              <template v-else-if="currentNode.type === 'create'">
+                <el-input v-model="param.name" placeholder="字段名" class="param-col" />
                 <el-select v-model="param.value" placeholder="字段类型" class="param-col" style="width: 100%">
                   <el-option label="INT" value="INT" />
                   <el-option label="VARCHAR" value="VARCHAR" />
@@ -272,6 +292,7 @@
                 </el-select>
               </template>
               <template v-else>
+                <el-input v-model="param.name" placeholder="字段名" class="param-col" />
                 <el-input v-model="param.value" placeholder="字段值" class="param-col" />
               </template>
               <div class="param-col">
@@ -641,6 +662,9 @@ const databaseCache = ref(new Map())
 const tableList = ref([])
 const tableCache = ref(new Map())
 const databaseTables = ref({})
+
+// 新增：列名缓存
+const columnsCache = ref(new Map())
 
 // 添加新的状态变量
 const showModelMenu = ref(false)
@@ -1147,17 +1171,21 @@ const removePort = (type, index) => {
 }
 
 // 添加参数
-const addParameter = () => {
+const addParameter = async () => {
   if (!currentNode.value) return
-  
   if (!currentNode.value.parameters) {
     currentNode.value.parameters = []
   }
-  
-  currentNode.value.parameters.push({
-    name: '',
-    value: ''
-  })
+  if (currentNode.value.type === 'select') {
+    // select类型允许多行，每次push新行
+    const param = { name: '', value: '', _columns: [] }
+    if (currentNode.value.databaseName && currentNode.value.tableName) {
+      param._columns = await getColumnsByDatabaseTable(currentNode.value.databaseName, currentNode.value.tableName)
+    }
+    currentNode.value.parameters.push(param)
+  } else {
+    currentNode.value.parameters.push({ name: '', value: '' })
+  }
 }
 
 // 删除参数
@@ -1169,13 +1197,28 @@ const removeParameter = (index) => {
 // 保存配置
 const saveConfig = () => {
   if (!currentNode.value) return
-  
+
+  // select类型参数校验
+  if (currentNode.value.type === 'select') {
+    const names = currentNode.value.parameters.map(p => p.name)
+    const hasEmpty = names.some(n => !n)
+    const hasDuplicate = names.length !== new Set(names).size
+    if (hasEmpty) {
+      ElMessage.error('列名不能为空，请选择具体字段')
+      return
+    }
+    if (hasDuplicate) {
+      ElMessage.error('不能选择重复的列名')
+      return
+    }
+  }
+
   // 更新节点配置
   const node = placedNodes.value.find(n => n.id === currentNode.value.id)
   if (node) {
     Object.assign(node, currentNode.value)
   }
-  
+
   configDialogVisible.value = false
 }
 
@@ -2052,6 +2095,29 @@ const bezierPath = (start, end) => {
   const offset = Math.max(Math.abs(end.x - start.x) / 2, 40)
   return `M ${start.x} ${start.y} C ${start.x + offset} ${start.y}, ${end.x - offset} ${end.y}, ${end.x} ${end.y}`
 }
+
+// 新增：通过数据库和表名获取列名
+const getColumnsByDatabaseTable = async (databaseName, tableName) => {
+  if (!databaseName || !tableName) return [];
+  const key = `${databaseName}::${tableName}`;
+  if (columnsCache.value.has(key)) {
+    return columnsCache.value.get(key);
+  }
+  try {
+    const url = `http://localhost:8000/api/code/columns?database_name=${encodeURIComponent(databaseName)}&table_name=${encodeURIComponent(tableName)}`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'success') {
+        columnsCache.value.set(key, data.columns);
+        return data.columns;
+      }
+    }
+  } catch (error) {
+    console.error('获取列名失败:', error);
+  }
+  return [];
+};
 </script>
 
 <style scoped>
