@@ -245,7 +245,7 @@
         </div>
 
         <!-- 参数配置 -->
-        <div class="config-section">
+        <div class="config-section" v-if="currentNode.type !== 'delete'">
           <div class="section-header">
             <h4>字段配置</h4>
             <el-button type="primary" size="small" @click="addParameter">添加参数</el-button>
