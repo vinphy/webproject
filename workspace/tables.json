@@ -1,16 +1,17 @@
 {
-  "demo": [
-    "test",
-    "person"
-  ],
-  "demo1": [
-    "tbale"
-  ],
   "demo3": {
     "person": [
       "name",
       "age",
       "gender"
+    ],
+    "test1": [
+      "yu"
+    ]
+  },
+  "demo": {
+    "u": [
+      "yu"
     ]
   }
 }

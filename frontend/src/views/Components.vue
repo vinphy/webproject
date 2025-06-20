@@ -726,7 +726,11 @@ const preloadTables = async (databaseName = null) => {
 
 // 根据数据库名获取表列表
 const getTablesByDatabase = (databaseName) => {
-  return databaseTables.value[databaseName] || []
+  const tablesObj = databaseTables.value[databaseName] || {}
+  //获取所有表名(对象的键)
+  const tableNames = Object.keys(tablesObj)
+  console.log('根据数据库',databaseName,'获取数据表结果：',tableNames)
+  return tableNames
 }
 
 // 预加载文件内容
