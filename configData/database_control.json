@@ -1,0 +1,124 @@
+{
+    "database_control": {
+    "name": "数据库控制",
+    "description": "数据库事务和权限控制模块",
+    "icon": "/src/assets/control.png",
+    "order": 3,
+    "children": {
+      "transaction": {
+        "name": "事务控制",
+        "description": "数据库事务管理",
+        "icon": "/src/assets/Data.svg",
+        "children": [
+          {
+            "id": "begin_transaction",
+            "name": "开始事务",
+            "description": "开始数据库事务",
+            "type": "transaction",
+            "subType": "begin",
+            "category": "database_control",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "事务配置", "connected": false, "id": "input1", "type": "transaction_config" }
+            ],
+            "outputs": [
+              { "name": "事务ID", "connected": false, "id": "output1", "type": "transaction_id" }
+            ],
+            "config": {
+              "isolationLevel": "READ_COMMITTED",
+              "timeout": 30
+            }
+          },
+          {
+            "id": "commit_transaction",
+            "name": "提交事务",
+            "description": "提交数据库事务",
+            "type": "transaction",
+            "subType": "commit",
+            "category": "database_control",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "事务ID", "connected": false, "id": "input1", "type": "transaction_id" }
+            ],
+            "outputs": [
+              { "name": "提交结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "transactionId": ""
+            }
+          },
+          {
+            "id": "rollback_transaction",
+            "name": "回滚事务",
+            "description": "回滚数据库事务",
+            "type": "transaction",
+            "subType": "rollback",
+            "category": "database_control",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "事务ID", "connected": false, "id": "input1", "type": "transaction_id" }
+            ],
+            "outputs": [
+              { "name": "回滚结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "transactionId": ""
+            }
+          }
+        ]
+      },
+      "permission": {
+        "name": "权限控制",
+        "description": "数据库权限管理",
+        "icon": "/src/assets/test.svg",
+        "children": [
+          {
+            "id": "grant_permission",
+            "name": "授予权限",
+            "description": "授予数据库权限",
+            "type": "permission",
+            "subType": "grant",
+            "category": "database_control",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "权限配置", "connected": false, "id": "input1", "type": "permission_config" }
+            ],
+            "outputs": [
+              { "name": "授权结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "user": "",
+              "privileges": [],
+              "objects": []
+            }
+          },
+          {
+            "id": "revoke_permission",
+            "name": "撤销权限",
+            "description": "撤销数据库权限",
+            "type": "permission",
+            "subType": "revoke",
+            "category": "database_control",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "权限配置", "connected": false, "id": "input1", "type": "permission_config" }
+            ],
+            "outputs": [
+              { "name": "撤销结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "user": "",
+              "privileges": [],
+              "objects": []
+            }
+          }
+        ]
+      }
+    }
+  }
+}

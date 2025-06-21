@@ -659,6 +659,7 @@ async def get_model_modules():
     获取模型列表
     从configData目录下的所有JSON文件中读取并合并
     支持新的三级层级结构：大层级->子层级->模块
+    支持通过order字段控制显示顺序
     """
     try:
         # 获取项目根目录
@@ -674,26 +675,20 @@ async def get_model_modules():
         
         # 合并所有JSON文件的数据
         merged_data = {}
+        file_order_info = {}  # 存储文件顺序信息
         
-        # 首先读取model_modules.json作为基础数据
-        model_modules_file = os.path.join(config_dir, 'model_modules.json')
-        if os.path.exists(model_modules_file):
-            try:
-                with open(model_modules_file, 'r', encoding='utf-8') as f:
-                    merged_data = json.load(f)
-                logger.info("成功读取基础模型配置: model_modules.json")
-            except Exception as e:
-                logger.error(f"读取model_modules.json失败: {str(e)}")
+        # 遍历configData目录下的所有JSON文件
+        json_files = [f for f in os.listdir(config_dir) if f.endswith('.json')]
+        logger.info(f"找到 {len(json_files)} 个JSON配置文件: {json_files}")
         
-        # 然后读取advanced_modules.json并合并到基础数据中
-        advanced_modules_file = os.path.join(config_dir, 'advanced_modules.json')
-        if os.path.exists(advanced_modules_file):
+        for json_file in json_files:
+            file_path = os.path.join(config_dir, json_file)
             try:
-                with open(advanced_modules_file, 'r', encoding='utf-8') as f:
-                    advanced_data = json.load(f)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    file_data = json.load(f)
                 
-                # 合并高级模块到基础数据中
-                for category_key, category_data in advanced_data.items():
+                # 合并文件数据到总数据中
+                for category_key, category_data in file_data.items():
                     if category_key in merged_data:
                         # 如果大层级已存在，合并子层级
                         if 'children' in category_data and 'children' in merged_data[category_key]:
@@ -710,11 +705,17 @@ async def get_model_modules():
                     else:
                         # 如果大层级不存在，直接添加
                         merged_data[category_key] = category_data
+                        # 记录顺序信息
+                        file_order_info[category_key] = {
+                            'order': category_data.get('order', 999),  # 默认顺序为999
+                            'file': json_file
+                        }
                 
-                logger.info("成功合并高级模块配置: advanced_modules.json")
+                logger.info(f"成功读取并合并配置文件: {json_file}")
                 
             except Exception as e:
-                logger.error(f"读取advanced_modules.json失败: {str(e)}")
+                logger.error(f"读取配置文件 {json_file} 失败: {str(e)}")
+                continue
         
         if not merged_data:
             logger.warning("没有找到有效的配置文件")
@@ -722,6 +723,10 @@ async def get_model_modules():
                 'status': 'success',
                 'data': {}
             }
+        
+        # 按order字段排序大层级
+        sorted_categories = sorted(merged_data.items(), key=lambda x: file_order_info.get(x[0], {}).get('order', 999))
+        merged_data = dict(sorted_categories)
         
         # 统计模块数量
         total_categories = len(merged_data)
@@ -736,6 +741,7 @@ async def get_model_modules():
                         total_modules += len(sub_category_data['children'])
         
         logger.info(f"成功合并模型配置，共 {total_categories} 个大层级，{total_sub_categories} 个子层级，{total_modules} 个模块")
+        logger.info(f"大层级显示顺序: {[key for key in merged_data.keys()]}")
         
         return {
             'status': 'success',

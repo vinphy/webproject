@@ -59,7 +59,7 @@
                   @dragstart="handleDragStart($event, module)"
                   :title="module.description"
                 >
-                  <img :src="module.icon || subCategoryData.icon" class="module-icon" alt="模块图标" />
+                  <!-- <img :src="module.icon || subCategoryData.icon" class="module-icon" alt="模块图标" /> -->
                   <div class="module-info">
                     <span class="module-name">{{ module.name }}</span>
                   </div>
@@ -2778,6 +2778,7 @@ h3 {
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
+  border: 1px solid #e4e7ed;
 }
 
 .file-content {
@@ -3213,7 +3214,7 @@ h3 {
   top: 2px;
   right: 4px;
   font-size: 10px;
-  color: #909399;
+  color: #67c23a;
   background: #f0f0f0;
   padding: 1px 4px;
   border-radius: 2px;
@@ -3382,7 +3383,6 @@ h3 {
 }
 
 .sub-category-header.expanded {
-  background: #f0f9ff;
   border-bottom: 1px solid #e4e7ed;
 }
 
@@ -3424,8 +3424,261 @@ h3 {
 
 .module-item:hover {
   border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  background: #f0f9ff;
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.module-item:active {
+  cursor: grabbing;
+  transform: translateY(0);
+}
+
+/* 为不同类型的模块添加左侧颜色标识 */
+.module-item[data-type="insert"] {
+  border-left: 3px solid #409eff;
+}
+
+.module-item[data-type="update"] {
+  border-left: 3px solid #67c23a;
+}
+
+.module-item[data-type="select"] {
+  border-left: 3px solid #e6a23c;
+}
+
+.module-item[data-type="delete"] {
+  border-left: 3px solid #f56c6c;
+}
+
+.module-item[data-type="create"] {
+  border-left: 3px solid #722ed1;
+}
+
+.module-item[data-type="custom"] {
+  border-left: 3px solid #909399;
+}
+
+/* 子类型标识 */
+.module-item[data-subtype="base"]::after {
+  content: "基础";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="where"]::after {
+  content: "条件";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="batch"]::after {
+  content: "批量";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="join"]::after {
+  content: "关联";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="aggregate"]::after {
+  content: "聚合";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="table"]::after {
+  content: "表";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="database"]::after {
+  content: "库";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="data_process"]::after {
+  content: "处理";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="data_analysis"]::after {
+  content: "分析";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="data_transform"]::after {
+  content: "转换";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="upsert"]::after {
+  content: "插入或更新";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 50px; /* 为子类型标签留出空间 */
+}
+
+.module-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.module-desc {
+  font-size: 11px;
+  color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+
+
+.sub-category-header:hover {
+  background: #f0f9ff;
+}
+
+.sub-category-header.expanded {
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.sub-category-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sub-category-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  flex: 1;
+}
+
+.sub-modules {
+  /* padding: 6px 2px 6px 2px; */
+  gap: 3px;
+  border: 1px solid #e4e7ed;
+  border-radius: 3px;
+}
+
+.module-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  background: #fff;
+  cursor: grab;
+  transition: all 0.3s ease;
+  user-select: none;
+  min-height: 28px;
+  position: relative;
+}
+
+.module-item:hover {
+  border-color: #409eff;
+  background: #f0f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
 .module-item:active {
@@ -3502,7 +3755,7 @@ h3 {
   top: 2px;
   right: 4px;
   font-size: 10px;
-  color: #909399;
+  color: #67c23a;
   background: #f0f0f0;
   padding: 1px 4px;
   border-radius: 2px;
@@ -3840,7 +4093,7 @@ h3 {
   
   
   .module-item {
-    padding: 2px 6px 2px 23px;
+    padding: 2px 6px 2px 43px;
     gap: 2px;
     min-height: 28px;
   }

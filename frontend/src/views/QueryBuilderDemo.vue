@@ -1,6 +1,6 @@
 <template>
   <div class="query-builder-demo">
-    <h2>SQL条件可视化构建器（Query Builder Demo）</h2>
+    <h2>自定义sql参数配置</h2>
     <div class="toolbar">
       <el-select v-model="selectedTables" multiple placeholder="选择表" style="width: 320px; margin-right: 16px">
         <el-option v-for="t in tableOptions" :key="t.value" :label="t.label" :value="t.value" />

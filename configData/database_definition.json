@@ -1,0 +1,155 @@
+{
+    "database_definition": {
+      "name": "数据库定义",
+      "description": "数据库结构定义相关模块",
+      "icon": "/src/assets/definition.png",
+      "order": 1,
+      "children": {
+        "create": {
+          "name": "创建数据库",
+          "description": "创建数据库",
+          "icon": "/src/assets/add.png",
+          "children": [
+            {
+              "id": "create_database",
+              "name": "创建数据库",
+              "description": "创建新的数据库",
+              "type": "create",
+              "subType": "base",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "databaseName": "",
+                "charset": "utf8mb4",
+                "collation": "utf8mb4_unicode_ci"
+              }
+            },
+            {
+              "id": "create_database_charset",
+              "name": "指定字符集",
+              "description": "创建新的数据库并指定字符集",
+              "type": "create",
+              "subType": "charset",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            }
+          ]
+        },
+        "update": {
+          "name": "修改操作",
+          "description": "增加数据表结构",
+          "icon": "/src/assets/update.png",
+          "children": [
+            {
+              "id": "alter_add",
+              "name": "添加列",
+              "description": "添加数据表结构",
+              "type": "alter",
+              "subType": "base",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "alter_config" }
+              ],
+              "outputs": [
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "operations": []
+              }
+            },
+            {
+              "id": "alter_modify",
+              "name": "修改列类型",
+              "description": "修改表列定义中的列数据类型",
+              "type": "alter",
+              "subType": "alter",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "列配置", "connected": false, "id": "input1", "type": "column_config" }
+              ],
+              "outputs": [
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "columnName": "",
+                "newDefinition": ""
+              }
+            },
+            {
+              "id": "alter_change",
+              "name": "修改列名",
+              "description": "修改数据表已定义的列名",
+              "type": "alter",
+              "subType": "change",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "column_config" }
+              ],
+              "outputs": [
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "columnName": "",
+                "newDefinition": ""
+              }
+            }
+          ]
+        },
+        "drop": {
+          "name": "删除",
+          "description": "删除数据库",
+          "icon": "/src/assets/delete.png",
+          "children": [
+            {
+              "id": "drop_table",
+              "name": "删除表",
+              "description": "删除数据表",
+              "type": "drop",
+              "subType": "table",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "drop_config" }
+              ],
+              "outputs": [
+                { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "cascade": false
+              }
+            }
+          ]
+        }
+      }
+    }
+}

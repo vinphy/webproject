@@ -1,0 +1,283 @@
+{
+    "database_operation": {
+    "name": "数据库操作",
+    "description": "数据增删改查操作模块",
+    "icon": "/src/assets/operation.png",
+    "order": 2,
+    "children": {
+      "insert": {
+        "name": "新增操作",
+        "description": "新增数据相关操作",
+        "icon": "/src/assets/add.png",
+        "children": [
+          {
+            "id": "basic_insert",
+            "name": "新增",
+            "description": "基础数据新增操作",
+            "type": "insert",
+            "subType": "basic",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+            ],
+            "outputs": [
+              { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": []
+            }
+          },
+          {
+            "id": "insert_condition",
+            "name": "条件插新增",
+            "description": "带where条件语句的新增",
+            "type": "insert",
+            "subType": "condition",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "批量数据", "connected": false, "id": "input1", "type": "batch_data" }
+            ],
+            "outputs": [
+              { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "batchSize": 100
+            }
+          }
+        ]
+      },
+      "delete": {
+        "name": "删除操作",
+        "description": "数据删除相关操作",
+        "icon": "/src/assets/delete.png",
+        "children": [
+          {
+            "id": "basic_delete",
+            "name": "删除",
+            "description": "数据删除操作",
+            "type": "delete",
+            "subType": "basic",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "删除条件", "connected": false, "id": "input1", "type": "condition" }
+            ],
+            "outputs": [
+              { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": []
+            }
+          },
+          {
+            "id": "where_delete",
+            "name": "条件删除",
+            "description": "带条件的数据删除操作",
+            "type": "delete",
+            "subType": "where",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "删除条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "过滤条件", "connected": false, "id": "input2", "type": "filter" }
+            ],
+            "outputs": [
+              { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "condition": ""
+            }
+          }
+        ]
+      },
+      "update": {
+        "name": "修改操作",
+        "description": "数据更新相关操作",
+        "icon": "/src/assets/update.png",
+        "children": [
+          {
+            "id": "basic_update",
+            "name": "更新",
+            "description": "基础数据更新操作",
+            "type": "update",
+            "subType": "basic",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+            ],
+            "outputs": [
+              { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": []
+            }
+          },
+          {
+            "id": "where_update",
+            "name": "条件更新",
+            "description": "带条件的数据更新操作",
+            "type": "update",
+            "subType": "where",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+              { "name": "条件输入", "connected": false, "id": "input2", "type": "condition" }
+            ],
+            "outputs": [
+              { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "condition": ""
+            }
+          }
+        ]
+      },
+      "select": {
+        "name": "查询操作",
+        "description": "数据查询相关操作",
+        "icon": "/src/assets/search.png",
+        "children": [
+          {
+            "id": "basic_select",
+            "name": "基本查询",
+            "description": "基础数据查询操作",
+            "type": "select",
+            "subType": "basic",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" }
+            ],
+            "outputs": [
+              { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": []
+            }
+          },
+          {
+            "id": "where_select",
+            "name": "条件查询",
+            "description": "带条件的数据查询操作",
+            "type": "select",
+            "subType": "where",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "过滤条件", "connected": false, "id": "input2", "type": "filter" }
+            ],
+            "outputs": [
+              { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "condition": ""
+            }
+          },
+          {
+            "id": "join_select",
+            "name": "关联查询",
+            "description": "多表关联查询操作",
+            "type": "select",
+            "subType": "join",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "主表条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "关联条件", "connected": false, "id": "input2", "type": "join_condition" }
+            ],
+            "outputs": [
+              { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "joinTables": []
+            }
+          },
+          {
+            "id": "group_select",
+            "name": "分组查询",
+            "description": "分组聚合查询操作",
+            "type": "select",
+            "subType": "group",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "分组字段", "connected": false, "id": "input2", "type": "group_fields" }
+            ],
+            "outputs": [
+              { "name": "分组结果", "connected": false, "id": "output1", "type": "group_data" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "groupBy": [],
+              "aggregateFunctions": []
+            }
+          },
+          {
+            "id": "complex_select",
+            "name": "复合查询",
+            "description": "复杂条件组合查询",
+            "type": "select",
+            "subType": "complex",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "复合条件", "connected": false, "id": "input2", "type": "complex_condition" }
+            ],
+            "outputs": [
+              { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+            ],
+            "config": {
+              "tableName": "",
+              "databaseName": "",
+              "fields": [],
+              "complexConditions": []
+            }
+          }
+        ]
+      }
+    }
+    }
+}
