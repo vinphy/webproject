@@ -1,0 +1,5 @@
+CREATE DATABASE IF NOT EXISTS demo3;
+USE demo3;
+CREATE TABLE ee (
+    se INT
+);

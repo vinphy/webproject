@@ -945,6 +945,7 @@ const handleDrop = (event) => {
   
   // 在所有分类的三层嵌套结构中查找模块
   let module = null
+  let fallbackIcon = ''
   for (const categoryKey in availableModules.value) {
     const category = availableModules.value[categoryKey]
     if (category.children) {
@@ -953,8 +954,12 @@ const handleDrop = (event) => {
         const subCategory = category.children[subCategoryKey]
         if (subCategory.children && Array.isArray(subCategory.children)) {
           // 在第三级：模块列表中查找
-          module = subCategory.children.find(m => m.id === moduleId)
-          if (module) break
+          const found = subCategory.children.find(m => m.id === moduleId)
+          if (found) {
+            module = found
+            fallbackIcon = subCategory.icon || category.icon || '/src/assets/logo.svg'
+            break
+          }
         }
       }
       if (module) break
@@ -975,6 +980,7 @@ const handleDrop = (event) => {
     
     placedNodes.value.push({
       ...module,
+      icon: module.icon || fallbackIcon || '/src/assets/logo.svg',
       id: nodeId++,
       x,
       y,
@@ -2441,11 +2447,14 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding-bottom: 12px;
+  gap: 6px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #e4e7ed;
   color: #303133;
   font-weight: 500;
+  font-size: 13px;
+  line-height: 1.2;
+  min-height: 24px;
   text-align: center;
 }
 
@@ -2821,7 +2830,7 @@ h3 {
 .node-icon {
   width: 16px;
   height: 16px;
-  margin-right: 8px;
+  margin-right: 4px;
   object-fit: contain;
   display: inline-block;
   vertical-align: middle;
@@ -2974,7 +2983,7 @@ h3 {
 .node-type {
   font-size: 12px;
   color: #909399;
-  margin-left: 5px;
+  margin-left: 3px;
 }
 
 .tabs-container {
@@ -3396,7 +3405,6 @@ h3 {
 }
 
 .sub-modules {
-  padding: 8px 12px 8px 36px;
   display: flex;
   flex-direction: column;
   gap: 4px;
