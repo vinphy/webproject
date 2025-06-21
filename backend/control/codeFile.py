@@ -658,6 +658,7 @@ async def get_model_modules():
     """
     获取模型列表
     从configData目录下的所有JSON文件中读取并合并
+    支持新的三级层级结构：大层级->子层级->模块
     """
     try:
         # 获取项目根目录
@@ -674,34 +675,46 @@ async def get_model_modules():
         # 合并所有JSON文件的数据
         merged_data = {}
         
-        # 遍历configData目录下的所有JSON文件
-        for filename in os.listdir(config_dir):
-            if filename.endswith('.json'):
-                file_path = os.path.join(config_dir, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        file_data = json.load(f)
-                    
-                    # 如果是model_modules.json，直接使用其数据
-                    if filename == 'model_modules.json':
-                        merged_data.update(file_data)
-                    else:
-                        # 其他JSON文件，尝试合并到相应模块中
-                        for module_type, module_data in file_data.items():
-                            if module_type in merged_data:
-                                # 如果模块已存在，合并children
-                                if 'children' in module_data and 'children' in merged_data[module_type]:
-                                    merged_data[module_type]['children'].extend(module_data['children'])
+        # 首先读取model_modules.json作为基础数据
+        model_modules_file = os.path.join(config_dir, 'model_modules.json')
+        if os.path.exists(model_modules_file):
+            try:
+                with open(model_modules_file, 'r', encoding='utf-8') as f:
+                    merged_data = json.load(f)
+                logger.info("成功读取基础模型配置: model_modules.json")
+            except Exception as e:
+                logger.error(f"读取model_modules.json失败: {str(e)}")
+        
+        # 然后读取advanced_modules.json并合并到基础数据中
+        advanced_modules_file = os.path.join(config_dir, 'advanced_modules.json')
+        if os.path.exists(advanced_modules_file):
+            try:
+                with open(advanced_modules_file, 'r', encoding='utf-8') as f:
+                    advanced_data = json.load(f)
+                
+                # 合并高级模块到基础数据中
+                for category_key, category_data in advanced_data.items():
+                    if category_key in merged_data:
+                        # 如果大层级已存在，合并子层级
+                        if 'children' in category_data and 'children' in merged_data[category_key]:
+                            for sub_category_key, sub_category_data in category_data['children'].items():
+                                if sub_category_key in merged_data[category_key]['children']:
+                                    # 如果子层级已存在，合并模块
+                                    if 'children' in sub_category_data and 'children' in merged_data[category_key]['children'][sub_category_key]:
+                                        merged_data[category_key]['children'][sub_category_key]['children'].extend(sub_category_data['children'])
+                                    else:
+                                        merged_data[category_key]['children'][sub_category_key] = sub_category_data
                                 else:
-                                    merged_data[module_type] = module_data
-                            else:
-                                merged_data[module_type] = module_data
-                    
-                    logger.info(f"成功读取配置文件: {filename}")
-                    
-                except Exception as e:
-                    logger.error(f"读取配置文件 {filename} 失败: {str(e)}")
-                    continue
+                                    # 如果子层级不存在，直接添加
+                                    merged_data[category_key]['children'][sub_category_key] = sub_category_data
+                    else:
+                        # 如果大层级不存在，直接添加
+                        merged_data[category_key] = category_data
+                
+                logger.info("成功合并高级模块配置: advanced_modules.json")
+                
+            except Exception as e:
+                logger.error(f"读取advanced_modules.json失败: {str(e)}")
         
         if not merged_data:
             logger.warning("没有找到有效的配置文件")
@@ -711,12 +724,18 @@ async def get_model_modules():
             }
         
         # 统计模块数量
+        total_categories = len(merged_data)
+        total_sub_categories = 0
         total_modules = 0
-        for module_type, module_data in merged_data.items():
-            if 'children' in module_data:
-                total_modules += len(module_data['children'])
         
-        logger.info(f"成功合并模型配置，共 {len(merged_data)} 个模块类型，{total_modules} 个子模块")
+        for category_key, category_data in merged_data.items():
+            if 'children' in category_data:
+                total_sub_categories += len(category_data['children'])
+                for sub_category_key, sub_category_data in category_data['children'].items():
+                    if 'children' in sub_category_data:
+                        total_modules += len(sub_category_data['children'])
+        
+        logger.info(f"成功合并模型配置，共 {total_categories} 个大层级，{total_sub_categories} 个子层级，{total_modules} 个模块")
         
         return {
             'status': 'success',

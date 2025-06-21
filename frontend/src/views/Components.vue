@@ -3,49 +3,71 @@
     <div class="module-container">
       <!-- 左侧模块列表 -->
       <div class="module-list">
-        <h3>模块列表</h3>
-        
-        <!-- 模块分类 -->
+        <h3 class="module-title">模块列表</h3>
         <div class="module-categories">
-          <div
-            v-for="(categoryData, categoryKey) in availableModules"
-            :key="categoryKey"
-            class="module-category"
+        <!-- 第一级：大层级 -->
+        <div 
+          v-for="(categoryData, categoryKey) in availableModules" 
+          :key="categoryKey"
+          class="module-category"
+        >
+          <!-- 大层级标题 -->
+          <div 
+            class="category-header"
+            @click="toggleCategory(categoryKey)"
+            :class="{ 'expanded': expandedCategories.includes(categoryKey) }"
+            :title="categoryData.description"
+          >
+            <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
+            <span class="category-name">{{ categoryData.name }}</span>
+            <span class="expand-icon">{{ expandedCategories.includes(categoryKey) ? '▼' : '▶' }}</span>
+          </div>
+          
+          <!-- 第二级：子层级 -->
+          <div 
+            v-if="expandedCategories.includes(categoryKey)"
+            class="sub-categories"
           >
             <div 
-              class="category-header"
-              @click="toggleCategory(categoryKey)"
+              v-for="(subCategoryData, subCategoryKey) in categoryData.children" 
+              :key="subCategoryKey"
+              class="sub-category"
             >
-              <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
-              <span class="category-name">{{ categoryData.name }}</span>
-              <span class="category-count">({{ categoryData.children?.length || 0 }})</span>
-              <span class="category-arrow" :class="{ 'expanded': expandedCategories.has(categoryKey) }">
-                ▼
-              </span>
-            </div>
-            
-            <!-- 子模块列表 -->
-            <div 
-              v-if="expandedCategories.has(categoryKey)"
-              class="sub-modules"
-            >
-              <div
-                v-for="module in categoryData.children"
-                :key="module.id"
-                class="module-item"
-                :data-type="module.type"
-                :data-subtype="module.subType"
-                draggable="true"
-                @dragstart="handleDragStart($event, module)"
+              <!-- 子层级标题 -->
+              <div 
+                class="sub-category-header"
+                @click="toggleSubCategory(categoryKey, subCategoryKey)"
+                :class="{ 'expanded': expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) }"
+                :title="subCategoryData.description"
               >
-                <img :src="module.icon || categoryData.icon" class="module-icon" alt="模块图标" />
-                <div class="module-info">
-                  <span class="module-name">{{ module.name }}</span>
-                  <span class="module-desc">{{ module.description }}</span>
+                <img :src="subCategoryData.icon" class="sub-category-icon" alt="子分类图标" />
+                <span class="sub-category-name">{{ subCategoryData.name }}</span>
+                <span class="expand-icon">{{ expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) ? '▼' : '▶' }}</span>
+              </div>
+              
+              <!-- 第三级：模块列表 -->
+              <div 
+                v-if="expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`)"
+                class="sub-modules"
+              >
+                <div 
+                  v-for="module in subCategoryData.children" 
+                  :key="module.id"
+                  class="module-item"
+                  :data-subtype="module.subType"
+                  draggable="true"
+                  @dragstart="handleDragStart($event, module)"
+                  :title="module.description"
+                >
+                  <img :src="module.icon || subCategoryData.icon" class="module-icon" alt="模块图标" />
+                  <div class="module-info">
+                    <span class="module-name">{{ module.name }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -544,7 +566,32 @@ import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 const availableModules = ref({})
 
 // 展开的分类
-const expandedCategories = ref(new Set(['insert', 'update', 'select', 'delete', 'create', 'custom']))
+const expandedCategories = ref([])
+const expandedSubCategories = ref([])
+
+// 切换大层级展开状态
+const toggleCategory = (categoryKey) => {
+  const index = expandedCategories.value.indexOf(categoryKey)
+  if (index > -1) {
+    expandedCategories.value.splice(index, 1)
+    // 同时收起所有相关的子层级
+    expandedSubCategories.value = expandedSubCategories.value.filter(key => !key.startsWith(categoryKey + '-'))
+  } else {
+    expandedCategories.value.push(categoryKey)
+  }
+}
+
+// 切换子层级展开状态
+const toggleSubCategory = (categoryKey, subCategoryKey) => {
+  const key = `${categoryKey}-${subCategoryKey}`
+  const index = expandedSubCategories.value.indexOf(key)
+  if (index > -1) {
+    expandedSubCategories.value.splice(index, 1)
+  } else {
+    expandedSubCategories.value.push(key)
+  }
+}
+
 
 // 加载模型列表
 const loadModelModules = async () => {
@@ -555,126 +602,72 @@ const loadModelModules = async () => {
       if (data.status === 'success') {
         availableModules.value = data.data
         console.log('模型列表加载成功:', data.data)
+        // 默认展开第一个大层级
+        if (Object.keys(data.data).length > 0) {
+          expandedCategories.value = [Object.keys(data.data)[0]]
+        }
       }
     }
   } catch (error) {
     console.error('加载模型列表失败:', error)
     // 如果加载失败，使用默认数据
     availableModules.value = {
-      insert: {
-        name: "插入模块",
-        description: "数据插入相关模块",
+      database_definition: {
+        name: "数据库定义",
+        description: "数据库结构定义相关模块",
         icon: "/src/assets/demo.svg",
-        children: [
-          {
-            id: "base_insert",
-            name: "基础插入",
-            description: "基础数据插入操作",
-            type: "insert",
-            subType: "base",
-            category: "insert",
-            inputs: [{ name: "数据输入", connected: false, id: "input1", type: "data" }],
-            outputs: [{ name: "插入结果", connected: false, id: "output1", type: "result" }]
+        children: {
+          create: {
+            name: "创建操作",
+            description: "创建数据库对象",
+            icon: "/src/assets/Data.svg",
+            children: [
+              {
+                id: "create_database",
+                name: "创建数据库",
+                description: "创建新的数据库",
+                type: "create",
+                subType: "database",
+                category: "database_definition",
+                inputs: [{ name: "数据库配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
           }
-        ]
+        }
       },
-      update: {
-        name: "更新模块",
-        description: "数据更新相关模块",
+      database_operation: {
+        name: "数据库操作",
+        description: "数据增删改查操作模块",
         icon: "/src/assets/Data.svg",
-        children: [
-          {
-            id: "base_update",
-            name: "基础更新",
-            description: "基础数据更新操作",
-            type: "update",
-            subType: "base",
-            category: "update",
-            inputs: [{ name: "数据输入", connected: false, id: "input1", type: "data" }],
-            outputs: [{ name: "更新结果", connected: false, id: "output1", type: "result" }]
+        children: {
+          select: {
+            name: "查询操作",
+            description: "数据查询相关操作",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "basic_select",
+                name: "基本查询",
+                description: "基础数据查询操作",
+                type: "select",
+                subType: "basic",
+                category: "database_operation",
+                inputs: [{ name: "查询条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "查询结果", connected: false, id: "output1", type: "data" }]
+              }
+            ]
           }
-        ]
-      },
-      select: {
-        name: "查询模块",
-        description: "数据查询相关模块",
-        icon: "/src/assets/test.svg",
-        children: [
-          {
-            id: "base_select",
-            name: "基础查询",
-            description: "基础数据查询操作",
-            type: "select",
-            subType: "base",
-            category: "select",
-            inputs: [{ name: "查询条件", connected: false, id: "input1", type: "condition" }],
-            outputs: [{ name: "查询结果", connected: false, id: "output1", type: "data" }]
-          }
-        ]
-      },
-      delete: {
-        name: "删除模块",
-        description: "数据删除相关模块",
-        icon: "/src/assets/wave-icon.svg",
-        children: [
-          {
-            id: "base_delete",
-            name: "基础删除",
-            description: "基础数据删除操作",
-            type: "delete",
-            subType: "base",
-            category: "delete",
-            inputs: [{ name: "删除条件", connected: false, id: "input1", type: "condition" }],
-            outputs: [{ name: "删除结果", connected: false, id: "output1", type: "result" }]
-          }
-        ]
-      },
-      create: {
-        name: "创建模块",
-        description: "数据创建相关模块",
-        icon: "/src/assets/wave-icon.svg",
-        children: [
-          {
-            id: "table_create",
-            name: "表创建",
-            description: "创建数据表操作",
-            type: "create",
-            subType: "table",
-            category: "create",
-            inputs: [{ name: "表结构", connected: false, id: "input1", type: "schema" }],
-            outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }]
-          }
-        ]
-      },
-      custom: {
-        name: "自定义模块",
-        description: "自定义处理模块",
-        icon: "/src/assets/wave-icon.svg",
-        children: [
-          {
-            id: "data_process",
-            name: "数据处理",
-            description: "自定义数据处理操作",
-            type: "custom",
-            subType: "data_process",
-            category: "custom",
-            inputs: [{ name: "数据输入", connected: false, id: "input1", type: "data" }],
-            outputs: [{ name: "处理结果", connected: false, id: "output1", type: "result" }]
-          }
-        ]
+        }
       }
+    }
+    // 默认展开第一个大层级
+    if (Object.keys(availableModules.value).length > 0) {
+      expandedCategories.value = [Object.keys(availableModules.value)[0]]
     }
   }
 }
 
-// 切换分类展开/折叠
-const toggleCategory = (categoryKey) => {
-  if (expandedCategories.value.has(categoryKey)) {
-    expandedCategories.value.delete(categoryKey)
-  } else {
-    expandedCategories.value.add(categoryKey)
-  }
-}
 
 // 已放置的节点
 const placedNodes = ref([])
@@ -942,12 +935,28 @@ const handleDragStart = (event, module) => {
 const handleDrop = (event) => {
   const moduleId = event.dataTransfer.getData('moduleId')
   
-  // 在所有分类的children中查找模块
+  // 如果没有moduleId，说明不是模块拖拽，直接返回
+  if (!moduleId) {
+    return
+  }
+  
+  // 阻止事件冒泡，避免触发文件拖拽处理
+  event.stopPropagation()
+  
+  // 在所有分类的三层嵌套结构中查找模块
   let module = null
   for (const categoryKey in availableModules.value) {
     const category = availableModules.value[categoryKey]
     if (category.children) {
-      module = category.children.find(m => m.id === moduleId)
+      // 遍历第二级：子层级
+      for (const subCategoryKey in category.children) {
+        const subCategory = category.children[subCategoryKey]
+        if (subCategory.children && Array.isArray(subCategory.children)) {
+          // 在第三级：模块列表中查找
+          module = subCategory.children.find(m => m.id === moduleId)
+          if (module) break
+        }
+      }
       if (module) break
     }
   }
@@ -1753,6 +1762,13 @@ const handleFileDrop = async (event) => {
   
   console.log('拖拽文件事件触发')
   
+  // 检查是否是模块拖拽，如果是则直接返回
+  const moduleId = event.dataTransfer.getData('moduleId')
+  if (moduleId) {
+    console.log('检测到模块拖拽，跳过文件拖拽处理')
+    return
+  }
+  
   // 检查是否有拖拽的文件数据
   const jsonData = event.dataTransfer.getData('application/json')
   const fileName = event.dataTransfer.getData('text/plain')
@@ -2240,6 +2256,15 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   z-index: 10;
 }
 
+.module-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  border-bottom: 2px solid #409eff;
+  padding-bottom: 8px;
+}
+
 .canvas-area {
   flex: 1;
   display: flex;
@@ -2249,39 +2274,51 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   min-width: 0;
 }
 
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .module-list {
-    width: 250px;
-  }
-}
 
-@media (max-width: 768px) {
-  .module-list {
-    width: 220px;
-    padding: 12px;
-  }
   
   .module-categories {
-    gap: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
   
   .module-category {
-    padding: 6px;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    overflow: hidden;
   }
   
   .category-header {
-    padding: 4px 6px;
-    gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #f5f7fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .category-header:hover {
+    background: #ecf5ff;
+  }
+  .category-header.expanded {
+    background: #ecf5ff;
+    border-bottom: 1px solid #e4e7ed;
   }
   
   .category-icon {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex-shrink: 0;
   }
   
   .category-name {
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+    flex: 1;
   }
   
   .module-item {
@@ -2301,7 +2338,6 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   .module-desc {
     font-size: 10px;
   }
-}
 
 .tabs-container {
   background: #fafafa;
@@ -2703,14 +2739,36 @@ h3 {
 }
 
 .expand-icon {
-  transition: transform 0.3s;
-  cursor: pointer;
-  margin-right: 4px;
-  font-size: 14px;
+  font-size: 12px;
+  color: #909399;
+  transition: transform 0.3s ease;
+}
+
+.sub-categories {
+  background: #fff;
+}
+
+.sub-category {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.sub-category:last-child {
+  border-bottom: none;
 }
 
 .expand-icon.is-expanded {
   transform: rotate(90deg);
+}
+
+.sub-category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 24px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .file-content {
@@ -2929,7 +2987,7 @@ h3 {
 .tabs-header {
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 0px;
   background: transparent;
   border-radius: 8px 8px 0 0;
 }
@@ -3311,4 +3369,507 @@ h3 {
   text-overflow: ellipsis;
   line-height: 1.2;
 }
+
+
+
+.sub-category-header:hover {
+  background: #f0f9ff;
+}
+
+.sub-category-header.expanded {
+  background: #f0f9ff;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.sub-category-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sub-category-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  flex: 1;
+}
+
+.sub-modules {
+  padding: 8px 12px 8px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+}
+
+.module-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  background: #fff;
+  cursor: grab;
+  transition: all 0.3s ease;
+  user-select: none;
+  min-height: 28px;
+  position: relative;
+}
+
+.module-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.module-item:active {
+  cursor: grabbing;
+}
+
+.module-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 50px; /* 为子类型标签留出空间 */
+}
+
+.module-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 自定义tooltip样式 */
+.module-item[title]:hover::before,
+.category-header[title]:hover::before,
+.sub-category-header[title]:hover::before {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #303133;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.module-item[title]:hover::after,
+.category-header[title]:hover::after,
+.sub-category-header[title]:hover::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #303133;
+  margin-bottom: 1px;
+  pointer-events: none;
+}
+
+/* 子类型标识 */
+.module-item[data-subtype="basic"]::after {
+  content: "基础";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="where"]::after {
+  content: "条件";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="batch"]::after {
+  content: "批量";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="join"]::after {
+  content: "关联";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="group"]::after {
+  content: "分组";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="complex"]::after {
+  content: "复合";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="upsert"]::after {
+  content: "插入或更新";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="database"]::after {
+  content: "数据库";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="table"]::after {
+  content: "表";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="index"]::after {
+  content: "索引";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="column"]::after {
+  content: "列";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="begin"]::after {
+  content: "开始";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="commit"]::after {
+  content: "提交";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="rollback"]::after {
+  content: "回滚";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="grant"]::after {
+  content: "授予";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="revoke"]::after {
+  content: "撤销";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="statistical"]::after {
+  content: "统计";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="trend"]::after {
+  content: "趋势";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="format"]::after {
+  content: "格式";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="cleaning"]::after {
+  content: "清洗";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="script"]::after {
+  content: "脚本";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="function"]::after {
+  content: "函数";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="aggregate"]::after {
+  content: "聚合";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="transform"]::after {
+  content: "转换";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="advanced_statistical"]::after {
+  content: "高级统计";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="advanced"]::after {
+  content: "高级";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+
+  
+  .module-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  
+  .category-header {
+    padding: 10px;
+  }
+  
+  .category-name {
+    font-size: 13px;
+  }
+  
+  .category-desc {
+    font-size: 10px;
+    max-width: 80px;
+  }
+  
+  .sub-category-header {
+    padding: 8px 10px 8px 20px;
+  }
+  
+  .sub-category-name {
+    font-size: 12px;
+  }
+  
+  .sub-category-desc {
+    font-size: 9px;
+    max-width: 70px;
+  }
+  
+  .sub-modules {
+    padding: 6px 10px 6px 28px;
+    gap: 3px;
+  }
+  
+  .module-item {
+    padding: 4px 6px;
+    gap: 6px;
+    min-height: 28px;
+  }
+  
+  .module-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .module-name {
+    font-size: 12px;
+  }
+  
+  .module-desc {
+    font-size: 10px;
+  }
+  
+  /* 调整子类型标签在小屏幕下的大小 */
+  .module-item[data-subtype]::after {
+    font-size: 8px;
+    padding: 1px 2px;
+    top: 1px;
+    right: 2px;
+  }
+  
+  .module-info {
+    padding-right: 35px;
+  }
 </style> 
