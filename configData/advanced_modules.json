@@ -1,0 +1,81 @@
+{
+  "insert": {
+    "children": [
+      {
+        "id": "upsert_insert",
+        "name": "插入或更新",
+        "description": "插入数据，如果存在则更新",
+        "type": "insert",
+        "subType": "upsert",
+        "category": "insert",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+          { "name": "更新条件", "connected": false, "id": "input2", "type": "condition" }
+        ],
+        "outputs": [
+          { "name": "操作结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "upsertKey": ""
+        }
+      }
+    ]
+  },
+  "select": {
+    "children": [
+      {
+        "id": "aggregate_select",
+        "name": "聚合查询",
+        "description": "带聚合函数的数据查询",
+        "type": "select",
+        "subType": "aggregate",
+        "category": "select",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+          { "name": "聚合函数", "connected": false, "id": "input2", "type": "aggregate" }
+        ],
+        "outputs": [
+          { "name": "聚合结果", "connected": false, "id": "output1", "type": "aggregate_data" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "aggregateFunctions": ["COUNT", "SUM", "AVG", "MAX", "MIN"]
+        }
+      }
+    ]
+  },
+  "custom": {
+    "children": [
+      {
+        "id": "data_transform",
+        "name": "数据转换",
+        "description": "数据格式转换处理",
+        "type": "custom",
+        "subType": "data_transform",
+        "category": "custom",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "原始数据", "connected": false, "id": "input1", "type": "data" },
+          { "name": "转换规则", "connected": false, "id": "input2", "type": "transform_rule" }
+        ],
+        "outputs": [
+          { "name": "转换结果", "connected": false, "id": "output1", "type": "transformed_data" }
+        ],
+        "config": {
+          "transformType": "",
+          "rules": []
+        }
+      }
+    ]
+  }
+} 

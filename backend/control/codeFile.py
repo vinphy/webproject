@@ -657,32 +657,70 @@ async def get_module_by_id(module_id: str):
 async def get_model_modules():
     """
     获取模型列表
-    从configData/model_modules.json文件中读取
+    从configData目录下的所有JSON文件中读取并合并
     """
     try:
         # 获取项目根目录
         current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        config_file = os.path.join(current_dir, 'configData', 'model_modules.json')
+        config_dir = os.path.join(current_dir, 'configData')
         
-        if not os.path.exists(config_file):
-            logger.warning(f"模型配置文件不存在: {config_file}")
+        if not os.path.exists(config_dir):
+            logger.warning(f"配置目录不存在: {config_dir}")
             return {
                 'status': 'success',
-                'data': {
-                    'basic': [],
-                    'custom': []
-                }
+                'data': {}
             }
         
-        # 读取JSON文件
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config_data = json.load(f)
+        # 合并所有JSON文件的数据
+        merged_data = {}
         
-        logger.info(f"成功读取模型配置，基础模块: {len(config_data.get('basic', []))} 个，自定义模块: {len(config_data.get('custom', []))} 个")
+        # 遍历configData目录下的所有JSON文件
+        for filename in os.listdir(config_dir):
+            if filename.endswith('.json'):
+                file_path = os.path.join(config_dir, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        file_data = json.load(f)
+                    
+                    # 如果是model_modules.json，直接使用其数据
+                    if filename == 'model_modules.json':
+                        merged_data.update(file_data)
+                    else:
+                        # 其他JSON文件，尝试合并到相应模块中
+                        for module_type, module_data in file_data.items():
+                            if module_type in merged_data:
+                                # 如果模块已存在，合并children
+                                if 'children' in module_data and 'children' in merged_data[module_type]:
+                                    merged_data[module_type]['children'].extend(module_data['children'])
+                                else:
+                                    merged_data[module_type] = module_data
+                            else:
+                                merged_data[module_type] = module_data
+                    
+                    logger.info(f"成功读取配置文件: {filename}")
+                    
+                except Exception as e:
+                    logger.error(f"读取配置文件 {filename} 失败: {str(e)}")
+                    continue
+        
+        if not merged_data:
+            logger.warning("没有找到有效的配置文件")
+            return {
+                'status': 'success',
+                'data': {}
+            }
+        
+        # 统计模块数量
+        total_modules = 0
+        for module_type, module_data in merged_data.items():
+            if 'children' in module_data:
+                total_modules += len(module_data['children'])
+        
+        logger.info(f"成功合并模型配置，共 {len(merged_data)} 个模块类型，{total_modules} 个子模块")
         
         return {
             'status': 'success',
-            'data': config_data
+            'data': merged_data
         }
         
     except Exception as e:

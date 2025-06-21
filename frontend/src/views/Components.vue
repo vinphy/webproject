@@ -5,38 +5,45 @@
       <div class="module-list">
         <h3>模块列表</h3>
         
-        <!-- 基础模块 -->
-        <div class="module-category">
-          <h4>基础模块</h4>
-          <div class="module-items">
-            <div
-              v-for="module in availableModules.basic"
-              :key="module.id"
-              class="module-item"
-              :data-type="module.type"
-              draggable="true"
-              @dragstart="handleDragStart($event, module)"
+        <!-- 模块分类 -->
+        <div class="module-categories">
+          <div
+            v-for="(categoryData, categoryKey) in availableModules"
+            :key="categoryKey"
+            class="module-category"
+          >
+            <div 
+              class="category-header"
+              @click="toggleCategory(categoryKey)"
             >
-              <img :src="module.icon" class="module-icon" alt="模块图标" />
-              <span>{{ module.name }}</span>
+              <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
+              <span class="category-name">{{ categoryData.name }}</span>
+              <span class="category-count">({{ categoryData.children?.length || 0 }})</span>
+              <span class="category-arrow" :class="{ 'expanded': expandedCategories.has(categoryKey) }">
+                ▼
+              </span>
             </div>
-          </div>
-        </div>
-        
-        <!-- 自定义模块 -->
-        <div class="module-category">
-          <h4>自定义模块</h4>
-          <div class="module-items">
-            <div
-              v-for="module in availableModules.custom"
-              :key="module.id"
-              class="module-item"
-              :data-type="module.type"
-              draggable="true"
-              @dragstart="handleDragStart($event, module)"
+            
+            <!-- 子模块列表 -->
+            <div 
+              v-if="expandedCategories.has(categoryKey)"
+              class="sub-modules"
             >
-              <img :src="module.icon" class="module-icon" alt="模块图标" />
-              <span>{{ module.name }}</span>
+              <div
+                v-for="module in categoryData.children"
+                :key="module.id"
+                class="module-item"
+                :data-type="module.type"
+                :data-subtype="module.subType"
+                draggable="true"
+                @dragstart="handleDragStart($event, module)"
+              >
+                <img :src="module.icon || categoryData.icon" class="module-icon" alt="模块图标" />
+                <div class="module-info">
+                  <span class="module-name">{{ module.name }}</span>
+                  <span class="module-desc">{{ module.description }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -534,10 +541,10 @@ import {
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 
 // 可用模块列表
-const availableModules = ref({
-  basic: [],
-  custom: []
-})
+const availableModules = ref({})
+
+// 展开的分类
+const expandedCategories = ref(new Set(['insert', 'update', 'select', 'delete', 'create', 'custom']))
 
 // 加载模型列表
 const loadModelModules = async () => {
@@ -554,89 +561,118 @@ const loadModelModules = async () => {
     console.error('加载模型列表失败:', error)
     // 如果加载失败，使用默认数据
     availableModules.value = {
-      basic: [
-        {
-          id: 1,
-          name: 'insert',
-          icon: '/src/assets/demo.svg',
-          type: 'insert',
-          category: 'basic',
-          inputs: [
-            { name: '输入1', connected: false, id: 'input1' }
-          ],
-          outputs: [
-            { name: '输出1', connected: false, id: 'output1' }
-          ]
-        },
-        {
-          id: 2,
-          name: 'update',
-          icon: '/src/assets/Data.svg',
-          type: 'update',
-          category: 'basic',
-          inputs: [
-            { name: '数据输入', connected: false, id: 'input1' }
-          ],
-          outputs: [
-            { name: '处理结果', connected: false, id: 'output1' }
-          ]
-        },
-        {
-          id: 3,
-          name: 'select',
-          icon: '/src/assets/test.svg',
-          type: 'select',
-          category: 'basic',
-          inputs: [
-            { name: '信号输入', connected: false, id: 'input1' }
-          ],
-          outputs: [
-            { name: '监控输出', connected: false, id: 'output1' }
-          ]
-        },
-        {
-          id: 4,
-          name: 'create',
-          icon: '/src/assets/wave-icon.svg',
-          type: 'create',
-          category: 'basic',
-          inputs: [
-            { name: '数据输入', connected: false, id: 'input1' }
-          ],
-          outputs: [
-            { name: '创建结果', connected: false, id: 'output1' }
-          ]
-        },
-        {
-          id: 6,
-          name: 'delete',
-          icon: '/src/assets/wave-icon.svg',
-          type: 'delete',
-          category: 'basic',
-          inputs: [
-            { name: '数据输入', connected: false, id: 'input1' }
-          ],
-          outputs: [
-            { name: '删除结果', connected: false, id: 'output1' }
-          ]
-        }
-      ],
-      custom: [
-        {
-          id: 5,
-          name: 'custom',
-          icon: '/src/assets/wave-icon.svg',
-          type: 'custom',
-          category: 'custom',
-          inputs: [
-            { name: '数据输入', connected: false, id: 'input1' }
-          ],
-          outputs: [
-            { name: '分析结果', connected: false, id: 'output1' }
-          ]
-        }
-      ]
+      insert: {
+        name: "插入模块",
+        description: "数据插入相关模块",
+        icon: "/src/assets/demo.svg",
+        children: [
+          {
+            id: "base_insert",
+            name: "基础插入",
+            description: "基础数据插入操作",
+            type: "insert",
+            subType: "base",
+            category: "insert",
+            inputs: [{ name: "数据输入", connected: false, id: "input1", type: "data" }],
+            outputs: [{ name: "插入结果", connected: false, id: "output1", type: "result" }]
+          }
+        ]
+      },
+      update: {
+        name: "更新模块",
+        description: "数据更新相关模块",
+        icon: "/src/assets/Data.svg",
+        children: [
+          {
+            id: "base_update",
+            name: "基础更新",
+            description: "基础数据更新操作",
+            type: "update",
+            subType: "base",
+            category: "update",
+            inputs: [{ name: "数据输入", connected: false, id: "input1", type: "data" }],
+            outputs: [{ name: "更新结果", connected: false, id: "output1", type: "result" }]
+          }
+        ]
+      },
+      select: {
+        name: "查询模块",
+        description: "数据查询相关模块",
+        icon: "/src/assets/test.svg",
+        children: [
+          {
+            id: "base_select",
+            name: "基础查询",
+            description: "基础数据查询操作",
+            type: "select",
+            subType: "base",
+            category: "select",
+            inputs: [{ name: "查询条件", connected: false, id: "input1", type: "condition" }],
+            outputs: [{ name: "查询结果", connected: false, id: "output1", type: "data" }]
+          }
+        ]
+      },
+      delete: {
+        name: "删除模块",
+        description: "数据删除相关模块",
+        icon: "/src/assets/wave-icon.svg",
+        children: [
+          {
+            id: "base_delete",
+            name: "基础删除",
+            description: "基础数据删除操作",
+            type: "delete",
+            subType: "base",
+            category: "delete",
+            inputs: [{ name: "删除条件", connected: false, id: "input1", type: "condition" }],
+            outputs: [{ name: "删除结果", connected: false, id: "output1", type: "result" }]
+          }
+        ]
+      },
+      create: {
+        name: "创建模块",
+        description: "数据创建相关模块",
+        icon: "/src/assets/wave-icon.svg",
+        children: [
+          {
+            id: "table_create",
+            name: "表创建",
+            description: "创建数据表操作",
+            type: "create",
+            subType: "table",
+            category: "create",
+            inputs: [{ name: "表结构", connected: false, id: "input1", type: "schema" }],
+            outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }]
+          }
+        ]
+      },
+      custom: {
+        name: "自定义模块",
+        description: "自定义处理模块",
+        icon: "/src/assets/wave-icon.svg",
+        children: [
+          {
+            id: "data_process",
+            name: "数据处理",
+            description: "自定义数据处理操作",
+            type: "custom",
+            subType: "data_process",
+            category: "custom",
+            inputs: [{ name: "数据输入", connected: false, id: "input1", type: "data" }],
+            outputs: [{ name: "处理结果", connected: false, id: "output1", type: "result" }]
+          }
+        ]
+      }
     }
+  }
+}
+
+// 切换分类展开/折叠
+const toggleCategory = (categoryKey) => {
+  if (expandedCategories.value.has(categoryKey)) {
+    expandedCategories.value.delete(categoryKey)
+  } else {
+    expandedCategories.value.add(categoryKey)
   }
 }
 
@@ -904,10 +940,17 @@ const handleDragStart = (event, module) => {
 
 // 处理模块放置
 const handleDrop = (event) => {
-  const moduleId = parseInt(event.dataTransfer.getData('moduleId'))
-  // 在basic和custom分类中查找模块
-  const module = availableModules.value.basic.find(m => m.id === moduleId) || 
-                availableModules.value.custom.find(m => m.id === moduleId)
+  const moduleId = event.dataTransfer.getData('moduleId')
+  
+  // 在所有分类的children中查找模块
+  let module = null
+  for (const categoryKey in availableModules.value) {
+    const category = availableModules.value[categoryKey]
+    if (category.children) {
+      module = category.children.find(m => m.id === moduleId)
+      if (module) break
+    }
+  }
   
   if (module) {
     // 获取当前活动的canvas容器
@@ -2144,117 +2187,57 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
 
 <style scoped>
 .module-management {
-  height: 100%;
-  padding: 20px;
+  display: flex;
+  height: 100vh;
   background: #f5f7fa;
-  user-select: none; /* 禁止文字选择 */
 }
 
 .module-container {
   display: flex;
-  gap: 20px;
+  width: 100%;
   height: 100%;
 }
 
 .module-list {
-  width: 130px;
+  width: 180px;
   background: #ffffff;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  border-right: 1px solid #e4e7ed;
+  padding: 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  max-height: 100vh;
+}
+
+/* 自定义滚动条样式 */
+.module-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.module-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.module-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.module-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .module-list h3 {
-  margin: 0 0 15px 0;
-  color: #303133;
+  margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
-}
-
-.module-category {
-  margin-bottom: 20px;
-}
-
-.module-category h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.module-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.module-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
-  cursor: move;
-  color: #606266;
-  transition: all 0.3s;
-  border: 1px solid #e4e7ed;
-}
-
-/* 为不同类型的模块添加不同的颜色 */
-.module-item[data-type="insert"] {
-  border-left: 3px solid #409EFF;
-}
-
-.module-item[data-type="update"] {
-  border-left: 3px solid #67C23A;
-}
-
-.module-item[data-type="select"] {
-  border-left: 3px solid #E6A23C;
-}
-
-.module-item[data-type="create"] {
-  border-left: 3px solid #F56C6C;
-}
-.module-item[data-type="delete"] {
-  border-left: 3px solid #722ED1;
-}
-
-.module-item[data-type="custom"] {
-  border-left: 3px solid #909399;
-}
-
-
-
-/* 节点类型对应的颜色 */
-.node[data-type="insert"] {
-  border-left: 3px solid #409EFF;
-}
-
-.node[data-type="update"] {
-  border-left: 3px solid #67C23A;
-}
-
-.node[data-type="select"] {
-  border-left: 3px solid #E6A23C;
-}
-
-.node[data-type="create"] {
-  border-left: 3px solid #F56C6C;
-}
-.node[data-type="delete"] {
-  border-left: 3px solid #722ED1;
-}
-
-.node[data-type="custom"] {
-  border-left: 3px solid #909399;
-}
-
-.module-item:hover {
-  background: #ecf5ff;
-  color: #409EFF;
-  border-color: #409EFF;
+  color: #303133;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #409eff;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 10;
 }
 
 .canvas-area {
@@ -2262,9 +2245,62 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  min-width: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .module-list {
+    width: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .module-list {
+    width: 220px;
+    padding: 12px;
+  }
+  
+  .module-categories {
+    gap: 6px;
+  }
+  
+  .module-category {
+    padding: 6px;
+  }
+  
+  .category-header {
+    padding: 4px 6px;
+    gap: 6px;
+  }
+  
+  .category-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .category-name {
+    font-size: 13px;
+  }
+  
+  .module-item {
+    padding: 4px 6px;
+    gap: 6px;
+  }
+  
+  .module-icon {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .module-name {
+    font-size: 12px;
+  }
+  
+  .module-desc {
+    font-size: 10px;
+  }
 }
 
 .tabs-container {
@@ -2970,5 +3006,309 @@ h3 {
 .tab-add:hover {
   background: #409EFF;
   color: white;
+}
+
+.module-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.module-category {
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  padding: 8px;
+  background: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.module-category:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e4e7ed;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.category-header:hover {
+  background-color: #f5f7fa;
+}
+
+.category-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.category-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-count {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.category-arrow {
+  transition: transform 0.3s ease;
+  cursor: pointer;
+  font-size: 10px;
+  color: #909399;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.category-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.sub-modules {
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.module-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  background: #fafbfc;
+  cursor: grab;
+  transition: all 0.3s ease;
+  user-select: none;
+  min-height: 32px;
+  position: relative;
+}
+
+.module-item:hover {
+  border-color: #409eff;
+  background: #f0f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+}
+
+.module-item:active {
+  cursor: grabbing;
+  transform: translateY(0);
+}
+
+/* 为不同类型的模块添加左侧颜色标识 */
+.module-item[data-type="insert"] {
+  border-left: 3px solid #409eff;
+}
+
+.module-item[data-type="update"] {
+  border-left: 3px solid #67c23a;
+}
+
+.module-item[data-type="select"] {
+  border-left: 3px solid #e6a23c;
+}
+
+.module-item[data-type="delete"] {
+  border-left: 3px solid #f56c6c;
+}
+
+.module-item[data-type="create"] {
+  border-left: 3px solid #722ed1;
+}
+
+.module-item[data-type="custom"] {
+  border-left: 3px solid #909399;
+}
+
+/* 子类型标识 */
+.module-item[data-subtype="base"]::after {
+  content: "基础";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="where"]::after {
+  content: "条件";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="batch"]::after {
+  content: "批量";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="join"]::after {
+  content: "关联";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="aggregate"]::after {
+  content: "聚合";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="table"]::after {
+  content: "表";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="database"]::after {
+  content: "库";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="data_process"]::after {
+  content: "处理";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="data_analysis"]::after {
+  content: "分析";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="data_transform"]::after {
+  content: "转换";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-item[data-subtype="upsert"]::after {
+  content: "插入或更新";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.module-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 50px; /* 为子类型标签留出空间 */
+}
+
+.module-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.module-desc {
+  font-size: 11px;
+  color: #909399;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 </style> 

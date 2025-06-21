@@ -1,132 +1,391 @@
 {
-  "basic": [
-    {
-      "id": 1,
-      "name": "insert",
-      "icon": "/src/assets/demo.svg",
-      "type": "insert",
-      "category": "basic",
-      "description": "数据插入模块",
-      "version": "1.0.0",
-      "status": "active",
-      "inputs": [
-        { "name": "输入1", "connected": false, "id": "input1", "type": "data" }
-      ],
-      "outputs": [
-        { "name": "输出1", "connected": false, "id": "output1", "type": "result" }
-      ],
-      "config": {
-        "tableName": "",
-        "databaseName": "",
-        "fields": []
+  "insert": {
+    "name": "插入模块",
+    "description": "数据插入相关模块",
+    "icon": "/src/assets/demo.svg",
+    "children": [
+      {
+        "id": "base_insert",
+        "name": "基础插入",
+        "description": "基础数据插入操作",
+        "type": "insert",
+        "subType": "base",
+        "category": "insert",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+        ],
+        "outputs": [
+          { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": []
+        }
+      },
+      {
+        "id": "where_insert",
+        "name": "条件插入",
+        "description": "带条件的数据插入操作",
+        "type": "insert",
+        "subType": "where",
+        "category": "insert",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+          { "name": "条件输入", "connected": false, "id": "input2", "type": "condition" }
+        ],
+        "outputs": [
+          { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "condition": ""
+        }
+      },
+      {
+        "id": "batch_insert",
+        "name": "批量插入",
+        "description": "批量数据插入操作",
+        "type": "insert",
+        "subType": "batch",
+        "category": "insert",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "批量数据", "connected": false, "id": "input1", "type": "batch_data" }
+        ],
+        "outputs": [
+          { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "batchSize": 100
+        }
       }
-    },
-    {
-      "id": 2,
-      "name": "update",
-      "icon": "/src/assets/Data.svg",
-      "type": "update",
-      "category": "basic",
-      "description": "数据更新模块",
-      "version": "1.0.0",
-      "status": "active",
-      "inputs": [
-        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
-      ],
-      "outputs": [
-        { "name": "处理结果", "connected": false, "id": "output1", "type": "result" }
-      ],
-      "config": {
-        "tableName": "",
-        "databaseName": "",
-        "fields": []
+    ]
+  },
+  "update": {
+    "name": "更新模块",
+    "description": "数据更新相关模块",
+    "icon": "/src/assets/Data.svg",
+    "children": [
+      {
+        "id": "base_update",
+        "name": "基础更新",
+        "description": "基础数据更新操作",
+        "type": "update",
+        "subType": "base",
+        "category": "update",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+        ],
+        "outputs": [
+          { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": []
+        }
+      },
+      {
+        "id": "where_update",
+        "name": "条件更新",
+        "description": "带条件的数据更新操作",
+        "type": "update",
+        "subType": "where",
+        "category": "update",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+          { "name": "条件输入", "connected": false, "id": "input2", "type": "condition" }
+        ],
+        "outputs": [
+          { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "condition": ""
+        }
+      },
+      {
+        "id": "batch_update",
+        "name": "批量更新",
+        "description": "批量数据更新操作",
+        "type": "update",
+        "subType": "batch",
+        "category": "update",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "批量数据", "connected": false, "id": "input1", "type": "batch_data" }
+        ],
+        "outputs": [
+          { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "batchSize": 100
+        }
       }
-    },
-    {
-      "id": 3,
-      "name": "select",
-      "icon": "/src/assets/test.svg",
-      "type": "select",
-      "category": "basic",
-      "description": "数据查询模块",
-      "version": "1.0.0",
-      "status": "active",
-      "inputs": [
-        { "name": "信号输入", "connected": false, "id": "input1", "type": "signal" }
-      ],
-      "outputs": [
-        { "name": "监控输出", "connected": false, "id": "output1", "type": "monitor" }
-      ],
-      "config": {
-        "tableName": "",
-        "databaseName": "",
-        "fields": []
+    ]
+  },
+  "select": {
+    "name": "查询模块",
+    "description": "数据查询相关模块",
+    "icon": "/src/assets/test.svg",
+    "children": [
+      {
+        "id": "base_select",
+        "name": "基础查询",
+        "description": "基础数据查询操作",
+        "type": "select",
+        "subType": "base",
+        "category": "select",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" }
+        ],
+        "outputs": [
+          { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": []
+        }
+      },
+      {
+        "id": "where_select",
+        "name": "条件查询",
+        "description": "带条件的数据查询操作",
+        "type": "select",
+        "subType": "where",
+        "category": "select",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+          { "name": "过滤条件", "connected": false, "id": "input2", "type": "filter" }
+        ],
+        "outputs": [
+          { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "condition": ""
+        }
+      },
+      {
+        "id": "join_select",
+        "name": "关联查询",
+        "description": "多表关联查询操作",
+        "type": "select",
+        "subType": "join",
+        "category": "select",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "主表条件", "connected": false, "id": "input1", "type": "condition" },
+          { "name": "关联条件", "connected": false, "id": "input2", "type": "join_condition" }
+        ],
+        "outputs": [
+          { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "joinTables": []
+        }
       }
-    },
-    {
-      "id": 4,
-      "name": "create",
-      "icon": "/src/assets/wave-icon.svg",
-      "type": "create",
-      "category": "basic",
-      "description": "数据创建模块",
-      "version": "1.0.0",
-      "status": "active",
-      "inputs": [
-        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
-      ],
-      "outputs": [
-        { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
-      ],
-      "config": {
-        "tableName": "",
-        "databaseName": "",
-        "fields": []
+    ]
+  },
+  "delete": {
+    "name": "删除模块",
+    "description": "数据删除相关模块",
+    "icon": "/src/assets/wave-icon.svg",
+    "children": [
+      {
+        "id": "base_delete",
+        "name": "基础删除",
+        "description": "基础数据删除操作",
+        "type": "delete",
+        "subType": "base",
+        "category": "delete",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "删除条件", "connected": false, "id": "input1", "type": "condition" }
+        ],
+        "outputs": [
+          { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": []
+        }
+      },
+      {
+        "id": "where_delete",
+        "name": "条件删除",
+        "description": "带条件的数据删除操作",
+        "type": "delete",
+        "subType": "where",
+        "category": "delete",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "删除条件", "connected": false, "id": "input1", "type": "condition" },
+          { "name": "过滤条件", "connected": false, "id": "input2", "type": "filter" }
+        ],
+        "outputs": [
+          { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "condition": ""
+        }
+      },
+      {
+        "id": "batch_delete",
+        "name": "批量删除",
+        "description": "批量数据删除操作",
+        "type": "delete",
+        "subType": "batch",
+        "category": "delete",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "批量条件", "connected": false, "id": "input1", "type": "batch_condition" }
+        ],
+        "outputs": [
+          { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": [],
+          "batchSize": 100
+        }
       }
-    },
-    {
-      "id": 6,
-      "name": "delete",
-      "icon": "/src/assets/wave-icon.svg",
-      "type": "delete",
-      "category": "basic",
-      "description": "数据删除模块",
-      "version": "1.0.0",
-      "status": "active",
-      "inputs": [
-        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
-      ],
-      "outputs": [
-        { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
-      ],
-      "config": {
-        "tableName": "",
-        "databaseName": "",
-        "fields": []
+    ]
+  },
+  "create": {
+    "name": "创建模块",
+    "description": "数据创建相关模块",
+    "icon": "/src/assets/wave-icon.svg",
+    "children": [
+      {
+        "id": "table_create",
+        "name": "表创建",
+        "description": "创建数据表操作",
+        "type": "create",
+        "subType": "table",
+        "category": "create",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "表结构", "connected": false, "id": "input1", "type": "schema" }
+        ],
+        "outputs": [
+          { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "tableName": "",
+          "databaseName": "",
+          "fields": []
+        }
+      },
+      {
+        "id": "database_create",
+        "name": "数据库创建",
+        "description": "创建数据库操作",
+        "type": "create",
+        "subType": "database",
+        "category": "create",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据库配置", "connected": false, "id": "input1", "type": "config" }
+        ],
+        "outputs": [
+          { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "databaseName": "",
+          "charset": "utf8mb4",
+          "collation": "utf8mb4_unicode_ci"
+        }
       }
-    }
-  ],
-  "custom": [
-    {
-      "id": 5,
-      "name": "custom",
-      "icon": "/src/assets/wave-icon.svg",
-      "type": "custom",
-      "category": "custom",
-      "description": "自定义处理模块",
-      "version": "1.0.0",
-      "status": "active",
-      "inputs": [
-        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
-      ],
-      "outputs": [
-        { "name": "分析结果", "connected": false, "id": "output1", "type": "analysis" }
-      ],
-      "config": {
-        "tableName": "",
-        "databaseName": "",
-        "fields": []
+    ]
+  },
+  "custom": {
+    "name": "自定义模块",
+    "description": "自定义处理模块",
+    "icon": "/src/assets/wave-icon.svg",
+    "children": [
+      {
+        "id": "data_process",
+        "name": "数据处理",
+        "description": "自定义数据处理操作",
+        "type": "custom",
+        "subType": "data_process",
+        "category": "custom",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+        ],
+        "outputs": [
+          { "name": "处理结果", "connected": false, "id": "output1", "type": "result" }
+        ],
+        "config": {
+          "processType": "",
+          "parameters": []
+        }
+      },
+      {
+        "id": "data_analysis",
+        "name": "数据分析",
+        "description": "自定义数据分析操作",
+        "type": "custom",
+        "subType": "data_analysis",
+        "category": "custom",
+        "version": "1.0.0",
+        "status": "active",
+        "inputs": [
+          { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+        ],
+        "outputs": [
+          { "name": "分析结果", "connected": false, "id": "output1", "type": "analysis" }
+        ],
+        "config": {
+          "analysisType": "",
+          "parameters": []
+        }
       }
-    }
-  ]
+    ]
+  }
 } 
