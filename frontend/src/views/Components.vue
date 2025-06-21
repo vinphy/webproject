@@ -225,134 +225,14 @@
     </div>
 
     <!-- 参数配置对话框 -->
-    <el-dialog
-      v-model="configDialogVisible"
-      :title="currentNode?.name + ' 参数配置'"
-      width="800px"
-      destroy-on-close
-    >
-      <div class="config-content">
-        <!-- 表名配置 -->
-        <div class="config-section">
-          <div class="section-header">
-            <div class="table-name-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-              <span class="label" style="min-width: 60px;">数据库：</span>
-              <el-select 
-                v-model="currentNode.databaseName" 
-                :placeholder="currentNode.type === 'create' ? '选择或输入数据库名称' : '选择数据库'"
-                :filterable="currentNode.type === 'create'"
-                :allow-create="currentNode.type === 'create'"
-                :default-first-option="currentNode.type === 'create'"
-                style="width: 200px"
-                @change="onDatabaseChange"
-              >
-                <el-option 
-                  v-for="db in databaseList" 
-                  :key="db" 
-                  :label="db" 
-                  :value="db" 
-                />
-              </el-select>
-              <span class="label" style="min-width: 60px;">表名：</span>
-              <el-select 
-                v-model="currentNode.tableName" 
-                :placeholder="currentNode.type === 'create' ? '选择或输入表名' : '选择表名'"
-                :filterable="currentNode.type === 'create'"
-                :allow-create="currentNode.type === 'create'"
-                :default-first-option="currentNode.type === 'create'"
-                style="width: 200px"
-              >
-                <el-option 
-                  v-for="table in getTablesByDatabase(currentNode.databaseName)" 
-                  :key="table" 
-                  :label="table" 
-                  :value="table" 
-                />
-              </el-select>
-            </div>
-          </div>
-        </div>
-
-        <!-- 参数配置 -->
-        <div class="config-section" v-if="currentNode.type !== 'delete'">
-          <div class="section-header">
-            <h4>字段配置</h4>
-            <el-button type="primary" size="small" @click="addParameter">添加参数</el-button>
-          </div>
-          <div class="section-content">
-            <div class="parameter-header">
-              <span class="param-col">列名</span>
-              <span v-if="currentNode.type !== 'select'" class="param-col">值</span>
-              <span class="param-col">操作</span>
-            </div>
-            <div v-for="(param, index) in currentNode.parameters" :key="index" class="parameter-item">
-              <!-- select类型节点，列名下拉，值字段隐藏 -->
-              <template v-if="currentNode.type === 'select'">
-                <el-select
-                  v-model="param.name"
-                  placeholder="选择列名"
-                  class="param-col"
-                  style="width: 100%"
-                  :disabled="!currentNode.databaseName || !currentNode.tableName || currentNode.parameters.some((p, i) => p.name === col && i !== index)"
-                  filterable
-                  @focus="async () => { param._columns = await getColumnsByDatabaseTable(currentNode.databaseName, currentNode.tableName) }"
-                >
-                  <el-option
-                    v-for="col in param._columns || []"
-                    :key="col"
-                    :label="col"
-                    :value="col"
-                  />
-                </el-select>
-                <!-- 值字段隐藏 -->
-              </template>
-              <template v-else-if="currentNode.type === 'create'">
-                <el-input v-model="param.name" placeholder="字段名" class="param-col" />
-                <el-select v-model="param.value" placeholder="字段类型" class="param-col" style="width: 100%">
-                  <el-option label="INT" value="INT" />
-                  <el-option label="VARCHAR" value="VARCHAR" />
-                  <el-option label="CHAR" value="CHAR" />
-                  <el-option label="TEXT" value="TEXT" />
-                  <el-option label="DATE" value="DATE" />
-                  <el-option label="DATETIME" value="DATETIME" />
-                  <el-option label="FLOAT" value="FLOAT" />
-                  <el-option label="DOUBLE" value="DOUBLE" />
-                  <el-option label="BOOLEAN" value="BOOLEAN" />
-                </el-select>
-              </template>
-              <template v-else>
-                <el-input v-model="param.name" placeholder="字段名" class="param-col" />
-                <el-input v-model="param.value" placeholder="字段值" class="param-col" />
-              </template>
-              <div class="param-col">
-                <el-button type="danger" size="small" @click="removeParameter(index)">删除</el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 条件配置 -->
-        <div class="config-section" v-if="currentNode.type !== 'create'">
-          <div class="section-header">
-            <h4>条件语句</h4>
-          </div>
-          <div class="section-content">
-            <el-input
-              v-model="currentNode.condition"
-              type="textarea"
-              :rows="3"
-              placeholder="请输入WHERE条件，例如: id = 1 AND status = 'active'"
-            />
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="configDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveConfig">确定</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <NodeConfigDialog
+      v-model:visible="configDialogVisible"
+      :node="currentNode"
+      :database-list="databaseList"
+      :get-tables-by-database="getTablesByDatabase"
+      :get-columns-by-database-table="getColumnsByDatabaseTable"
+      @save="handleConfigSave"
+    />
 
     <!-- 代码展示面板 -->
     <div class="code-panel" :class="{ 'code-panel-collapsed': isCodePanelCollapsed }">
@@ -561,6 +441,7 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
+import NodeConfigDialog from './component/NodeConfigDialog.vue'
 
 // 可用模块列表
 const availableModules = ref({})
@@ -1192,32 +1073,17 @@ const handleNodeDblClick = (node) => {
 // 打开配置对话框
 const openConfigDialog = (node) => {
   currentNode.value = { ...node }
-  
-  // 确保parameters数组存在且至少有一个元素
-  if (!currentNode.value.parameters) {
-    currentNode.value.parameters = [{
-      name: '',
-      value: ''
-    }]
-  }
-  
-  // 如果不是create类型，设置默认的数据库和表名
-  if (node.type !== 'create') {
-    // 如果没有设置数据库名，选择第一个数据库
-    if (!currentNode.value.databaseName && databaseList.value.length > 0) {
-      currentNode.value.databaseName = databaseList.value[0]
-    }
-    
-    // 如果有数据库名，设置默认表名
-    if (currentNode.value.databaseName) {
-      const tables = getTablesByDatabase(currentNode.value.databaseName)
-      if (tables.length > 0 && !currentNode.value.tableName) {
-        currentNode.value.tableName = tables[0]
-      }
-    }
-  }
-  
   configDialogVisible.value = true
+}
+
+// 处理配置保存
+const handleConfigSave = (updatedNode) => {
+  // 更新节点配置
+  const node = placedNodes.value.find(n => n.id === updatedNode.id)
+  if (node) {
+    Object.assign(node, updatedNode)
+  }
+  configDialogVisible.value = false
 }
 
 // 添加端口
@@ -3683,6 +3549,7 @@ h3 {
 
 .module-item:active {
   cursor: grabbing;
+  transform: translateY(0);
 }
 
 .module-icon {
