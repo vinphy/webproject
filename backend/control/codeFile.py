@@ -581,3 +581,149 @@ async def get_columns(database_name: str, table_name: str):
         logger.error(f"获取列名失败: {str(e)}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_available_modules")
+async def get_available_modules():
+    """
+    获取可用的模型列表
+    从configData/modules.json文件中读取
+    """
+    try:
+        # 获取项目根目录
+        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        config_file = os.path.join(current_dir, 'configData', 'modules.json')
+        
+        if not os.path.exists(config_file):
+            logger.warning(f"配置文件不存在: {config_file}")
+            return {
+                'status': 'success',
+                'data': {
+                    'modules': [],
+                    'categories': []
+                }
+            }
+        
+        # 读取JSON文件
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        logger.info(f"成功读取模型配置，共 {len(config_data.get('modules', []))} 个模块")
+        
+        return {
+            'status': 'success',
+            'data': config_data
+        }
+        
+    except Exception as e:
+        logger.error(f"获取模型列表失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_module_by_id/{module_id}")
+async def get_module_by_id(module_id: str):
+    """
+    根据模块ID获取模块详情
+    """
+    try:
+        # 获取项目根目录
+        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        config_file = os.path.join(current_dir, 'configData', 'modules.json')
+        
+        if not os.path.exists(config_file):
+            raise HTTPException(status_code=404, detail="配置文件不存在")
+        
+        # 读取JSON文件
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        # 查找指定模块
+        modules = config_data.get('modules', [])
+        module = next((m for m in modules if m['id'] == module_id), None)
+        
+        if not module:
+            raise HTTPException(status_code=404, detail=f"模块 {module_id} 不存在")
+        
+        return {
+            'status': 'success',
+            'data': module
+        }
+        
+    except Exception as e:
+        logger.error(f"获取模块详情失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_model_modules")
+async def get_model_modules():
+    """
+    获取模型列表
+    从configData/model_modules.json文件中读取
+    """
+    try:
+        # 获取项目根目录
+        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        config_file = os.path.join(current_dir, 'configData', 'model_modules.json')
+        
+        if not os.path.exists(config_file):
+            logger.warning(f"模型配置文件不存在: {config_file}")
+            return {
+                'status': 'success',
+                'data': {
+                    'basic': [],
+                    'custom': []
+                }
+            }
+        
+        # 读取JSON文件
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        logger.info(f"成功读取模型配置，基础模块: {len(config_data.get('basic', []))} 个，自定义模块: {len(config_data.get('custom', []))} 个")
+        
+        return {
+            'status': 'success',
+            'data': config_data
+        }
+        
+    except Exception as e:
+        logger.error(f"获取模型列表失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_model_by_id/{module_id}")
+async def get_model_by_id(module_id: int):
+    """
+    根据模块ID获取模块详情
+    """
+    try:
+        # 获取项目根目录
+        current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        config_file = os.path.join(current_dir, 'configData', 'model_modules.json')
+        
+        if not os.path.exists(config_file):
+            raise HTTPException(status_code=404, detail="配置文件不存在")
+        
+        # 读取JSON文件
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        # 查找指定模块
+        basic_modules = config_data.get('basic', [])
+        custom_modules = config_data.get('custom', [])
+        
+        module = next((m for m in basic_modules if m['id'] == module_id), None)
+        if not module:
+            module = next((m for m in custom_modules if m['id'] == module_id), None)
+        
+        if not module:
+            raise HTTPException(status_code=404, detail=f"模块 {module_id} 不存在")
+        
+        return {
+            'status': 'success',
+            'data': module
+        }
+        
+    except Exception as e:
+        logger.error(f"获取模块详情失败: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))

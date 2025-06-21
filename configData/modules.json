@@ -1,0 +1,139 @@
+{
+  "modules": [
+    {
+      "id": "person",
+      "name": "人员管理",
+      "description": "人员信息管理模块",
+      "category": "基础数据",
+      "icon": "user",
+      "version": "1.0.0",
+      "status": "active",
+      "config": {
+        "tableName": "person",
+        "databaseName": "main",
+        "fields": [
+          { "name": "id", "label": "ID", "type": "number", "primary": true },
+          { "name": "name", "label": "姓名", "type": "string", "required": true },
+          { "name": "age", "label": "年龄", "type": "number" },
+          { "name": "email", "label": "邮箱", "type": "string" },
+          { "name": "phone", "label": "电话", "type": "string" },
+          { "name": "department", "label": "部门", "type": "string" },
+          { "name": "position", "label": "职位", "type": "string" },
+          { "name": "create_time", "label": "创建时间", "type": "datetime" }
+        ]
+      }
+    },
+    {
+      "id": "department",
+      "name": "部门管理",
+      "description": "部门信息管理模块",
+      "category": "基础数据",
+      "icon": "office-building",
+      "version": "1.0.0",
+      "status": "active",
+      "config": {
+        "tableName": "department",
+        "databaseName": "main",
+        "fields": [
+          { "name": "id", "label": "部门ID", "type": "number", "primary": true },
+          { "name": "name", "label": "部门名称", "type": "string", "required": true },
+          { "name": "code", "label": "部门编码", "type": "string" },
+          { "name": "parent_id", "label": "上级部门", "type": "number" },
+          { "name": "manager", "label": "部门经理", "type": "string" },
+          { "name": "description", "label": "部门描述", "type": "text" },
+          { "name": "create_time", "label": "创建时间", "type": "datetime" }
+        ]
+      }
+    },
+    {
+      "id": "project",
+      "name": "项目管理",
+      "description": "项目信息管理模块",
+      "category": "业务管理",
+      "icon": "folder",
+      "version": "1.0.0",
+      "status": "active",
+      "config": {
+        "tableName": "project",
+        "databaseName": "main",
+        "fields": [
+          { "name": "id", "label": "项目ID", "type": "number", "primary": true },
+          { "name": "name", "label": "项目名称", "type": "string", "required": true },
+          { "name": "code", "label": "项目编码", "type": "string" },
+          { "name": "manager_id", "label": "项目经理", "type": "number" },
+          { "name": "department_id", "label": "所属部门", "type": "number" },
+          { "name": "start_date", "label": "开始日期", "type": "date" },
+          { "name": "end_date", "label": "结束日期", "type": "date" },
+          { "name": "status", "label": "项目状态", "type": "string", "values": ["规划中", "进行中", "已完成", "已暂停"] },
+          { "name": "budget", "label": "项目预算", "type": "number" },
+          { "name": "description", "label": "项目描述", "type": "text" }
+        ]
+      }
+    },
+    {
+      "id": "task",
+      "name": "任务管理",
+      "description": "任务分配和跟踪模块",
+      "category": "业务管理",
+      "icon": "checklist",
+      "version": "1.0.0",
+      "status": "active",
+      "config": {
+        "tableName": "task",
+        "databaseName": "main",
+        "fields": [
+          { "name": "id", "label": "任务ID", "type": "number", "primary": true },
+          { "name": "title", "label": "任务标题", "type": "string", "required": true },
+          { "name": "description", "label": "任务描述", "type": "text" },
+          { "name": "project_id", "label": "所属项目", "type": "number" },
+          { "name": "assignee_id", "label": "负责人", "type": "number" },
+          { "name": "priority", "label": "优先级", "type": "string", "values": ["低", "中", "高", "紧急"] },
+          { "name": "status", "label": "任务状态", "type": "string", "values": ["待分配", "进行中", "已完成", "已暂停"] },
+          { "name": "start_date", "label": "开始日期", "type": "date" },
+          { "name": "due_date", "label": "截止日期", "type": "date" },
+          { "name": "progress", "label": "完成进度", "type": "number" }
+        ]
+      }
+    },
+    {
+      "id": "report",
+      "name": "报表管理",
+      "description": "数据报表生成模块",
+      "category": "数据分析",
+      "icon": "chart-bar",
+      "version": "1.0.0",
+      "status": "active",
+      "config": {
+        "tableName": "report",
+        "databaseName": "main",
+        "fields": [
+          { "name": "id", "label": "报表ID", "type": "number", "primary": true },
+          { "name": "name", "label": "报表名称", "type": "string", "required": true },
+          { "name": "type", "label": "报表类型", "type": "string", "values": ["统计报表", "分析报表", "明细报表"] },
+          { "name": "creator_id", "label": "创建人", "type": "number" },
+          { "name": "create_time", "label": "创建时间", "type": "datetime" },
+          { "name": "update_time", "label": "更新时间", "type": "datetime" },
+          { "name": "status", "label": "状态", "type": "string", "values": ["草稿", "已发布", "已归档"] },
+          { "name": "description", "label": "报表描述", "type": "text" }
+        ]
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "basic",
+      "name": "基础数据",
+      "description": "基础数据管理模块"
+    },
+    {
+      "id": "business",
+      "name": "业务管理",
+      "description": "业务流程管理模块"
+    },
+    {
+      "id": "analysis",
+      "name": "数据分析",
+      "description": "数据分析和报表模块"
+    }
+  ]
+} 

@@ -535,89 +535,110 @@ import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 
 // 可用模块列表
 const availableModules = ref({
-  basic: [
-    {
-      id: 1,
-      name: 'insert',
-      icon: '/src/assets/demo.svg',
-      type: 'insert',
-      category: 'basic',
-      inputs: [
-        { name: '输入1', connected: false, id: 'input1' }
-      ],
-      outputs: [
-        { name: '输出1', connected: false, id: 'output1' }
-      ]
-    },
-    {
-      id: 2,
-      name: 'update',
-      icon: '/src/assets/Data.svg',
-      type: 'update',
-      category: 'basic',
-      inputs: [
-        { name: '数据输入', connected: false, id: 'input1' }
-      ],
-      outputs: [
-        { name: '处理结果', connected: false, id: 'output1' }
-      ]
-    },
-    {
-      id: 3,
-      name: 'select',
-      icon: '/src/assets/test.svg',
-      type: 'select',
-      category: 'basic',
-      inputs: [
-        { name: '信号输入', connected: false, id: 'input1' }
-      ],
-      outputs: [
-        { name: '监控输出', connected: false, id: 'output1' }
-      ]
-    },
-    {
-      id: 4,
-      name: 'create',
-      icon: '/src/assets/wave-icon.svg',
-      type: 'create',
-      category: 'basic',
-      inputs: [
-        { name: '数据输入', connected: false, id: 'input1' }
-      ],
-      outputs: [
-        { name: '创建结果', connected: false, id: 'output1' }
-      ]
-    },
-    {
-      id: 6,
-      name: 'delete',
-      icon: '/src/assets/wave-icon.svg',
-      type: 'delete',
-      category: 'basic',
-      inputs: [
-        { name: '数据输入', connected: false, id: 'input1' }
-      ],
-      outputs: [
-        { name: '创建结果', connected: false, id: 'output1' }
-      ]
-    }
-  ],
-  custom: [
-    {
-      id: 5,
-      name: 'custom',
-      icon: '/src/assets/wave-icon.svg',
-      type: 'custom',
-      category: 'custom',
-      inputs: [
-        { name: '数据输入', connected: false, id: 'input1' }
-      ],
-      outputs: [
-        { name: '分析结果', connected: false, id: 'output1' }
-      ]
-    }
-  ]
+  basic: [],
+  custom: []
 })
+
+// 加载模型列表
+const loadModelModules = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/code/get_model_modules')
+    if (response.ok) {
+      const data = await response.json()
+      if (data.status === 'success') {
+        availableModules.value = data.data
+        console.log('模型列表加载成功:', data.data)
+      }
+    }
+  } catch (error) {
+    console.error('加载模型列表失败:', error)
+    // 如果加载失败，使用默认数据
+    availableModules.value = {
+      basic: [
+        {
+          id: 1,
+          name: 'insert',
+          icon: '/src/assets/demo.svg',
+          type: 'insert',
+          category: 'basic',
+          inputs: [
+            { name: '输入1', connected: false, id: 'input1' }
+          ],
+          outputs: [
+            { name: '输出1', connected: false, id: 'output1' }
+          ]
+        },
+        {
+          id: 2,
+          name: 'update',
+          icon: '/src/assets/Data.svg',
+          type: 'update',
+          category: 'basic',
+          inputs: [
+            { name: '数据输入', connected: false, id: 'input1' }
+          ],
+          outputs: [
+            { name: '处理结果', connected: false, id: 'output1' }
+          ]
+        },
+        {
+          id: 3,
+          name: 'select',
+          icon: '/src/assets/test.svg',
+          type: 'select',
+          category: 'basic',
+          inputs: [
+            { name: '信号输入', connected: false, id: 'input1' }
+          ],
+          outputs: [
+            { name: '监控输出', connected: false, id: 'output1' }
+          ]
+        },
+        {
+          id: 4,
+          name: 'create',
+          icon: '/src/assets/wave-icon.svg',
+          type: 'create',
+          category: 'basic',
+          inputs: [
+            { name: '数据输入', connected: false, id: 'input1' }
+          ],
+          outputs: [
+            { name: '创建结果', connected: false, id: 'output1' }
+          ]
+        },
+        {
+          id: 6,
+          name: 'delete',
+          icon: '/src/assets/wave-icon.svg',
+          type: 'delete',
+          category: 'basic',
+          inputs: [
+            { name: '数据输入', connected: false, id: 'input1' }
+          ],
+          outputs: [
+            { name: '删除结果', connected: false, id: 'output1' }
+          ]
+        }
+      ],
+      custom: [
+        {
+          id: 5,
+          name: 'custom',
+          icon: '/src/assets/wave-icon.svg',
+          type: 'custom',
+          category: 'custom',
+          inputs: [
+            { name: '数据输入', connected: false, id: 'input1' }
+          ],
+          outputs: [
+            { name: '分析结果', connected: false, id: 'output1' }
+          ]
+        }
+      ]
+    }
+  }
+}
 
 // 已放置的节点
 const placedNodes = ref([])
@@ -1315,6 +1336,7 @@ const fetchFileStructure = async () => {
 
 // 初始化
 onMounted(async () => {
+  await loadModelModules() // 加载模型列表
   await fetchFileStructure()
   await preloadDatabases()
   await preloadTables()

@@ -1,0 +1,132 @@
+{
+  "basic": [
+    {
+      "id": 1,
+      "name": "insert",
+      "icon": "/src/assets/demo.svg",
+      "type": "insert",
+      "category": "basic",
+      "description": "数据插入模块",
+      "version": "1.0.0",
+      "status": "active",
+      "inputs": [
+        { "name": "输入1", "connected": false, "id": "input1", "type": "data" }
+      ],
+      "outputs": [
+        { "name": "输出1", "connected": false, "id": "output1", "type": "result" }
+      ],
+      "config": {
+        "tableName": "",
+        "databaseName": "",
+        "fields": []
+      }
+    },
+    {
+      "id": 2,
+      "name": "update",
+      "icon": "/src/assets/Data.svg",
+      "type": "update",
+      "category": "basic",
+      "description": "数据更新模块",
+      "version": "1.0.0",
+      "status": "active",
+      "inputs": [
+        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+      ],
+      "outputs": [
+        { "name": "处理结果", "connected": false, "id": "output1", "type": "result" }
+      ],
+      "config": {
+        "tableName": "",
+        "databaseName": "",
+        "fields": []
+      }
+    },
+    {
+      "id": 3,
+      "name": "select",
+      "icon": "/src/assets/test.svg",
+      "type": "select",
+      "category": "basic",
+      "description": "数据查询模块",
+      "version": "1.0.0",
+      "status": "active",
+      "inputs": [
+        { "name": "信号输入", "connected": false, "id": "input1", "type": "signal" }
+      ],
+      "outputs": [
+        { "name": "监控输出", "connected": false, "id": "output1", "type": "monitor" }
+      ],
+      "config": {
+        "tableName": "",
+        "databaseName": "",
+        "fields": []
+      }
+    },
+    {
+      "id": 4,
+      "name": "create",
+      "icon": "/src/assets/wave-icon.svg",
+      "type": "create",
+      "category": "basic",
+      "description": "数据创建模块",
+      "version": "1.0.0",
+      "status": "active",
+      "inputs": [
+        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+      ],
+      "outputs": [
+        { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
+      ],
+      "config": {
+        "tableName": "",
+        "databaseName": "",
+        "fields": []
+      }
+    },
+    {
+      "id": 6,
+      "name": "delete",
+      "icon": "/src/assets/wave-icon.svg",
+      "type": "delete",
+      "category": "basic",
+      "description": "数据删除模块",
+      "version": "1.0.0",
+      "status": "active",
+      "inputs": [
+        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+      ],
+      "outputs": [
+        { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+      ],
+      "config": {
+        "tableName": "",
+        "databaseName": "",
+        "fields": []
+      }
+    }
+  ],
+  "custom": [
+    {
+      "id": 5,
+      "name": "custom",
+      "icon": "/src/assets/wave-icon.svg",
+      "type": "custom",
+      "category": "custom",
+      "description": "自定义处理模块",
+      "version": "1.0.0",
+      "status": "active",
+      "inputs": [
+        { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+      ],
+      "outputs": [
+        { "name": "分析结果", "connected": false, "id": "output1", "type": "analysis" }
+      ],
+      "config": {
+        "tableName": "",
+        "databaseName": "",
+        "fields": []
+      }
+    }
+  ]
+} 
