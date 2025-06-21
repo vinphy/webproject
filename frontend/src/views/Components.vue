@@ -3395,7 +3395,7 @@ h3 {
 
 .sub-category-name {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: #303133;
   flex: 1;
 }
@@ -3819,9 +3819,6 @@ h3 {
     padding: 10px;
   }
   
-  .category-name {
-    font-size: 13px;
-  }
   
   .category-desc {
     font-size: 10px;
