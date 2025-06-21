@@ -3151,12 +3151,6 @@ h3 {
   transform: rotate(90deg);
 }
 
-.sub-modules {
-  padding-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
 .module-item {
   display: flex;
@@ -3165,12 +3159,14 @@ h3 {
   padding: 6px 8px;
   border: 1px solid #e4e7ed;
   border-radius: 4px;
-  background: #fafbfc;
+  background: #fff;
   cursor: grab;
   transition: all 0.3s ease;
   user-select: none;
-  min-height: 32px;
+  min-height: 28px;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .module-item:hover {
@@ -3405,10 +3401,10 @@ h3 {
 }
 
 .sub-modules {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #fff;
+  /* padding: 6px 2px 6px 2px; */
+  gap: 3px;
+  border: 1px solid #e4e7ed;
+  border-radius: 3px;
 }
 
 .module-item {
@@ -3845,14 +3841,10 @@ h3 {
     max-width: 70px;
   }
   
-  .sub-modules {
-    padding: 6px 10px 6px 28px;
-    gap: 3px;
-  }
   
   .module-item {
-    padding: 4px 6px;
-    gap: 6px;
+    padding: 2px 6px 2px 23px;
+    gap: 2px;
     min-height: 28px;
   }
   
