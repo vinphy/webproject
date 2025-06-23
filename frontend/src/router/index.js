@@ -24,7 +24,7 @@ const routes = [
   {
     path: '/test',
     name: 'Test',
-    component: () => import('../views/QueryBuilderDemo.vue')
+    component: () => import('../views/TestD.vue')
   },
   {
     path: '/bitTest',
