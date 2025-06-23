@@ -6,14 +6,14 @@
     "order": 4,
     "children": {
       "data_analysis": {
-        "name": "数据分析",
-        "description": "数据分析和统计功能",
+        "name": "模式",
+        "description": "模式操作",
         "icon": "/src/assets/demo.svg",
         "children": [
           {
-            "id": "statistical_analysis",
-            "name": "统计分析",
-            "description": "数据统计分析功能",
+            "id": "schemaC",
+            "name": "创建模式",
+            "description": "创建模式",
             "type": "analysis",
             "subType": "statistical",
             "category": "advanced_features",
@@ -31,9 +31,30 @@
             }
           },
           {
-            "id": "trend_analysis",
-            "name": "趋势分析",
-            "description": "数据趋势分析功能",
+            "id": "schemaU",
+            "name": "修改模式",
+            "description": "修改模式",
+            "type": "analysis",
+            "subType": "trend",
+            "category": "advanced_features",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "时间序列数据", "connected": false, "id": "input1", "type": "time_series" }
+            ],
+            "outputs": [
+              { "name": "趋势结果", "connected": false, "id": "output1", "type": "trend" }
+            ],
+            "config": {
+              "analysisType": "trend",
+              "timeField": "",
+              "valueField": ""
+            }
+          },
+          {
+            "id": "schemaD",
+            "name": "删除模式",
+            "description": "删除模式",
             "type": "analysis",
             "subType": "trend",
             "category": "advanced_features",
@@ -54,14 +75,14 @@
         ]
       },
       "data_transformation": {
-        "name": "数据转换",
-        "description": "数据格式转换功能",
+        "name": "游标",
+        "description": "游标操作",
         "icon": "/src/assets/Data.svg",
         "children": [
           {
-            "id": "format_transform",
-            "name": "格式转换",
-            "description": "数据格式转换处理",
+            "id": "cursorDeclare",
+            "name": "游标声明",
+            "description": "游标声明",
             "type": "transformation",
             "subType": "format",
             "category": "advanced_features",
@@ -80,9 +101,72 @@
             }
           },
           {
-            "id": "data_cleaning",
-            "name": "数据清洗",
-            "description": "数据清洗和预处理",
+            "id": "cursorOpen",
+            "name": "打开游标",
+            "description": "打开游标",
+            "type": "transformation",
+            "subType": "cleaning",
+            "category": "advanced_features",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "原始数据", "connected": false, "id": "input1", "type": "data" }
+            ],
+            "outputs": [
+              { "name": "清洗结果", "connected": false, "id": "output1", "type": "cleaned_data" }
+            ],
+            "config": {
+              "cleaningRules": [],
+              "removeNulls": true,
+              "removeDuplicates": true
+            }
+          },
+          {
+            "id": "cursorClose",
+            "name": "关闭游标",
+            "description": "关闭游标",
+            "type": "transformation",
+            "subType": "cleaning",
+            "category": "advanced_features",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "原始数据", "connected": false, "id": "input1", "type": "data" }
+            ],
+            "outputs": [
+              { "name": "清洗结果", "connected": false, "id": "output1", "type": "cleaned_data" }
+            ],
+            "config": {
+              "cleaningRules": [],
+              "removeNulls": true,
+              "removeDuplicates": true
+            }
+          },
+          {
+            "id": "cursorFetch",
+            "name": "获取游标",
+            "description": "获取游标",
+            "type": "transformation",
+            "subType": "cleaning",
+            "category": "advanced_features",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "原始数据", "connected": false, "id": "input1", "type": "data" }
+            ],
+            "outputs": [
+              { "name": "清洗结果", "connected": false, "id": "output1", "type": "cleaned_data" }
+            ],
+            "config": {
+              "cleaningRules": [],
+              "removeNulls": true,
+              "removeDuplicates": true
+            }
+          },
+          {
+            "id": "cursordeallocate",
+            "name": "释放游标",
+            "description": "释放游标",
             "type": "transformation",
             "subType": "cleaning",
             "category": "advanced_features",
@@ -103,14 +187,14 @@
         ]
       },
       "custom_processing": {
-        "name": "自定义处理",
-        "description": "自定义数据处理功能",
+        "name": "域",
+        "description": "域处理",
         "icon": "/src/assets/test.svg",
         "children": [
           {
-            "id": "custom_script",
-            "name": "自定义脚本",
-            "description": "执行自定义处理脚本",
+            "id": "domainC",
+            "name": "创建域",
+            "description": "创建域",
             "type": "custom",
             "subType": "script",
             "category": "advanced_features",
@@ -129,9 +213,29 @@
             }
           },
           {
-            "id": "custom_function",
-            "name": "自定义函数",
-            "description": "执行自定义处理函数",
+            "id": "domainU",
+            "name": "修改域",
+            "description": "修改域",
+            "type": "custom",
+            "subType": "function",
+            "category": "advanced_features",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
+            ],
+            "outputs": [
+              { "name": "处理结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "functionName": "",
+              "parameters": []
+            }
+          },
+          {
+            "id": "domainD",
+            "name": "删除域",
+            "description": "删除域",
             "type": "custom",
             "subType": "function",
             "category": "advanced_features",

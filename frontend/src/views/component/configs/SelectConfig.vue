@@ -7,6 +7,7 @@
     <div class="section-content">
       <div class="parameter-header">
         <span class="param-col">列名</span>
+        <span class="param-col">别名</span>
         <span class="param-col">操作</span>
       </div>
       <div v-for="(param, index) in node.parameters" :key="index" class="parameter-item">
@@ -14,7 +15,7 @@
           v-model="param.name"
           placeholder="选择列名"
           class="param-col"
-          style="width: 100%"
+          style="width: 50%"
           :disabled="!node.databaseName || !node.tableName || node.parameters.some((p, i) => p.name === col && i !== index)"
           filterable
           @focus="async () => { param._columns = await getColumnsByDatabaseTable(node.databaseName, node.tableName) }"
@@ -26,6 +27,7 @@
             :value="col"
           />
         </el-select>
+        <el-input  placeholder="别名(可选)" style="width:340px;font-size:14px;" size="small" />
         <div class="param-col">
           <el-button type="danger" size="small" @click="removeParameter(index)">删除</el-button>
         </div>

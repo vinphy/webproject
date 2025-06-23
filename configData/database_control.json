@@ -31,6 +31,25 @@
             }
           },
           {
+            "id": "constrationsM",
+            "name": "约束",
+            "description": "设置约束模式",
+            "type": "transaction",
+            "subType": "commit",
+            "category": "database_control",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "事务ID", "connected": false, "id": "input1", "type": "transaction_id" }
+            ],
+            "outputs": [
+              { "name": "提交结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "config": {
+              "transactionId": ""
+            }
+          },
+          {
             "id": "commit_transaction",
             "name": "提交事务",
             "description": "提交数据库事务",

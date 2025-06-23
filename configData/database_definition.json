@@ -11,11 +11,11 @@
           "icon": "/src/assets/add.png",
           "children": [
             {
-              "id": "create_database",
+              "id": "databaseC",
               "name": "创建数据库",
               "description": "创建新的数据库",
               "type": "create",
-              "subType": "base",
+              "subType": "database",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
@@ -32,11 +32,74 @@
               }
             },
             {
-              "id": "create_database_charset",
-              "name": "指定字符集",
-              "description": "创建新的数据库并指定字符集",
+              "id": "tableC",
+              "name": "创建数据表",
+              "description": "创建新的数据表并定义表结构",
               "type": "create",
-              "subType": "charset",
+              "subType": "table",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "viewC",
+              "name": "创建视图",
+              "description": "创建视图",
+              "type": "create",
+              "subType": "view",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "indexC",
+              "name": "创建索引",
+              "description": "创建索引",
+              "type": "create",
+              "subType": "index",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "assertionC",
+              "name": "创建断言",
+              "description": "创建断言",
+              "type": "create",
+              "subType": "assertion",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
@@ -56,69 +119,112 @@
         },
         "update": {
           "name": "修改操作",
-          "description": "增加数据表结构",
+          "description": "修改操作",
           "icon": "/src/assets/update.png",
           "children": [
             {
-              "id": "alter_add",
-              "name": "添加列",
-              "description": "添加数据表结构",
-              "type": "alter",
-              "subType": "base",
+              "id": "databaseU",
+              "name": "修改数据库",
+              "description": "修改数据库",
+              "type": "update",
+              "subType": "database",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "alter_config" }
+                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
               "config": {
-                "tableName": "",
-                "operations": []
+                "databaseName": "",
+                "charset": "utf8mb4",
+                "collation": "utf8mb4_unicode_ci"
               }
             },
             {
-              "id": "alter_modify",
-              "name": "修改列类型",
-              "description": "修改表列定义中的列数据类型",
-              "type": "alter",
-              "subType": "alter",
+              "id": "tableU",
+              "name": "修改数据表",
+              "description": "修改数据表结构",
+              "type": "update",
+              "subType": "table",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "列配置", "connected": false, "id": "input1", "type": "column_config" }
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
               ],
               "outputs": [
-                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
               "config": {
                 "tableName": "",
-                "columnName": "",
-                "newDefinition": ""
+                "databaseName": "",
+                "fields": []
               }
             },
             {
-              "id": "alter_change",
-              "name": "修改列名",
-              "description": "修改数据表已定义的列名",
-              "type": "alter",
-              "subType": "change",
+              "id": "viewU",
+              "name": "修改视图",
+              "description": "修改视图",
+              "type": "update",
+              "subType": "view",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "column_config" }
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
               ],
               "outputs": [
-                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
               "config": {
                 "tableName": "",
-                "columnName": "",
-                "newDefinition": ""
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "indexU",
+              "name": "修改索引",
+              "description": "修改索引",
+              "type": "update",
+              "subType": "index",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "assertionU",
+              "name": "修改断言",
+              "description": "修改断言",
+              "type": "update",
+              "subType": "assertion",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
               }
             }
           ]
@@ -129,23 +235,108 @@
           "icon": "/src/assets/delete.png",
           "children": [
             {
-              "id": "drop_table",
-              "name": "删除表",
+              "id": "databaseD",
+              "name": "删除数据库",
+              "description": "删除数据库",
+              "type": "delete",
+              "subType": "database",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "databaseName": "",
+                "charset": "utf8mb4",
+                "collation": "utf8mb4_unicode_ci"
+              }
+            },
+            {
+              "id": "tableD",
+              "name": "删除数据表",
               "description": "删除数据表",
-              "type": "drop",
+              "type": "delete",
               "subType": "table",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "drop_config" }
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
               ],
               "outputs": [
-                { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
               "config": {
                 "tableName": "",
-                "cascade": false
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "viewD",
+              "name": "删除视图",
+              "description": "删除视图",
+              "type": "delete",
+              "subType": "view",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "indexD",
+              "name": "删除索引",
+              "description": "删除索引",
+              "type": "delete",
+              "subType": "index",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
+              }
+            },
+            {
+              "id": "assertionC",
+              "name": "删除断言",
+              "description": "删除断言",
+              "type": "delete",
+              "subType": "assertion",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "config": {
+                "tableName": "",
+                "databaseName": "",
+                "fields": []
               }
             }
           ]
