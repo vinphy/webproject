@@ -140,19 +140,15 @@ watch(() => props.node, (newNode) => {
       }]
     }
     
-    // 如果不是create类型，设置默认的数据库和表名
-    if (newNode.type !== 'create') {
-      // 如果没有设置数据库名，选择第一个数据库
-      if (!currentNode.value.databaseName && props.databaseList.length > 0) {
-        currentNode.value.databaseName = props.databaseList[0]
-      }
-      
-      // 如果有数据库名，设置默认表名
-      if (currentNode.value.databaseName) {
-        const tables = props.getTablesByDatabase(currentNode.value.databaseName)
-        if (tables.length > 0 && !currentNode.value.tableName) {
-          currentNode.value.tableName = tables[0]
-        }
+    // 自动兜底：如果没有数据库名，自动选择第一个
+    if (!currentNode.value.databaseName && props.databaseList.length > 0) {
+      currentNode.value.databaseName = props.databaseList[0]
+    }
+    // 自动兜底：如果有数据库名但没有表名，自动选择第一个表
+    if (currentNode.value.databaseName) {
+      const tables = props.getTablesByDatabase(currentNode.value.databaseName)
+      if (tables.length > 0 && !currentNode.value.tableName) {
+        currentNode.value.tableName = tables[0]
       }
     }
   }

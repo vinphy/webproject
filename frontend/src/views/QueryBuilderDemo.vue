@@ -1,40 +1,96 @@
 <template>
   <div class="query-builder-demo">
     <h2>自定义sql参数配置</h2>
-    <div class="toolbar">
-      <el-select v-model="selectedTables" multiple placeholder="选择表" style="width: 320px; margin-right: 16px">
-        <el-option v-for="t in tableOptions" :key="t.value" :label="t.label" :value="t.value" />
-      </el-select>
-      <el-button size="small" @click="addRootGroup" type="primary">添加分组(括号)</el-button>
-      <el-button size="small" @click="addRootCondition" type="success">添加条件</el-button>
-      <el-button size="small" @click="addOrderBy" type="info">添加排序</el-button>
+    <!-- 基础配置 -->
+    <div class="config-section">
+        <div class="section-header">
+          <div class="table-name-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <h4>数据库：</h4>
+            <el-select 
+              v-model="currentNode.databaseName" 
+              style="width: 200px"
+              @change="onDatabaseChange"
+            >
+              <el-option 
+                v-for="db in databaseList" 
+                :key="db" 
+                :label="db" 
+                :value="db" 
+              />
+            </el-select>
+          </div>
+        </div>
     </div>
-    <div class="builder-area">
-      <ConditionGroup
-        v-if="conditionBuilder"
-        :group="conditionBuilder"
-        :fields="filteredFields"
-        :operators="operators"
-        :table-map="tableMap"
-        :support-agg="true"
-        :support-subquery="true"
-        :removable="false"
-        @update="val => conditionBuilder = val"
-      />
-    </div>
-    <div class="order-by-area" v-if="orderByList.length">
-      <h4>排序字段</h4>
-      <div v-for="(ob, idx) in orderByList" :key="idx" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <el-select v-model="ob.field" placeholder="选择字段" style="width:180px">
-          <el-option v-for="f in filteredFields" :key="f.name" :label="f.label" :value="f.name" />
-        </el-select>
-        <el-select v-model="ob.order" placeholder="排序方式" style="width:100px">
-          <el-option label="升序" value="asc" />
-          <el-option label="降序" value="desc" />
-        </el-select>
-        <el-button type="danger" size="small" @click="orderByList.splice(idx,1)">删除</el-button>
+    <div class="config-section">
+      <div class="section-header">
+        <div class="table-name-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <h4>数据表：</h4>
+            <el-select v-model="selectedTables" multiple placeholder="选择表" style="width: 320px; margin-right: 16px">
+              <el-option v-for="t in tableOptions" :key="t.value" :label="t.label" :value="t.value" />
+            </el-select>
+        </div>
       </div>
     </div>
+
+    <!-- 查询字段配置区 -->
+    <div class="config-section">
+      <div class="section-header">
+        <h4>查询字段配置</h4>
+      </div>
+      <div class="section-content">
+        <template v-if="fieldConfigs.length === 0">
+          <el-button type="primary" size="small" style="margin-right:16px;vertical-align:middle;" @click="addFieldConfig">添加字段</el-button>
+          <span style="color:#aaa;font-size:14px;line-height:32px;vertical-align:middle;">未添加字段时，默认查询所有字段（*）</span>
+        </template>
+        <template v-else>
+          <div v-for="(item, idx) in fieldConfigs" :key="idx" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <el-select v-model="item.name" placeholder="选择字段" style="width:180px;font-size:14px;">
+              <el-option v-for="f in allFieldOptions" :key="f.name" :label="f.label" :value="f.name" />
+            </el-select>
+            <el-input v-model="item.alias" placeholder="别名(可选)" style="width:140px;font-size:14px;" size="small" />
+            <el-button type="danger" size="small" @click="removeFieldConfig(idx)">删除</el-button>
+            <el-button type="primary" size="small" style="margin-left:8px;" v-if="idx === fieldConfigs.length-1" @click="addFieldConfig">添加字段</el-button>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div class="config-section" style="margin-top: 20px;">
+      <div class="section-header">
+        <h4 style="margin-bottom:0;">条件语句：</h4>
+      </div>
+      <div class="toolbar" style="margin-bottom: 0;">
+        <el-button size="small" @click="addRootGroup" type="primary">添加分组(括号)</el-button>
+        <el-button size="small" @click="addRootCondition" type="success">添加条件</el-button>
+        <el-button size="small" @click="addOrderBy" type="info">添加排序</el-button>
+      </div>
+      <div class="builder-area">
+        <ConditionGroup
+          v-if="conditionBuilder"
+          :group="conditionBuilder"
+          :fields="filteredFields"
+          :operators="operators"
+          :table-map="tableMap"
+          :support-agg="true"
+          :support-subquery="true"
+          :removable="false"
+          @update="val => conditionBuilder = val"
+        />
+      </div>
+      <div class="order-by-area" v-if="orderByList.length">
+        <h4>排序字段</h4>
+        <div v-for="(ob, idx) in orderByList" :key="idx" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <el-select v-model="ob.field" placeholder="选择字段" style="width:180px">
+            <el-option v-for="f in filteredFields" :key="f.name" :label="f.label" :value="f.name" />
+          </el-select>
+          <el-select v-model="ob.order" placeholder="排序方式" style="width:100px">
+            <el-option label="升序" value="asc" />
+            <el-option label="降序" value="desc" />
+          </el-select>
+          <el-button type="danger" size="small" @click="orderByList.splice(idx,1)">删除</el-button>
+        </div>
+      </div>
+    </div>
+    
     <div class="sql-preview">
       <h4>SQL预览</h4>
       <el-input type="textarea" :rows="8" :model-value="buildFullSQL()" readonly />
@@ -43,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, h, computed } from 'vue'
+import { ref, reactive, h, computed, onMounted, watch } from 'vue'
 import { ElButton, ElInput, ElSelect, ElOption, ElMessage } from 'element-plus'
 
 // TPC-H风格表结构
@@ -109,6 +165,26 @@ const aggFuncs = [ '', 'min', 'max', 'sum', 'count', 'avg' ]
 
 const conditionBuilder = ref(null)
 const orderByList = ref([])
+
+const currentNode = reactive({
+  databaseName: 'demo',
+  tableName: '[table1,table2,table3]',
+  type: ''
+})
+
+onMounted(() => {
+  if (!currentNode.databaseName) currentNode.databaseName = tableOptions[0]?.value || ''
+  if (!currentNode.tableName && currentNode.databaseName) {
+    const tables = getTablesByDatabase(currentNode.databaseName)
+    if (tables.length > 0) currentNode.tableName = tables[0]
+  }
+})
+
+function getTablesByDatabase(databaseName) {
+  // 这里假设每个数据库都用 tableOptions 里的表
+  // 实际可根据业务调整
+  return tableOptions.map(t => t.value)
+}
 
 const addRootGroup = () => {
   if (!conditionBuilder.value) {
@@ -405,6 +481,50 @@ function buildFullSQL() {
   const orderBy = orderByList.value.filter(ob=>ob.field).map(ob=>`${ob.field} ${ob.order.toUpperCase()}`).join(', ')
   return `select\n  ${selectFields.join(', ')}\nfrom\n  ${fromTables}\nwhere\n  ${where}\n${orderBy ? 'order by\n  ' + orderBy : ''}`
 }
+
+
+
+// 假设 tableMap 里有所有表的字段
+const isSingleTable = computed(() => selectedTables.value.length === 1)
+
+// 查询字段动态配置
+const fieldConfigs = ref([])
+
+// 所有可选字段（合并所有选中表的字段）
+const allFieldOptions = computed(() => {
+  return selectedTables.value.flatMap(t => tableMap[t]||[])
+})
+
+function addFieldConfig() {
+  fieldConfigs.value.push({ name: '', alias: '' })
+}
+function removeFieldConfig(idx) {
+  fieldConfigs.value.splice(idx, 1)
+}
+
+// 初始化字段配置
+// watch([selectedTables, () => currentNode.databaseName], ([tables, dbName]) => {
+//   if (!dbName || !tables.length) return
+//   if (isSingleTable.value) {
+//     // 单表
+//     const fields = tableMap[tables[0]] || []
+//     fieldConfigs.value = fields.map(f => ({ name: f.name, alias: '', selected: false }))
+//   } else {
+//     // 多表
+//     for (const table of tables) {
+//       const fields = tableMap[table] || []
+//       fieldConfigs.value = fields.map(f => ({ name: f.name, alias: '', selected: false }))
+//     }
+//   }
+// }, { immediate: true })
+
+function selectAllFields() {
+  fieldConfigs.value.forEach(f => f.selected = true)
+}
+
+function getFieldConfigsByTable(table) {
+  return fieldConfigs.value.filter(f => f.name.startsWith(table))
+}
 </script>
 
 <style scoped>
@@ -422,11 +542,16 @@ function buildFullSQL() {
   align-items: center;
 }
 .builder-area {
-  margin-bottom: 18px;
+  display: block;
+  margin: 18px 0 18px 0;
+  width: 100%;
+  min-height: 32px;
 }
 .sql-preview {
   margin-top: 18px;
 }
+
+
 .order-by-area {
   margin-top: 18px;
 }
@@ -437,4 +562,41 @@ function buildFullSQL() {
   background: none !important;
   border: none !important;
 }
+
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  position: relative;
+  padding-left: 12px;
+}
+
+.section-header h4::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  background: #409EFF;
+  border-radius: 2px;
+}
+
+.table-name-row .label {
+  font-size: 16px;
+  color: #303133;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 </style> 
