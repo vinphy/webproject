@@ -149,7 +149,7 @@
             >
               <div class="node-header">
                 <img :src="node.icon" class="node-icon" alt="节点图标" />
-                <span>{{ node.name }}</span>
+                <span>{{ node.originId || node.rawId || (typeof node.id === 'string' ? node.id : '') || node.id }}</span>
                 <span class="node-type">({{ node.type }})</span>
               </div>
               <div class="node-ports">
@@ -205,7 +205,7 @@
                     <span class="param-text">{{ node.tableName }}</span>
                   </div>
                   <div v-if="node.parameters && node.parameters.length > 0" class="param-line">
-                    <span class="param-label">列:</span>
+                    <span class="param-label">参数:</span>
                     <span class="param-text">
                       {{ node.parameters.slice(0, 2).map(p => p.name).join(', ') }}{{ node.parameters.length > 2 ? '...' : '' }}
                     </span>
@@ -863,6 +863,7 @@ const handleDrop = (event) => {
       ...module,
       icon: module.icon || fallbackIcon || '/src/assets/logo.svg',
       id: nodeId++,
+      originId: module.id,
       x,
       y,
       scale: 1
@@ -1308,12 +1309,18 @@ const handleGenerateCode = async () => {
     const nodeData = {
       name: moduleName,
       type: contextMenuNode.value.type,
-      tableName: contextMenuNode.value.tableName,
-      databaseName: contextMenuNode.value.databaseName,
-      parameters: contextMenuNode.value.parameters || [],
-      condition: contextMenuNode.value.condition,
-      icon: contextMenuNode.value.icon || "/src/assets/wave-icon.svg"  // 添加图标信息
+      tableName: contextMenuNode.value.tableName || '', // 保证有值
+      databaseName: contextMenuNode.value.databaseName || '',
+      parameters: Array.isArray(contextMenuNode.value.parameters) ? contextMenuNode.value.parameters : [],
+      condition: contextMenuNode.value.condition || '',
+      icon: contextMenuNode.value.icon || "/src/assets/wave-icon.svg"
     }
+    // 新增：如果节点有sql字段，则一并传递
+    if (contextMenuNode.value.sql) {
+      nodeData.sql = contextMenuNode.value.sql
+    }
+    // 调试输出
+    console.log('最终发送到后端的 nodeData:', JSON.stringify(nodeData, null, 2))
     
     console.log('节点图标信息:', contextMenuNode.value.icon)
     console.log('发送到后端的数据:', JSON.stringify(nodeData, null, 2))

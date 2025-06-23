@@ -1,5 +1,0 @@
-CREATE DATABASE IF NOT EXISTS demo;
-USE demo;
-CREATE TABLE rt (
-    sd VARCHAR(255)
-);

@@ -1,5 +1,0 @@
-CREATE DATABASE IF NOT EXISTS demo;
-USE demo;
-CREATE TABLE person (
-    name VARCHAR(255)
-);

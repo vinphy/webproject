@@ -1,5 +1,0 @@
-CREATE DATABASE IF NOT EXISTS demo;
-USE demo;
-CREATE TABLE u (
-    yu VARCHAR(255)
-);

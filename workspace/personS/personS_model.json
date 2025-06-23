@@ -1,0 +1,41 @@
+{
+  "type": "draggable_model",
+  "version": "1.0",
+  "model_config": {
+    "name": "personS",
+    "type": "select",
+    "icon": "/src/assets/search.png",
+    "category": "basic",
+    "inputs": [
+      {
+        "name": "输入",
+        "connected": false,
+        "id": "input"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "输出",
+        "connected": false,
+        "id": "output"
+      }
+    ]
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "person"
+  },
+  "parameters": [
+    {
+      "name": "name",
+      "value": ""
+    },
+    {
+      "name": "age",
+      "value": ""
+    }
+  ],
+  "condition": null,
+  "generated_time": "2025-06-23 16:04:22",
+  "description": "预配置的 SELECT 模型"
+}

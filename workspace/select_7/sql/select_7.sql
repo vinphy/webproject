@@ -1,1 +1,0 @@
-SELECT yu, yu FROM test1;

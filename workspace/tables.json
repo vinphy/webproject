@@ -1,17 +1,8 @@
 {
-  "demo3": {
-    "person": [],
-    "test1": [
-      "yu",
-      "yu"
-    ],
-    "ee": [
-      "se"
-    ]
-  },
   "demo": {
-    "u": [
-      "yu"
+    "person": [
+      "name",
+      "age"
     ]
   }
 }

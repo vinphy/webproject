@@ -8,7 +8,7 @@
   >
     <div class="config-content">
       <!-- 基础配置 -->
-      <div class="config-section">
+      <div class="config-section" v-if="currentNode?.subType !== 'database'">
         <div class="section-header">
           <div class="table-name-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <span class="label" style="min-width: 60px;">数据库：</span>
@@ -92,6 +92,7 @@ import CreateConfig from './configs/CreateConfig.vue'
 import InsertConfig from './configs/InsertConfig.vue'
 import UpdateConfig from './configs/UpdateConfig.vue'
 import DeleteConfig from './configs/DeleteConfig.vue'
+import DatabaseCreateConfig from './configs/DatabaseCreateConfig.vue'
 
 // Props
 const props = defineProps({
@@ -144,8 +145,8 @@ watch(() => props.node, (newNode) => {
     if (!currentNode.value.databaseName && props.databaseList.length > 0) {
       currentNode.value.databaseName = props.databaseList[0]
     }
-    // 自动兜底：如果有数据库名但没有表名，自动选择第一个表
-    if (currentNode.value.databaseName) {
+    // 自动兜底：如果有数据库名但没有表名，且不是创建数据库操作，自动选择第一个表
+    if (currentNode.value.databaseName && currentNode.value.subType !== 'database') {
       const tables = props.getTablesByDatabase(currentNode.value.databaseName)
       if (tables.length > 0 && !currentNode.value.tableName) {
         currentNode.value.tableName = tables[0]
@@ -161,6 +162,10 @@ const getConfigComponent = () => {
   const { type, subType } = currentNode.value
   
   // 根据type和subType返回不同的配置组件
+  if (type === 'create' && subType === 'database') {
+    return DatabaseCreateConfig
+  }
+  
   switch (type) {
     case 'select':
       return SelectConfig
@@ -180,6 +185,11 @@ const getConfigComponent = () => {
 // 数据库切换处理
 const onDatabaseChange = async () => {
   console.log('数据库切换:', currentNode.value.databaseName)
+  
+  // 如果是创建数据库操作，不需要处理表名
+  if (currentNode.value.subType === 'database') {
+    return
+  }
   
   // 清空当前表名
   currentNode.value.tableName = ''
@@ -218,6 +228,18 @@ const saveConfig = () => {
     }
     if (hasDuplicate) {
       ElMessage.error('不能选择重复的列名')
+      return
+    }
+  }
+  
+  // 创建数据库参数校验
+  if (currentNode.value.type === 'create' && currentNode.value.subType === 'database') {
+    if (!currentNode.value.databaseName) {
+      ElMessage.error('数据库名不能为空')
+      return
+    }
+    if (!currentNode.value.parameters?.find(p => p.name === 'charset')?.value) {
+      ElMessage.error('字符集不能为空')
       return
     }
   }

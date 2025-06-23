@@ -39,6 +39,7 @@ class NodeData(BaseModel):
     parameters: List[Parameter]
     condition: Optional[str] = None
     icon: Optional[str] = None
+    sql: Optional[str] = None  # 新增：可选的sql字段
 
 class DraggableModelRequest(BaseModel):
     file_content: str
@@ -196,7 +197,6 @@ def generate_sql(node_data: NodeData) -> str:
     """生成SQL插入语句"""
     
 
-    
     # 获取列名和值
     columns = [param.name for param in node_data.parameters]
     values = [f"'{param.value}'" for param in node_data.parameters]  # 添加引号
@@ -204,7 +204,11 @@ def generate_sql(node_data: NodeData) -> str:
 
     # 如果有数据库名和表名，保存表名对应关系
     if node_data.databaseName and node_data.tableName:
-        save_table_name(node_data.databaseName, node_data.tableName,columns)
+        save_table_name(node_data.databaseName, node_data.tableName, columns)
+    
+    # 如果节点数据中包含sql字段，直接使用该SQL
+    if node_data.sql:
+        return node_data.sql
     
     if type == 'insert':
         # 构建SQL语句
@@ -260,8 +264,6 @@ def generate_sql(node_data: NodeData) -> str:
                           ",\n    ".join(field_definitions) + \
                           "\n);"
         sql_parts.append(create_table_sql)
-        
-        
         
         sql = "\n".join(sql_parts)
     return sql

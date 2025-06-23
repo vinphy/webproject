@@ -21,7 +21,7 @@
           @focus="async () => { param._columns = await getColumnsByDatabaseTable(node.databaseName, node.tableName) }"
         >
           <el-option
-            v-for="col in param._columns || []"
+            v-for="col in param._columns || ['name']"
             :key="col"
             :label="col"
             :value="col"

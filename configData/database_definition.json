@@ -20,16 +20,17 @@
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+                { "name": "输入", "connected": false, "id": "input" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "输出", "connected": false, "id": "output"}
               ],
-              "config": {
-                "databaseName": "",
-                "charset": "utf8mb4",
-                "collation": "utf8mb4_unicode_ci"
-              }
+              "ui_schema": [
+                { "key": "databaseName", "label": "数据库名", "type": "input", "required": true },
+                { "key": "charset", "label": "字符集", "type": "input", "required": true },
+                { "key": "collation", "label": "排序规则", "type": "input" }
+              ],
+              "sql_template": "CREATE DATABASE {{databaseName}} CHARACTER SET {{charset}} COLLATE {{collation}};"
             },
             {
               "id": "tableC",

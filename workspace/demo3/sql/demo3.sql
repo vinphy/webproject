@@ -1,6 +1,0 @@
-CREATE DATABASE IF NOT EXISTS demo2;
-USE demo2;
-CREATE TABLE test (
-    name VARCHAR(255),
-    age INT
-);
