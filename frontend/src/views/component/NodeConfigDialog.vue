@@ -50,12 +50,22 @@
 
       <!-- 根据subtype显示不同的配置界面 -->
       <component 
+        v-if="!(currentNode?.type === 'create' && currentNode?.subType === 'database')"
         :is="getConfigComponent()" 
         :node="currentNode"
         :database-list="databaseList"
         :get-tables-by-database="getTablesByDatabase"
         :get-columns-by-database-table="getColumnsByDatabaseTable"
         @update:node="updateNode"
+        v-bind="currentNode?.ui_schema ? { uiSchema: currentNode.ui_schema } : {}"
+      />
+      <DynamicForm
+        v-else
+        ref="dynamicFormRef"
+        :ui-schema="currentNode?.ui_schema || []"
+        :initial-data="getDatabaseCreateInitialData()"
+        :sql-template="currentNode?.sql_template"
+        @submit="onDatabaseCreateSubmit"
       />
 
       <!-- 条件配置 -->
@@ -93,6 +103,7 @@ import InsertConfig from './configs/InsertConfig.vue'
 import UpdateConfig from './configs/UpdateConfig.vue'
 import DeleteConfig from './configs/DeleteConfig.vue'
 import DatabaseCreateConfig from './configs/DatabaseCreateConfig.vue'
+import DynamicForm from '../components/DynamicForm.vue'
 
 // Props
 const props = defineProps({
@@ -127,6 +138,8 @@ const dialogVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value)
 })
+
+const dynamicFormRef = ref(null)
 
 // 监听节点变化
 watch(() => props.node, (newNode) => {
@@ -234,13 +247,18 @@ const saveConfig = () => {
   
   // 创建数据库参数校验
   if (currentNode.value.type === 'create' && currentNode.value.subType === 'database') {
+    // 只校验databaseName，charset和collation交由DynamicForm的表单校验
     if (!currentNode.value.databaseName) {
       ElMessage.error('数据库名不能为空')
       return
     }
-    if (!currentNode.value.parameters?.find(p => p.name === 'charset')?.value) {
-      ElMessage.error('字符集不能为空')
-      return
+    // 获取表单所有数据和sql
+    if (dynamicFormRef.value && dynamicFormRef.value.getFormDataWithSql) {
+      const allFormData = dynamicFormRef.value.getFormDataWithSql()
+      Object.assign(currentNode.value, allFormData)
+      currentNode.value.parameters = Object.keys(allFormData)
+        .filter(key => key !== 'sql')
+        .map(key => ({ name: key, value: allFormData[key] }))
     }
   }
 
@@ -252,6 +270,42 @@ const saveConfig = () => {
 // 关闭对话框
 const handleClose = () => {
   dialogVisible.value = false
+}
+
+function getDatabaseCreateInitialData() {
+  const params = currentNode.value?.parameters || []
+  const paramMap = Object.fromEntries(params.map(p => [p.name, p.value]))
+  const data = {}
+  if (Array.isArray(currentNode.value?.ui_schema)) {
+    currentNode.value.ui_schema.forEach(item => {
+      data[item.key] =
+        currentNode.value[item.key] ||
+        paramMap[item.key] ||
+        (item.type === 'input' && item.key === 'charset' ? 'utf8mb4' : '')
+    })
+  }
+  return data
+}
+
+function onDatabaseCreateSubmit(formData) {
+  // 直接将formData合并到currentNode.value
+  Object.assign(currentNode.value, formData)
+  // 生成SQL
+  if (currentNode.value.sql_template) {
+    let sql = currentNode.value.sql_template
+    Object.keys(formData).forEach(key => {
+      sql = sql.replace(`{{${key}}}`, formData[key] || '')
+    })
+    currentNode.value.sql = sql
+  } else {
+    currentNode.value.sql = `CREATE DATABASE ${formData.databaseName} CHARACTER SET ${formData.charset} COLLATE ${formData.collation};`
+  }
+  // 同步所有参数到parameters，便于模型图显示
+  currentNode.value.parameters = Object.keys(formData)
+    .map(key => ({ name: key, value: formData[key] }))
+  // 触发保存
+  emit('save', currentNode.value)
+  handleClose()
 }
 </script>
 

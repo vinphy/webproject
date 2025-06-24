@@ -15,30 +15,19 @@
               @input="updateNodeData"
             />
           </template>
-          <template v-else-if="field.key === 'charset'">
+          <template v-else-if="field.type === 'select'">
             <el-select 
               v-model="formData[field.key]" 
               :placeholder="'请选择' + field.label"
               :required="field.required"
               @change="updateNodeData"
             >
-              <el-option label="utf8" value="utf8" />
-              <el-option label="utf8mb4" value="utf8mb4" />
-              <el-option label="latin1" value="latin1" />
-              <el-option label="gbk" value="gbk" />
-            </el-select>
-          </template>
-          <template v-else-if="field.key === 'collation'">
-            <el-select 
-              v-model="formData[field.key]" 
-              :placeholder="'请选择' + field.label"
-              :required="field.required"
-              @change="updateNodeData"
-            >
-              <el-option label="utf8_general_ci" value="utf8_general_ci" />
-              <el-option label="utf8mb4_general_ci" value="utf8mb4_general_ci" />
-              <el-option label="latin1_swedish_ci" value="latin1_swedish_ci" />
-              <el-option label="gbk_chinese_ci" value="gbk_chinese_ci" />
+              <el-option 
+                v-for="opt in field.options || []" 
+                :key="opt.value" 
+                :label="opt.label" 
+                :value="opt.value" 
+              />
             </el-select>
           </template>
         </div>
@@ -64,17 +53,19 @@ const props = defineProps({
   node: {
     type: Object,
     required: true
+  },
+  uiSchema: {
+    type: Array,
+    default: () => [
+      { key: 'databaseName', label: '数据库名1', type: 'input', required: true },
+      { key: 'charset', label: '字符集', type: 'select', required: true ,
+      },
+      { key: 'collation', label: '排序规则', type: 'select' }
+    ]
   }
 })
 
 const emit = defineEmits(['update:node'])
-
-// UI Schema定义
-const uiSchema = [
-  { key: 'databaseName', label: '数据库名', type: 'input', required: true },
-  { key: 'charset', label: '字符集', type: 'select', required: true },
-  { key: 'collation', label: '排序规则', type: 'select' }
-]
 
 // 表单数据
 const formData = reactive({

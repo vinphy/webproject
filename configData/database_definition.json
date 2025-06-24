@@ -27,8 +27,43 @@
               ],
               "ui_schema": [
                 { "key": "databaseName", "label": "数据库名", "type": "input", "required": true },
-                { "key": "charset", "label": "字符集", "type": "input", "required": true },
-                { "key": "collation", "label": "排序规则", "type": "input" }
+                { "key": "charset", "label": "字符集", "type": "select", "required": true ,"options":
+                  [
+                    {"label":"utf8mb4","value":"utf8mb4"},
+                    {"label":"utf8","value":"utf8"},
+                    {"label":"utf16","value":"utf16"},
+                    {"label":"utf16le","value":"utf16le"},
+                    {"label":"utf32","value":"utf32"},
+                    {"label":"latin1","value":"latin1"},
+                    {"label":"ascii","value":"ascii"},
+                    {"label":"gbk","value":"gbk"},
+                    {"label":"gb18030","value":"gb18030"},
+                    {"label":"big5","value":"big5"},
+                    {"label":"binary","value":"binary"},
+                    {"label":"ucs2","value":"ucs2"}
+                  ],"defaultValue": "utf8mb4"},
+                { "key": "collation", "label": "排序规则", "type": "select","options": [
+                  {"label":"_general_ci","value":"_general_ci"},
+                  {"label":"_bin","value":"_bin"},
+                  {"label":"utf8mb4_general_ci","value":"utf8mb4_general_ci"},
+                  {"label":"utf8mb4_unicode_ci","value":"utf8mb4_unicode_ci"},
+                  {"label":"utf8mb4_0900_ai_ci","value":"utf8mb4_0900_ai_ci"},
+                  {"label":"utf8mb4_bin","value":"utf8mb4_bin"},
+                  {"label":"utf8_general_ci","value":"utf8_general_ci"},
+                  {"label":"utf8_unicode_ci","value":"utf8_unicode_ci"},
+                  {"label":"utf8_bin","value":"utf8_bin"},
+                  {"label":"latin1_swedish_ci","value":"latin1_swedish_ci"},
+                  {"label":"latin1_general_ci","value":"latin1_general_ci"},
+                  {"label":"latin1_bin","value":"latin1_bin"},
+                  {"label":"gbk_chinese_ci","value":"gbk_chinese_ci"},
+                  {"label":"gbk_bin","value":"gbk_bin"},
+                  {"label":"gb18030_chinese_ci","value":"gb18030_chinese_ci"},
+                  {"label":"gb18030_bin","value":"gb18030_bin"},
+                  {"label":"big5_chinese_ci","value":"big5_chinese_ci"},
+                  {"label":"big5_bin","value":"big5_bin"},
+                  {"label":"utf8mb4","value":"utf8mb4"},
+                  {"label":"utf8mb4_0900_ai_ci","value":"utf8mb4_0900_ai_ci"}
+                ],"defaultValue": "utf8mb4_general_ci"}
               ],
               "sql_template": "CREATE DATABASE {{databaseName}} CHARACTER SET {{charset}} COLLATE {{collation}};"
             },
