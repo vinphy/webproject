@@ -441,7 +441,7 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
-import NodeConfigDialog from './component/NodeConfigDialog.vue'
+import NodeConfigDialog from './components/NodeConfigDialog.vue'
 
 // 可用模块列表
 const availableModules = ref({})

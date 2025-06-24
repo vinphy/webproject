@@ -96,13 +96,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import BasicConfig from './configs/BasicConfig.vue'
-import SelectConfig from './configs/SelectConfig.vue'
-import CreateConfig from './configs/CreateConfig.vue'
-import InsertConfig from './configs/InsertConfig.vue'
-import UpdateConfig from './configs/UpdateConfig.vue'
-import DeleteConfig from './configs/DeleteConfig.vue'
-import DatabaseCreateConfig from './configs/DatabaseCreateConfig.vue'
 import DynamicForm from '../components/DynamicForm.vue'
 
 // Props

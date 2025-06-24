@@ -1,0 +1,1 @@
+CREATE DATABASE demo23 CHARACTER SET utf16 COLLATE utf8mb4_general_ci;
