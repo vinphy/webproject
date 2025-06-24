@@ -50,7 +50,7 @@
 
       <!-- 根据subtype显示不同的配置界面 -->
       <component 
-        v-if="!(currentNode?.type === 'create' && currentNode?.subType === 'database')"
+        v-if="!(currentNode?.type === 'create' && (currentNode?.subType === 'database' || currentNode?.subType === 'table'))"
         :is="getConfigComponent()" 
         :node="currentNode"
         :database-list="databaseList"

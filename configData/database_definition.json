@@ -82,11 +82,24 @@
               "outputs": [
                 { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema":[
+                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+                { "key": "tableName", "label": "数据表名", "type": "input", "required": true },
+                { 
+                  "key": "fields", 
+                  "label": "列", 
+                  "type": "table-editor", 
+                  "columns": [
+                    {"name": "字段名", "key": "fieldName", "type": "input"},
+                    {"name": "类型", "key": "fieldType", "type": "select", "options": [
+                      "INT", "VARCHAR(255)", "TEXT", "DATETIME", "TIMESTAMP", "BOOLEAN"
+                    ]},
+                    {"name": "主键", "key": "isPrimary", "type": "checkbox"},
+                    {"name": "非空", "key": "notNull", "type": "checkbox"}
+                  ]
+                }
+              ],
+              "sql_template": "USE DATABASE {{databaseName}};\nCREATE TABLE {{tableName}} (\n{{#each fields}}\n    {{fieldName}} {{fieldType}}{{#if isPrimary}} PRIMARY KEY{{/if}}{{#if notNull}} NOT NULL{{/if}}{{#unless @last}},{{/unless}}\n{{/each}}\n);"
             },
             {
               "id": "viewC",

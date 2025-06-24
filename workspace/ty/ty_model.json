@@ -27,11 +27,19 @@
   },
   "parameters": [
     {
-      "name": "",
-      "value": ""
+      "name": "databaseName",
+      "value": "demo"
+    },
+    {
+      "name": "charset",
+      "value": "utf8mb4"
+    },
+    {
+      "name": "collation",
+      "value": "utf8mb4_general_ci"
     }
   ],
   "condition": "",
-  "generated_time": "2025-06-24 15:58:23",
+  "generated_time": "2025-06-24 19:36:15",
   "description": "预配置的 CREATE 模型"
 }
