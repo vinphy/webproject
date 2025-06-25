@@ -8,6 +8,7 @@ import os
 import json
 from datetime import datetime
 import time
+from typing import Any
 
 # 配置日志
 logging.basicConfig(level=logging.DEBUG)
@@ -41,7 +42,7 @@ class ModelFile(BaseModel):
 
 class Parameter(BaseModel):
     name: str
-    value: str
+    value: Any
 
 class NodeData(BaseModel):
     name: str
@@ -364,7 +365,12 @@ def extract_columns_and_values(node_data: NodeData) -> tuple:
         for param in node_data.parameters:
             if hasattr(param, 'name') and hasattr(param, 'value'):
                 columns.append(param.name)
-                values.append(f"'{param.value}'")  # 添加引号
+                # 如果是字符串，直接加引号；如果是对象/数组，转json字符串
+                if isinstance(param.value, (dict, list)):
+                    import json
+                    values.append(f"'{json.dumps(param.value, ensure_ascii=False)}'")
+                else:
+                    values.append(f"'{param.value}'")
     
     # 如果没有parameters，尝试从其他字段提取
     elif hasattr(node_data, '__dict__'):
