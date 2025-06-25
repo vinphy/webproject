@@ -149,7 +149,7 @@
             >
               <div class="node-header">
                 <img :src="node.icon" class="node-icon" alt="节点图标" />
-                <span>{{ node.originId || node.rawId || (typeof node.id === 'string' ? node.id : '') || node.id }}</span>
+                <span>{{ node.name }}</span>
                 <span class="node-type">({{ node.type }})</span>
               </div>
               <div class="node-ports">
@@ -1305,7 +1305,7 @@ const handleGenerateCode = async () => {
     const moduleName = folderName
     console.log('模块名称:', moduleName)
     
-    // 准备节点数据
+    // 准备节点数据 - 包含所有可能的字段
     const nodeData = {
       name: moduleName,
       type: contextMenuNode.value.type,
@@ -1315,10 +1315,30 @@ const handleGenerateCode = async () => {
       condition: contextMenuNode.value.condition || '',
       icon: contextMenuNode.value.icon || "/src/assets/wave-icon.svg"
     }
+    
     // 新增：如果节点有sql字段，则一并传递
     if (contextMenuNode.value.sql) {
       nodeData.sql = contextMenuNode.value.sql
     }
+    
+    // 新增：包含动态表单的所有字段
+    if (contextMenuNode.value.fields) {
+      nodeData.fields = contextMenuNode.value.fields
+    }
+    if (contextMenuNode.value.charset) {
+      nodeData.charset = contextMenuNode.value.charset
+    }
+    if (contextMenuNode.value.collation) {
+      nodeData.collation = contextMenuNode.value.collation
+    }
+    
+    // 包含所有其他可能的动态字段
+    Object.keys(contextMenuNode.value).forEach(key => {
+      if (!['name', 'type', 'tableName', 'databaseName', 'parameters', 'condition', 'icon', 'sql', 'fields', 'charset', 'collation'].includes(key)) {
+        nodeData[key] = contextMenuNode.value[key]
+      }
+    })
+    
     // 调试输出
     console.log('最终发送到后端的 nodeData:', JSON.stringify(nodeData, null, 2))
     
@@ -1380,7 +1400,6 @@ const handleGenerateCode = async () => {
     // 预加载新生成的文件内容
     const newFiles = [
       { path: `${newModulePath}/sql/${moduleName}.sql`, type: 'file' },
-      { path: `${newModulePath}/${moduleName}.json`, type: 'file' },
       { path: `${newModulePath}/${moduleName}_model.json`, type: 'file' },
       { path: `${newModulePath}/src/${moduleName}.cpp`, type: 'file' },
       { path: `${newModulePath}/src/${moduleName}.h`, type: 'file' }
@@ -2299,7 +2318,7 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
 
 .node {
   position: absolute;
-  width: 120px;
+  width: 150px;
   background: #ffffff;
   border: 1px solid #e4e7ed;
   border-radius: 8px;

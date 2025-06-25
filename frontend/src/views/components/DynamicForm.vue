@@ -61,6 +61,7 @@
   import { ref, watch, computed, defineExpose } from 'vue'
   import { ElMessage } from 'element-plus'
   import TableEditor from './TableEditor.vue'
+  import Handlebars from 'handlebars'
   
   const props = defineProps({
     uiSchema: {
@@ -117,12 +118,12 @@
 
   // 生成SQL
   function buildSQL() {
-    // 优先用props.sqlTemplate，否则用默认
-    let sql = props.sqlTemplate 
-    Object.keys(formData.value).forEach(key => {
-      sql = sql.replace(`{{${key}}}`, formData.value[key] || '')
-    })
-    return sql
+    try {
+      const template = Handlebars.compile(props.sqlTemplate)
+      return template(formData.value)
+    } catch (e) {
+      return 'SQL渲染出错'
+    }
   }
 
   // 暴露方法供父组件获取表单数据

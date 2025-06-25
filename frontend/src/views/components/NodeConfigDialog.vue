@@ -7,60 +7,8 @@
     @close="handleClose"
   >
     <div class="config-content">
-      <!-- 基础配置 -->
-      <div class="config-section" v-if="currentNode?.subType !== 'database'">
-        <div class="section-header">
-          <div class="table-name-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span class="label" style="min-width: 60px;">数据库：</span>
-            <el-select 
-              v-model="currentNode.databaseName" 
-              :placeholder="currentNode.type === 'create' ? '选择或输入数据库名称' : '选择数据库'"
-              :filterable="currentNode.type === 'create'"
-              :allow-create="currentNode.type === 'create'"
-              :default-first-option="currentNode.type === 'create'"
-              style="width: 200px"
-              @change="onDatabaseChange"
-            >
-              <el-option 
-                v-for="db in databaseList" 
-                :key="db" 
-                :label="db" 
-                :value="db" 
-              />
-            </el-select>
-            <span class="label" style="min-width: 60px;">表名：</span>
-            <el-select 
-              v-model="currentNode.tableName" 
-              :placeholder="currentNode.type === 'create' ? '选择或输入表名' : '选择表名'"
-              :filterable="currentNode.type === 'create'"
-              :allow-create="currentNode.type === 'create'"
-              :default-first-option="currentNode.type === 'create'"
-              style="width: 200px"
-            >
-              <el-option 
-                v-for="table in getTablesByDatabase(currentNode.databaseName)" 
-                :key="table" 
-                :label="table" 
-                :value="table" 
-              />
-            </el-select>
-          </div>
-        </div>
-      </div>
-
       <!-- 根据subtype显示不同的配置界面 -->
-      <component 
-        v-if="!(currentNode?.type === 'create' && (currentNode?.subType === 'database' || currentNode?.subType === 'table'))"
-        :is="getConfigComponent()" 
-        :node="currentNode"
-        :database-list="databaseList"
-        :get-tables-by-database="getTablesByDatabase"
-        :get-columns-by-database-table="getColumnsByDatabaseTable"
-        @update:node="updateNode"
-        v-bind="currentNode?.ui_schema ? { uiSchema: currentNode.ui_schema } : {}"
-      />
       <DynamicForm
-        v-else
         ref="dynamicFormRef"
         :ui-schema="currentNode?.ui_schema || []"
         :initial-data="getDatabaseCreateInitialData()"
@@ -158,6 +106,18 @@ watch(() => props.node, (newNode) => {
         currentNode.value.tableName = tables[0]
       }
     }
+    // 动态注入数据库下拉框的options
+    if (Array.isArray(currentNode.value.ui_schema)) {
+      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        if (item.key === 'databaseName' && item.type === 'select') {
+          return {
+            ...item,
+            options: props.databaseList.map(db => ({ label: db, value: db }))
+          }
+        }
+        return item
+      })
+    }
   }
 }, { immediate: true })
 
@@ -239,7 +199,7 @@ const saveConfig = () => {
   }
   
   // 创建数据库参数校验
-  if (currentNode.value.type === 'create' && currentNode.value.subType === 'database') {
+  if (currentNode.value.type === 'create' ) {
     // 只校验databaseName，charset和collation交由DynamicForm的表单校验
     if (!currentNode.value.databaseName) {
       ElMessage.error('数据库名不能为空')
@@ -249,6 +209,7 @@ const saveConfig = () => {
     if (dynamicFormRef.value && dynamicFormRef.value.getFormDataWithSql) {
       const allFormData = dynamicFormRef.value.getFormDataWithSql()
       Object.assign(currentNode.value, allFormData)
+      console.log("==",allFormData)
       currentNode.value.parameters = Object.keys(allFormData)
         .filter(key => key !== 'sql')
         .map(key => ({ name: key, value: allFormData[key] }))

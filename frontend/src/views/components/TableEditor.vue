@@ -94,6 +94,13 @@
     newValue.splice(index, 1)
     emit('update:modelValue', newValue)
   }
+
+  function getTableData() {
+    return {
+      modelValue
+    }
+  }
+  defineExpose({ getTableData })
   </script>
   
   <style scoped>

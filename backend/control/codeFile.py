@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from util.FileUtil import FileUtil
 import traceback
 import logging
@@ -14,6 +14,18 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+@router.get("/test")
+async def test_route():
+    print("=== 测试路由被调用 ===")
+    logger.info("=== 测试路由被调用 ===")
+    return {"message": "测试路由正常工作"}
+
+@router.post("/test_post")
+async def test_post_route(data: dict):
+    print(f"=== 测试POST路由被调用，数据: {data} ===")
+    logger.info(f"=== 测试POST路由被调用，数据: {data} ===")
+    return {"message": "测试POST路由正常工作", "received_data": data}
 
 class FileContent(BaseModel):
     name: str
@@ -36,10 +48,27 @@ class NodeData(BaseModel):
     type: str
     tableName: str
     databaseName: Optional[str] = None
-    parameters: List[Parameter]
+    parameters: Optional[List[Parameter]] = None  # 改为可选，支持动态表单数据
     condition: Optional[str] = None
     icon: Optional[str] = None
     sql: Optional[str] = None  # 新增：可选的sql字段
+    # 新增：支持动态表单的字段数据
+    fields: Optional[List[Dict[str, Any]]] = None  # 表格编辑器数据
+    charset: Optional[str] = None
+    collation: Optional[str] = None
+    # 其他可能的动态字段
+    class Config:
+        extra = "allow"  # 允许额外字段
+        # 添加调试信息
+        @classmethod
+        def __get_validators__(cls):
+            yield cls.validate_to_json
+            
+        @classmethod
+        def validate_to_json(cls, value):
+            print(f"=== NodeData验证: {value} ===")
+            logger.info(f"=== NodeData验证: {value} ===")
+            return value
 
 class DraggableModelRequest(BaseModel):
     file_content: str
@@ -196,77 +225,157 @@ async def read_file(path: str):
 def generate_sql(node_data: NodeData) -> str:
     """生成SQL插入语句"""
     
-
-    # 获取列名和值
-    columns = [param.name for param in node_data.parameters]
-    values = [f"'{param.value}'" for param in node_data.parameters]  # 添加引号
-    type = node_data.type
-
-    # 如果有数据库名和表名，保存表名对应关系
-    if node_data.databaseName and node_data.tableName:
-        save_table_name(node_data.databaseName, node_data.tableName, columns)
-    
     # 如果节点数据中包含sql字段，直接使用该SQL
     if node_data.sql:
         return node_data.sql
     
-    if type == 'insert':
-        # 构建SQL语句
-        sql = f"INSERT INTO {node_data.tableName} ({', '.join(columns)}) VALUES ({', '.join(values)});"
+    type = node_data.type
+    
+    # 处理不同的数据结构
+    if type == 'create':
+        return generate_create_sql(node_data)
+    elif type == 'insert':
+        return generate_insert_sql(node_data)
     elif type == 'update':
+        return generate_update_sql(node_data)
+    elif type == 'select':
+        return generate_select_sql(node_data)
+    elif type == 'delete':
+        return generate_delete_sql(node_data)
+    else:
+        return f"-- 未支持的操作类型: {type}"
+
+def generate_create_sql(node_data: NodeData) -> str:
+    """生成CREATE语句"""
+    sql_parts = []
+    
+    # 如果有数据库名，先创建数据库
+    if node_data.databaseName:
+        sql_parts.append(f"CREATE DATABASE IF NOT EXISTS {node_data.databaseName};")
+        sql_parts.append(f"USE {node_data.databaseName};")
+    
+    # 处理表创建
+    if node_data.tableName:
+        # 构建字段定义
+        field_definitions = []
+        
+        # 优先使用fields数据（动态表单的table-editor）
+        if node_data.fields and isinstance(node_data.fields, list):
+            for field in node_data.fields:
+                field_name = field.get('fieldName', '')
+                field_type = field.get('fieldType', 'VARCHAR(255)')
+                is_primary = field.get('isPrimary', False)
+                not_null = field.get('notNull', False)
+                
+                if field_name:
+                    field_def = f"{field_name} {field_type}"
+                    if is_primary:
+                        field_def += " PRIMARY KEY"
+                    if not_null:
+                        field_def += " NOT NULL"
+                    field_definitions.append(field_def)
+        
+        # 如果没有fields数据，使用parameters数据
+        elif node_data.parameters and isinstance(node_data.parameters, list):
+            for param in node_data.parameters:
+                if hasattr(param, 'name') and hasattr(param, 'value'):
+                    # 根据参数值判断字段类型
+                    value = param.value.lower()
+                    if value in ['int', 'integer']:
+                        field_type = 'INT'
+                    elif value in ['varchar', 'char', 'string', 'text']:
+                        field_type = 'VARCHAR(255)'
+                    elif value in ['float', 'double', 'decimal']:
+                        field_type = 'DECIMAL(10,2)'
+                    elif value in ['date', 'datetime', 'timestamp']:
+                        field_type = 'DATETIME'
+                    elif value in ['bool', 'boolean']:
+                        field_type = 'BOOLEAN'
+                    else:
+                        field_type = 'VARCHAR(255)'  # 默认类型
+                    
+                    field_definitions.append(f"{param.name} {field_type}")
+        
+        # 构建CREATE TABLE语句
+        if field_definitions:
+            create_table_sql = f"CREATE TABLE {node_data.tableName} (\n    " + \
+                              ",\n    ".join(field_definitions) + \
+                              "\n);"
+            sql_parts.append(create_table_sql)
+    
+    return "\n".join(sql_parts)
+
+def generate_insert_sql(node_data: NodeData) -> str:
+    """生成INSERT语句"""
+    # 获取列名和值
+    columns, values = extract_columns_and_values(node_data)
+    
+    # 如果有数据库名和表名，保存表名对应关系
+    if node_data.databaseName and node_data.tableName:
+        save_table_name(node_data.databaseName, node_data.tableName, columns)
+    
+    if columns and values:
+        sql = f"INSERT INTO {node_data.tableName} ({', '.join(columns)}) VALUES ({', '.join(values)});"
+        return sql
+    else:
+        return f"-- INSERT语句生成失败: 缺少列数据"
+
+def generate_update_sql(node_data: NodeData) -> str:
+    """生成UPDATE语句"""
+    # 获取列名和值
+    columns, values = extract_columns_and_values(node_data)
+    
+    if columns and values:
         # 构建SET子句
         set_clauses = [f"{col} = {val}" for col, val in zip(columns, values)]
         # 添加WHERE条件（如果有）
         where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
         sql = f"UPDATE {node_data.tableName} SET {', '.join(set_clauses)}{where_clause};"
-    elif type == 'select':
-        # 构建SELECT子句
-        select_clause = ', '.join(columns) if columns else '*'
-        # 添加WHERE条件（如果有）
-        where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
-        sql = f"SELECT {select_clause} FROM {node_data.tableName}{where_clause};"
-    elif type == 'delete':
-        # 添加WHERE条件（如果有）
-        where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
-        sql = f"DELETE FROM {node_data.tableName}{where_clause};"
-    elif type == 'create':
-        sql_parts = []
-        
-        # 如果有数据库名，先创建数据库
-        if node_data.databaseName:
-            # save_database_name(node_data.databaseName)
-            sql_parts.append(f"CREATE DATABASE IF NOT EXISTS {node_data.databaseName};")
-            sql_parts.append(f"USE {node_data.databaseName};")
-        
-        # 构建字段定义
-        field_definitions = []
-        for param in node_data.parameters:
-            # 根据参数值判断字段类型
-            value = param.value.lower()
-            if value in ['int', 'integer']:
-                field_type = 'INT'
-            elif value in ['varchar', 'char', 'string', 'text']:
-                field_type = 'VARCHAR(255)'
-            elif value in ['float', 'double', 'decimal']:
-                field_type = 'DECIMAL(10,2)'
-            elif value in ['date', 'datetime', 'timestamp']:
-                field_type = 'DATETIME'
-            elif value in ['bool', 'boolean']:
-                field_type = 'BOOLEAN'
-            else:
-                field_type = 'VARCHAR(255)'  # 默认类型
-            
-            # 添加字段定义
-            field_definitions.append(f"{param.name} {field_type}")
-        
-        # 构建CREATE TABLE语句
-        create_table_sql = f"CREATE TABLE {node_data.tableName} (\n    " + \
-                          ",\n    ".join(field_definitions) + \
-                          "\n);"
-        sql_parts.append(create_table_sql)
-        
-        sql = "\n".join(sql_parts)
+        return sql
+    else:
+        return f"-- UPDATE语句生成失败: 缺少列数据"
+
+def generate_select_sql(node_data: NodeData) -> str:
+    """生成SELECT语句"""
+    # 获取列名
+    columns, _ = extract_columns_and_values(node_data)
+    
+    # 构建SELECT子句
+    select_clause = ', '.join(columns) if columns else '*'
+    # 添加WHERE条件（如果有）
+    where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
+    sql = f"SELECT {select_clause} FROM {node_data.tableName}{where_clause};"
     return sql
+
+def generate_delete_sql(node_data: NodeData) -> str:
+    """生成DELETE语句"""
+    # 添加WHERE条件（如果有）
+    where_clause = f" WHERE {node_data.condition}" if node_data.condition else ""
+    sql = f"DELETE FROM {node_data.tableName}{where_clause};"
+    return sql
+
+def extract_columns_and_values(node_data: NodeData) -> tuple:
+    """提取列名和值，支持多种数据结构"""
+    columns = []
+    values = []
+    
+    # 优先使用parameters数据
+    if node_data.parameters and isinstance(node_data.parameters, list):
+        for param in node_data.parameters:
+            if hasattr(param, 'name') and hasattr(param, 'value'):
+                columns.append(param.name)
+                values.append(f"'{param.value}'")  # 添加引号
+    
+    # 如果没有parameters，尝试从其他字段提取
+    elif hasattr(node_data, '__dict__'):
+        # 遍历所有字段，排除特殊字段
+        exclude_fields = {'name', 'type', 'tableName', 'databaseName', 'condition', 'icon', 'sql', 'fields', 'charset', 'collation'}
+        for key, value in node_data.__dict__.items():
+            if key not in exclude_fields and value is not None and value != '':
+                columns.append(key)
+                values.append(f"'{value}'")
+    
+    return columns, values
 
 def generate_xml(node_data: NodeData) -> str:
     """生成JSON描述文件"""
@@ -281,18 +390,38 @@ def generate_xml(node_data: NodeData) -> str:
             "database_name": node_data.databaseName,
             "table_name": node_data.tableName
         },
-        "parameters": [
-            {
-                "name": param.name,
-                "value": param.value,
-                # "type": "field" if node_data.type == "create" else "value"
-            }
-            for param in node_data.parameters
-        ],
+        "parameters": [],
         "condition": node_data.condition,
         "generated_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "version": "1.0"
     }
+    
+    # 处理参数数据
+    if node_data.parameters and isinstance(node_data.parameters, list):
+        json_data["parameters"] = [
+            {
+                "name": param.name,
+                "value": param.value,
+            }
+            for param in node_data.parameters
+        ]
+    elif node_data.fields and isinstance(node_data.fields, list):
+        # 处理动态表单的fields数据
+        json_data["parameters"] = [
+            {
+                "name": field.get('fieldName', ''),
+                "value": field.get('fieldType', ''),
+                "isPrimary": field.get('isPrimary', False),
+                "notNull": field.get('notNull', False)
+            }
+            for field in node_data.fields
+        ]
+    
+    # 添加其他动态字段
+    if node_data.charset:
+        json_data["charset"] = node_data.charset
+    if node_data.collation:
+        json_data["collation"] = node_data.collation
     
     # 转换为格式化的JSON字符串
     json_content = json.dumps(json_data, ensure_ascii=False, indent=2)
@@ -300,13 +429,11 @@ def generate_xml(node_data: NodeData) -> str:
 
 def generate_cpp(node_data: NodeData) -> str:
     """生成C++源文件"""
-    # TODO: 实现C++生成
-    return ""
+    return f"// {node_data.name}.cpp\n// 自动生成的C++源文件\n"
 
 def generate_header(node_data: NodeData) -> str:
     """生成C++头文件"""
-    # TODO: 实现头文件生成
-    return ""
+    return f"// {node_data.name}.h\n// 自动生成的C++头文件\n"
 
 def generate_draggable_model(node_data: NodeData) -> str:
     """生成可拖拽的模型文件"""
@@ -338,17 +465,38 @@ def generate_draggable_model(node_data: NodeData) -> str:
             "database_name": node_data.databaseName,
             "table_name": node_data.tableName
         },
-        "parameters": [
+        "parameters": [],
+        "condition": node_data.condition,
+        "generated_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "description": f"预配置的 {node_data.type.upper()} 模型"
+    }
+    
+    # 处理参数数据
+    if node_data.parameters and isinstance(node_data.parameters, list):
+        draggable_model["parameters"] = [
             {
                 "name": param.name,
                 "value": param.value
             }
             for param in node_data.parameters
-        ],
-        "condition": node_data.condition,
-        "generated_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "description": f"预配置的 {node_data.type.upper()} 模型"
-    }
+        ]
+    elif node_data.fields and isinstance(node_data.fields, list):
+        # 处理动态表单的fields数据
+        draggable_model["parameters"] = [
+            {
+                "name": field.get('fieldName', ''),
+                "value": field.get('fieldType', ''),
+                "isPrimary": field.get('isPrimary', False),
+                "notNull": field.get('notNull', False)
+            }
+            for field in node_data.fields
+        ]
+    
+    # 添加其他动态字段
+    if node_data.charset:
+        draggable_model["charset"] = node_data.charset
+    if node_data.collation:
+        draggable_model["collation"] = node_data.collation
     
     # 转换为格式化的JSON字符串
     json_content = json.dumps(draggable_model, ensure_ascii=False, indent=2)
@@ -433,7 +581,26 @@ async def get_tables(database_name: str = None):
 
 @router.post("/generate")
 async def generate_code(node_data: NodeData):
+    print("=== 请求到达generate_code函数 ===")
+    logger.info("=== 请求到达generate_code函数 ===")
+    
     try:
+        # 添加详细的调试日志
+        logger.info("=== 开始代码生成 ===")
+        logger.info(f"接收到的node_data类型: {type(node_data)}")
+        logger.info(f"node_data原始数据: {node_data}")
+        logger.info(f"node_data.dict(): {node_data.dict()}")
+        logger.info(f"node_data.name: {node_data.name}")
+        logger.info(f"node_data.type: {node_data.type}")
+        logger.info(f"node_data.tableName: {node_data.tableName}")
+        logger.info(f"node_data.databaseName: {node_data.databaseName}")
+        logger.info(f"node_data.parameters: {node_data.parameters}")
+        logger.info(f"node_data.fields: {node_data.fields}")
+        logger.info(f"node_data.condition: {node_data.condition}")
+        logger.info(f"node_data.sql: {node_data.sql}")
+        logger.info(f"node_data.charset: {getattr(node_data, 'charset', None)}")
+        logger.info(f"node_data.collation: {getattr(node_data, 'collation', None)}")
+        
         # 获取工作空间路径
         workspace_path = FileUtil.get_workspace_path()
         if not workspace_path:
@@ -450,6 +617,7 @@ async def generate_code(node_data: NodeData):
         
         # 生成SQL文件
         sql_content = generate_sql(node_data)
+        logger.info(f"生成的SQL内容: {sql_content}")
         sql_file_path = os.path.join(sql_dir, f"{node_data.name}.sql")
         with open(sql_file_path, "w", encoding="utf-8") as f:
             f.write(sql_content)
@@ -478,6 +646,8 @@ async def generate_code(node_data: NodeData):
         with open(header_file_path, "w", encoding="utf-8") as f:
             f.write(header_content)
         
+        logger.info("=== 代码生成完成 ===")
+        
         return {
             "status": "success", 
             "message": "代码生成成功",
@@ -491,6 +661,8 @@ async def generate_code(node_data: NodeData):
         }
     
     except Exception as e:
+        logger.error(f"代码生成失败: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/parse_draggable_model")
