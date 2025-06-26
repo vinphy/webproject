@@ -1,0 +1,10 @@
+# 忽略所有 __pycache__ 目录
+*/__pycache__/
+
+# 显式忽略 backend 和 workspace 下的 __pycache__
+backend/__pycache__/
+
+# 或者使用通配符匹配所有子目录下的 __pycache__
+**/__pycache__/
+
+/workspace
