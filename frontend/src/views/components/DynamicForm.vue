@@ -123,8 +123,34 @@
   // 生成SQL
   function buildSQL() {
     try {
-      const template = Handlebars.compile(props.sqlTemplate)
-      return template(formData.value)
+      // 注册辅助函数：判断是否字符串
+      Handlebars.registerHelper('isString', function(value) {
+        return typeof value === 'string';
+      });
+      // 注册辅助函数：判断是否最后一个
+      Handlebars.registerHelper('unlessLast', function(index, array, options) {
+        if (index !== array.length - 1) {
+          return options.fn(this);
+        }
+        return '';
+      });
+      // 如果有sql_template，优先用模板
+      if (props.sqlTemplate) {
+        const template = Handlebars.compile(props.sqlTemplate)
+        return template(formData.value)
+      }
+      // 否则自动拼接
+      const tableName = formData.value.tableName || 'table_name'
+      const fields = formData.value.fields || []
+      const columns = fields.map(f => f.fieldName).filter(Boolean)
+      const values = fields.map(f => {
+        if (typeof f.fieldType === 'number' || /^[0-9.]+$/.test(f.fieldType)) {
+          return f.fieldType
+        }
+        return `'${f.fieldType}'`
+      })
+      if (columns.length === 0) return '-- 请选择参数'
+      return `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${values.join(', ')});`
     } catch (e) {
       return 'SQL渲染出错'
     }
