@@ -15,21 +15,6 @@
         :sql-template="currentNode?.sql_template"
         @submit="onDatabaseCreateSubmit"
       />
-
-      <!-- 条件配置 -->
-      <div class="config-section" v-if="currentNode.type !== 'create'">
-        <div class="section-header">
-          <h4>条件语句</h4>
-        </div>
-        <div class="section-content">
-          <el-input
-            v-model="currentNode.condition"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入WHERE条件，例如: id = 1 AND status = 'active'"
-          />
-        </div>
-      </div>
     </div>
     
     <template #footer>
@@ -109,10 +94,42 @@ watch(() => props.node, (newNode) => {
     // 动态注入数据库下拉框的options
     if (Array.isArray(currentNode.value.ui_schema)) {
       currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        // 数据库名下拉
         if (item.key === 'databaseName' && item.type === 'select') {
           return {
             ...item,
-            options: props.databaseList.map(db => ({ label: db, value: db }))
+            options: props.databaseList.map(db => ({ label: db, value: db })),
+            onChange: handleDatabaseChange
+          }
+        }
+        // 表名下拉
+        if (item.key === 'tableName' && item.type === 'select') {
+          const tables = props.getTablesByDatabase(currentNode.value.databaseName)
+          return {
+            ...item,
+            options: tables.map(tb => ({ label: tb, value: tb })),
+            onChange: handleTableChange
+          }
+        }
+        // table-editor字段名下拉
+        if (item.type === 'table-editor' && Array.isArray(item.columns)) {
+          const columns = item.columns.map(col => {
+            if (col.key === 'fieldName' && col.type === 'select') {
+              // 字段名下拉联动表名
+              const fieldList = props.getColumnsByDatabaseTable(
+                currentNode.value.databaseName,
+                currentNode.value.tableName
+              ) || []
+              return {
+                ...col,
+                options: fieldList
+              }
+            }
+            return col
+          })
+          return {
+            ...item,
+            columns
           }
         }
         return item
@@ -120,6 +137,24 @@ watch(() => props.node, (newNode) => {
     }
   }
 }, { immediate: true })
+
+// 处理数据库名变更
+function handleDatabaseChange(val) {
+  // 更新表名下拉
+  const tables = props.getTablesByDatabase(val)
+  currentNode.value.tableName = tables.length > 0 ? tables[0] : ''
+  // 触发ui_schema更新
+  if (Array.isArray(currentNode.value.ui_schema)) {
+    currentNode.value.ui_schema = [...currentNode.value.ui_schema]
+  }
+}
+// 处理表名变更
+function handleTableChange(val) {
+  // 触发ui_schema更新（table-editor字段名下拉联动）
+  if (Array.isArray(currentNode.value.ui_schema)) {
+    currentNode.value.ui_schema = [...currentNode.value.ui_schema]
+  }
+}
 
 // 根据subtype获取对应的配置组件
 const getConfigComponent = () => {

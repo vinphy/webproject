@@ -1,0 +1,52 @@
+{
+  "type": "draggable_model",
+  "version": "1.0",
+  "model_config": {
+    "name": "tuyu",
+    "type": "create",
+    "icon": "/src/assets/add.png",
+    "category": "basic",
+    "inputs": [
+      {
+        "name": "输入",
+        "connected": false,
+        "id": "input"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "输出",
+        "connected": false,
+        "id": "output"
+      }
+    ]
+  },
+  "database_config": {
+    "database_name": "demo",
+    "table_name": "person"
+  },
+  "parameters": [
+    {
+      "name": "databaseName",
+      "value": "demo"
+    },
+    {
+      "name": "tableName",
+      "value": "person"
+    },
+    {
+      "name": "fields",
+      "value": [
+        {
+          "fieldName": "name",
+          "fieldType": "VARCHAR(255)",
+          "isPrimary": false,
+          "notNull": false
+        }
+      ]
+    }
+  ],
+  "condition": "",
+  "generated_time": "2025-06-25 14:54:25",
+  "description": "预配置的 CREATE 模型"
+}

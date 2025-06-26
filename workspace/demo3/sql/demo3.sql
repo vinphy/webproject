@@ -1,0 +1,6 @@
+USE DATABASE demo;
+CREATE TABLE person (
+    name VARCHAR(255) PRIMARY KEY,
+    age INT NOT NULL,
+    id INT PRIMARY KEY
+);

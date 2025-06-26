@@ -227,10 +227,21 @@ def generate_sql(node_data: NodeData) -> str:
     """生成SQL插入语句"""
     
     # 如果节点数据中包含sql字段，直接使用该SQL
-    if node_data.sql:
-        return node_data.sql
-    
     type = node_data.type
+    if node_data.sql:
+        if type == 'create':
+            if node_data.databaseName and node_data.tableName :
+                if node_data.parameters and isinstance(node_data.parameters, list):
+                    for param in node_data.parameters:
+                        logger.info('-----')
+                        logger.info(param)
+                        pvalue = param.value
+                        logger.info(pvalue)
+                        if isinstance(pvalue, list):
+                            fieldName = [field['fieldName'] for field in pvalue]
+                save_table_name(node_data.databaseName, node_data.tableName, fieldName)
+        return node_data.sql
+
     
     # 处理不同的数据结构
     if type == 'create':
@@ -247,8 +258,11 @@ def generate_sql(node_data: NodeData) -> str:
         return f"-- 未支持的操作类型: {type}"
 
 def generate_create_sql(node_data: NodeData) -> str:
-    """生成CREATE语句"""
+    """生成CREATE语句，并保存表结构到tables.json"""
     sql_parts = []
+    columns_for_save = []  # 用于保存到tables.json
+
+    logger.info("--生成sql")
     
     # 如果有数据库名，先创建数据库
     if node_data.databaseName:
@@ -257,6 +271,7 @@ def generate_create_sql(node_data: NodeData) -> str:
     
     # 处理表创建
     if node_data.tableName:
+        
         # 构建字段定义
         field_definitions = []
         
@@ -275,13 +290,14 @@ def generate_create_sql(node_data: NodeData) -> str:
                     if not_null:
                         field_def += " NOT NULL"
                     field_definitions.append(field_def)
+                    columns_for_save.append(field_name)
         
         # 如果没有fields数据，使用parameters数据
         elif node_data.parameters and isinstance(node_data.parameters, list):
             for param in node_data.parameters:
+               
                 if hasattr(param, 'name') and hasattr(param, 'value'):
-                    # 根据参数值判断字段类型
-                    value = param.value.lower()
+                    value = str(param.value).lower()
                     if value in ['int', 'integer']:
                         field_type = 'INT'
                     elif value in ['varchar', 'char', 'string', 'text']:
@@ -294,8 +310,8 @@ def generate_create_sql(node_data: NodeData) -> str:
                         field_type = 'BOOLEAN'
                     else:
                         field_type = 'VARCHAR(255)'  # 默认类型
-                    
                     field_definitions.append(f"{param.name} {field_type}")
+                    columns_for_save.append(param.name)
         
         # 构建CREATE TABLE语句
         if field_definitions:
@@ -303,6 +319,14 @@ def generate_create_sql(node_data: NodeData) -> str:
                               ",\n    ".join(field_definitions) + \
                               "\n);"
             sql_parts.append(create_table_sql)
+        logger.info("f'是否存储表数据'")
+        logger.info(f'数据库：',node_data.databaseName)
+        logger.info(f'数据表：',node_data.tableName)
+        logger.info(f'数据列：',columns_for_save)
+        # 保存表结构到tables.json
+        if node_data.databaseName and node_data.tableName and columns_for_save:
+            logger.info(f'是否存储表数据')
+            save_table_name(node_data.databaseName, node_data.tableName, columns_for_save)
     
     return "\n".join(sql_parts)
 

@@ -1,7 +1,9 @@
 {
   "demo": {
     "person": [
-      ""
+      "name",
+      "age",
+      "id"
     ]
   }
 }

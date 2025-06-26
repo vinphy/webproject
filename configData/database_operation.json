@@ -25,11 +25,20 @@
             "outputs": [
               { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": []
-            }
+            "ui_schema":[
+                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+                { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+                { 
+                  "key": "fields", 
+                  "label": "参数", 
+                  "type": "table-editor", 
+                  "columns": [
+                    {"name": "字段名", "key": "fieldName", "type": "select"},
+                    {"name": "字段值", "key": "fieldType", "type": "input"}
+                  ]
+                }
+              ],
+              "sql_template": "INSERT INTO table_name (column1, column2) VALUES (value1, value2);"
           },
           {
             "id": "insert_condition",
