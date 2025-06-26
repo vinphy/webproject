@@ -22,9 +22,9 @@
             >
               <el-option 
                 v-for="option in col.options" 
-                :key="option" 
-                :label="option" 
-                :value="option"
+                :key="typeof option === 'object' ? option.value : option" 
+                :label="typeof option === 'object' ? option.label : option" 
+                :value="typeof option === 'object' ? option.value : option"
               />
             </el-select>
             

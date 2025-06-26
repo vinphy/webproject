@@ -115,14 +115,10 @@ watch(() => props.node, (newNode) => {
         if (item.type === 'table-editor' && Array.isArray(item.columns)) {
           const columns = item.columns.map(col => {
             if (col.key === 'fieldName' && col.type === 'select') {
-              // 字段名下拉联动表名
-              const fieldList = props.getColumnsByDatabaseTable(
-                currentNode.value.databaseName,
-                currentNode.value.tableName
-              ) || []
+              // 字段名下拉联动表名 - 初始为空，由watch异步填充
               return {
                 ...col,
-                options: fieldList
+                options: [] // 初始为空，由watch异步填充
               }
             }
             return col
@@ -138,11 +134,60 @@ watch(() => props.node, (newNode) => {
   }
 }, { immediate: true })
 
+// 监听数据库名和表名变化，异步更新字段列表
+watch([() => currentNode.value?.databaseName, () => currentNode.value?.tableName], async ([databaseName, tableName]) => {
+  console.log('数据库名或表名变化:', { databaseName, tableName })
+  if (databaseName && tableName && Array.isArray(currentNode.value?.ui_schema)) {
+    try {
+      // 异步获取字段列表
+      const fieldList = await props.getColumnsByDatabaseTable(databaseName, tableName) || []
+      console.log('获取到的字段列表:', fieldList)
+      
+      // 将字段名数组转换为label-value格式
+      const fieldOptions = fieldList.map(field => ({
+        label: field,
+        value: field
+      }))
+      
+      // 更新ui_schema中的字段名下拉选项
+      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        if (item.type === 'table-editor' && Array.isArray(item.columns)) {
+          const columns = item.columns.map(col => {
+            if (col.key === 'fieldName' && col.type === 'select') {
+              return {
+                ...col,
+                options: fieldOptions
+              }
+            }
+            return col
+          })
+          return {
+            ...item,
+            columns
+          }
+        }
+        return item
+      })
+    } catch (error) {
+      console.error('获取字段列表失败:', error)
+    }
+  }
+}, { immediate: true })
+
 // 处理数据库名变更
 function handleDatabaseChange(val) {
+  console.log('数据库名变更:', val)
   // 更新表名下拉
   const tables = props.getTablesByDatabase(val)
-  currentNode.value.tableName = tables.length > 0 ? tables[0] : ''
+  const newTableName = tables.length > 0 ? tables[0] : ''
+  
+  // 更新当前节点
+  currentNode.value = {
+    ...currentNode.value,
+    databaseName: val,
+    tableName: newTableName
+  }
+  
   // 触发ui_schema更新
   if (Array.isArray(currentNode.value.ui_schema)) {
     currentNode.value.ui_schema = [...currentNode.value.ui_schema]
@@ -150,6 +195,12 @@ function handleDatabaseChange(val) {
 }
 // 处理表名变更
 function handleTableChange(val) {
+  console.log('表名变更:', val)
+  // 更新当前节点的表名
+  currentNode.value = {
+    ...currentNode.value,
+    tableName: val
+  }
   // 触发ui_schema更新（table-editor字段名下拉联动）
   if (Array.isArray(currentNode.value.ui_schema)) {
     currentNode.value.ui_schema = [...currentNode.value.ui_schema]

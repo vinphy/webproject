@@ -23,7 +23,11 @@
           :prop="item.key"
           :rules="item.required ? [{ required: true, message: `${item.label}不能为空` }] : []"
         >
-          <el-select v-model="formData[item.key]" :placeholder="`请选择${item.label}`">
+          <el-select 
+            v-model="formData[item.key]" 
+            :placeholder="`请选择${item.label}`"
+            @change="(val) => handleSelectChange(item, val)"
+          >
             <el-option 
               v-for="opt in item.options || []" 
               :key="opt.value" 
@@ -133,6 +137,18 @@
       sql: buildSQL()
     }
   }
+  
+  // 处理下拉框变化事件
+  function handleSelectChange(item, value) {
+    console.log('下拉框变化:', item.key, value)
+    // 更新表单数据
+    formData.value[item.key] = value
+    // 如果有onChange回调，执行它
+    if (item.onChange && typeof item.onChange === 'function') {
+      item.onChange(value)
+    }
+  }
+  
   defineExpose({ getFormDataWithSql })
   </script>
 

@@ -1,10 +1,7 @@
-# 忽略所有 __pycache__ 目录
-*/__pycache__/
+# 忽略整个 workspace 目录（所有文件）
+/workspace/
 
-# 显式忽略 backend 和 workspace 下的 __pycache__
-backend/__pycache__/
-
-# 或者使用通配符匹配所有子目录下的 __pycache__
+# 忽略所有 Python 缓存目录和文件
 **/__pycache__/
-
-/workspace
+*.py[cod]
+*$py.class

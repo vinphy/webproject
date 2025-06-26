@@ -1,4 +1,0 @@
-USE DATABASE demo;
-CREATE TABLE person (
-    p VARCHAR(255)
-);

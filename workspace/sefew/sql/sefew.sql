@@ -1,4 +1,0 @@
-USE DATABASE demo;
-CREATE TABLE person (
-    wu VARCHAR(255) PRIMARY KEY
-);
