@@ -30,6 +30,11 @@ const routes = [
     path: '/bitTest',
     name: 'BitTest',
     component: () => import('../views/BitTest.vue')
+  },
+  {
+    path: '/sqlErDiagram',
+    name: 'SqlErDiagram',
+    component: () => import('../views/SqlErDiagram.vue')
   }
 ]
 

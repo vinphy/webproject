@@ -26,13 +26,17 @@
             <el-icon><Goods /></el-icon>
             <span>日志管理</span>
           </el-menu-item>
-          <el-menu-item index="3" @click="handleMenuClick('test')">
+          <el-menu-item index="4" @click="handleMenuClick('test')">
             <el-icon><Goods /></el-icon>
             <span>测试</span>
           </el-menu-item>
-          <el-menu-item index="4" @click="handleMenuClick('bitTest')">
+          <el-menu-item index="5" @click="handleMenuClick('bitTest')">
             <el-icon><Goods /></el-icon>
             <span>符合性测试</span>
+          </el-menu-item>
+          <el-menu-item index="6" @click="handleMenuClick('sqlErDiagram')">
+            <el-icon><DataAnalysis /></el-icon>
+            <span>SQL ER图</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -78,7 +82,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Monitor, User, Goods, List, Setting, Fold, Expand } from '@element-plus/icons-vue'
+import { Monitor, User, Goods, List, Setting, Fold, Expand, DataAnalysis } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const isCollapse = ref(false)
@@ -93,7 +97,8 @@ const handleMenuClick = (route) => {
     components: '模块管理',
     logs: '日志管理',
     test: '测试',
-    bitTest:'bit测试'
+    bitTest: 'bit测试',
+    sqlErDiagram: 'SQL ER图'
   }
   currentPage.value = pageNames[route]
 }
