@@ -3,6 +3,11 @@ from pydantic import BaseModel
 from typing import List, Optional
 import re
 import json
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -126,7 +131,7 @@ class SqlParser:
         table = Table(
             name=table_name,
             columns=[],
-            primaryKey=[],
+            primaryKey=None,
             foreignKeys=[]
         )
         
@@ -275,10 +280,13 @@ class SqlParser:
 
 @router.post("/parse", response_model=SqlParseResponse)
 async def parse_sql(request: SqlParseRequest):
+    logger.info("解析sql")
     """解析SQL语句并返回表结构信息"""
     try:
         parser = SqlParser()
         tables = parser.parse_sql(request.sql)
+
+        logger.info("解析sql结束")
         
         return SqlParseResponse(
             success=True,
@@ -286,6 +294,9 @@ async def parse_sql(request: SqlParseRequest):
             tables=tables
         )
     except Exception as e:
+        import traceback
+        print(f"SQL解析错误: {str(e)}")
+        print(f"错误详情: {traceback.format_exc()}")
         raise HTTPException(
             status_code=400,
             detail=f"SQL解析失败: {str(e)}"

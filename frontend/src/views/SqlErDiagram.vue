@@ -107,32 +107,83 @@
           </div>
         </div>
 
-        <!-- Vue Flow 图表容器 -->
+        <!-- 自定义ER图容器 -->
         <div class="diagram-container" ref="diagramContainer">
-          <VueFlow
-            v-model="elements"
-            :default-viewport="{ zoom: 1 }"
-            :min-zoom="0.2"
-            :max-zoom="4"
-            :node-types="nodeTypes"
-            :edge-types="edgeTypes"
-            @connect="onConnect"
-            @node-drag-stop="onNodeDragStop"
-            @pane-click="onPaneClick"
-            class="vue-flow-diagram"
-          >
-            <template #node-custom="nodeProps">
-              <TableNode 
-                :data="nodeProps.data" 
-                :selected="nodeProps.selected"
-                @node-click="onNodeClick"
-              />
-            </template>
+          <div class="diagram-canvas" ref="diagramCanvas">
+            <!-- 连接线 -->
+            <svg class="connections-layer" :width="canvasWidth" :height="canvasHeight">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#409EFF" />
+                </marker>
+              </defs>
+              <g>
+                <path
+                  v-for="connection in connections"
+                  :key="connection.id"
+                  :d="connection.path"
+                  class="connection-path"
+                  :marker-end="'url(#arrowhead)'"
+                  stroke="#409EFF"
+                  stroke-width="2"
+                  fill="none"
+                />
+              </g>
+            </svg>
             
-            <Background pattern-color="#aaa" gap="20" />
-            <MiniMap />
-            <Controls />
-          </VueFlow>
+            <!-- 表格节点 -->
+            <div
+              v-for="table in tableNodes"
+              :key="table.id"
+              class="table-node"
+              :style="{
+                left: table.x + 'px',
+                top: table.y + 'px'
+              }"
+              @mousedown="startDrag($event, table)"
+              @click="selectTableNode(table)"
+              :class="{ 'selected': selectedTableNode === table.id }"
+            >
+              <div class="table-header">
+                <div class="table-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 3h18v18H3V3zm16 16V5H5v14h14z"/>
+                    <path d="M7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
+                  </svg>
+                </div>
+                <span class="table-name">{{ table.name }}</span>
+                <div class="table-actions" v-if="table.primaryKey">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#f56c6c">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="table-columns">
+                <div 
+                  v-for="column in table.columns.slice(0, 5)" 
+                  :key="column.name"
+                  class="column-row"
+                  :class="{
+                    'primary-key': isPrimaryKey(table, column.name),
+                    'foreign-key': isForeignKey(table, column.name)
+                  }"
+                >
+                  <div class="column-info">
+                    <span class="column-name">{{ column.name }}</span>
+                    <span class="column-type">{{ column.type }}</span>
+                  </div>
+                  <div class="column-constraints">
+                    <span v-if="!column.nullable" class="constraint not-null">NOT NULL</span>
+                    <span v-if="isPrimaryKey(table, column.name)" class="constraint pk">PK</span>
+                    <span v-if="isForeignKey(table, column.name)" class="constraint fk">FK</span>
+                  </div>
+                </div>
+                <div v-if="table.columns.length > 5" class="more-columns">
+                  +{{ table.columns.length - 5 }} 更多字段
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -164,28 +215,14 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
-import { VueFlow, useVueFlow } from '@vue-flow/core'
-import { Background } from '@vue-flow/background'
-import { MiniMap } from '@vue-flow/minimap'
-import { Controls } from '@vue-flow/controls'
-import '@vue-flow/core/dist/style.css'
-import '@vue-flow/core/dist/theme-default.css'
-import '@vue-flow/minimap/dist/style.css'
-import '@vue-flow/controls/dist/style.css'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { Search, Delete, Upload, Grid, Download } from '@element-plus/icons-vue'
-import TableNode from '../components/TableNode.vue'
 import axios from 'axios'
 
 export default {
   name: 'SqlErDiagram',
   components: {
-    VueFlow,
-    Background,
-    MiniMap,
-    Controls,
-    TableNode,
     Search,
     Delete,
     Upload,
@@ -202,16 +239,20 @@ export default {
     const selectedTableData = ref(null)
     const uploadRef = ref(null)
     const diagramContainer = ref(null)
+    const diagramCanvas = ref(null)
 
-    // Vue Flow 相关
-    const elements = ref([])
-    const nodeTypes = {
-      custom: TableNode
-    }
-    const edgeTypes = {}
+    // 图表相关
+    const tableNodes = ref([])
+    const connections = ref([])
+    const selectedTableNode = ref(null)
+    const canvasWidth = ref(1200)
+    const canvasHeight = ref(800)
+    const isDragging = ref(false)
+    const dragTarget = ref(null)
+    const dragOffset = ref({ x: 0, y: 0 })
 
     // 计算属性
-    const hasNodes = computed(() => elements.value.some(el => el.type === 'custom'))
+    const hasNodes = computed(() => tableNodes.value.length > 0)
 
     // 方法
     const handleFileChange = (file) => {
@@ -234,7 +275,7 @@ export default {
 
       parsing.value = true
       try {
-        const response = await axios.post('/api/sql/parse', {
+        const response = await axios.post('http://localhost:8000/api/sql/parse', {
           sql: sqlText.value
         })
         
@@ -257,6 +298,7 @@ export default {
       sqlText.value = ''
       parsedTables.value = []
       selectedTable.value = ''
+      clearDiagram()
     }
 
     const selectTable = (tableName) => {
@@ -266,98 +308,152 @@ export default {
     }
 
     const generateErDiagram = () => {
-      const nodes = []
-      const edges = []
+      tableNodes.value = []
+      connections.value = []
       let nodeId = 1
-      let edgeId = 1
 
-      // 生成节点
+      // 生成表格节点
       parsedTables.value.forEach((table, index) => {
         const node = {
           id: `table-${nodeId}`,
-          type: 'custom',
-          position: { x: 100 + index * 300, y: 100 + index * 200 },
-          data: {
-            tableName: table.name,
-            columns: table.columns,
-            primaryKey: table.primaryKey,
-            foreignKeys: table.foreignKeys || []
-          }
+          name: table.name,
+          columns: table.columns,
+          primaryKey: table.primaryKey,
+          foreignKeys: table.foreignKeys || [],
+          x: 100 + (index % 3) * 350,
+          y: 100 + Math.floor(index / 3) * 300
         }
-        nodes.push(node)
+        tableNodes.value.push(node)
         nodeId++
       })
 
-      // 生成关系边
+      // 生成连接线
+      let connectionId = 1
       parsedTables.value.forEach(table => {
         if (table.foreignKeys) {
           table.foreignKeys.forEach(fk => {
-            const sourceNode = nodes.find(n => n.data.tableName === table.name)
-            const targetNode = nodes.find(n => n.data.tableName === fk.referencedTable)
+            const sourceNode = tableNodes.value.find(n => n.name === table.name)
+            const targetNode = tableNodes.value.find(n => n.name === fk.referencedTable)
             
             if (sourceNode && targetNode) {
-              const edge = {
-                id: `edge-${edgeId}`,
+              const connection = {
+                id: `connection-${connectionId}`,
                 source: sourceNode.id,
                 target: targetNode.id,
-                type: 'smoothstep',
-                animated: true,
-                style: { stroke: '#409EFF', strokeWidth: 2 },
-                label: `${fk.column} → ${fk.referencedColumn}`,
-                labelStyle: { fill: '#409EFF', fontWeight: 600 }
+                sourceTable: table.name,
+                targetTable: fk.referencedTable,
+                sourceColumn: fk.column,
+                targetColumn: fk.referencedColumn,
+                path: calculatePath(sourceNode, targetNode)
               }
-              edges.push(edge)
-              edgeId++
+              connections.value.push(connection)
+              connectionId++
             }
           })
         }
       })
+    }
 
-      elements.value = [...nodes, ...edges]
+    const calculatePath = (source, target) => {
+      const startX = source.x + 200 // 表格宽度的一半
+      const startY = source.y + 150 // 表格高度的一半
+      const endX = target.x + 200
+      const endY = target.y + 150
+      
+      const midX = (startX + endX) / 2
+      
+      return `M ${startX} ${startY} C ${midX} ${startY} ${midX} ${endY} ${endX} ${endY}`
+    }
+
+    const isPrimaryKey = (table, columnName) => {
+      return table.primaryKey && table.primaryKey.includes(columnName)
+    }
+
+    const isForeignKey = (table, columnName) => {
+      return table.foreignKeys && table.foreignKeys.some(fk => fk.column === columnName)
+    }
+
+    const selectTableNode = (node) => {
+      selectedTableNode.value = node.id
+      selectTable(node.name)
+    }
+
+    const startDrag = (event, node) => {
+      isDragging.value = true
+      dragTarget.value = node
+      const rect = event.target.getBoundingClientRect()
+      dragOffset.value = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      }
+      
+      document.addEventListener('mousemove', handleDrag)
+      document.addEventListener('mouseup', stopDrag)
+    }
+
+    const handleDrag = (event) => {
+      if (!isDragging.value || !dragTarget.value) return
+      
+      const containerRect = diagramCanvas.value.getBoundingClientRect()
+      const newX = event.clientX - containerRect.left - dragOffset.value.x
+      const newY = event.clientY - containerRect.top - dragOffset.value.y
+      
+      dragTarget.value.x = Math.max(0, newX)
+      dragTarget.value.y = Math.max(0, newY)
+      
+      // 更新连接线
+      updateConnections()
+    }
+
+    const stopDrag = () => {
+      isDragging.value = false
+      dragTarget.value = null
+      document.removeEventListener('mousemove', handleDrag)
+      document.removeEventListener('mouseup', stopDrag)
+    }
+
+    const updateConnections = () => {
+      connections.value.forEach(connection => {
+        const sourceNode = tableNodes.value.find(n => n.id === connection.source)
+        const targetNode = tableNodes.value.find(n => n.id === connection.target)
+        
+        if (sourceNode && targetNode) {
+          connection.path = calculatePath(sourceNode, targetNode)
+        }
+      })
     }
 
     const autoLayout = () => {
-      // 简单的自动布局算法
-      const nodes = elements.value.filter(el => el.type === 'custom')
+      const nodes = tableNodes.value
       const cols = Math.ceil(Math.sqrt(nodes.length))
       
       nodes.forEach((node, index) => {
         const row = Math.floor(index / cols)
         const col = index % cols
-        node.position = {
-          x: 100 + col * 350,
-          y: 100 + row * 250
-        }
+        node.x = 100 + col * 350
+        node.y = 100 + row * 300
       })
+      
+      updateConnections()
     }
 
     const exportDiagram = () => {
-      // 导出图表为图片
       ElMessage.info('导出功能开发中...')
     }
 
     const clearDiagram = () => {
-      elements.value = []
+      tableNodes.value = []
+      connections.value = []
+      selectedTableNode.value = null
     }
 
-    const onConnect = (params) => {
-      // 处理连接
-      console.log('连接:', params)
-    }
-
-    const onNodeDragStop = (event, node) => {
-      // 节点拖拽结束
-      console.log('节点拖拽:', node)
-    }
-
-    const onPaneClick = () => {
-      // 画布点击
-    }
-
-    const onNodeClick = (nodeId) => {
-      // 节点点击
-      console.log('节点点击:', nodeId)
-    }
+    onMounted(() => {
+      // 初始化画布尺寸
+      if (diagramContainer.value) {
+        canvasWidth.value = diagramContainer.value.clientWidth
+        canvasHeight.value = diagramContainer.value.clientHeight
+      }
+    })
 
     return {
       sqlText,
@@ -368,22 +464,25 @@ export default {
       selectedTableData,
       uploadRef,
       diagramContainer,
-      elements,
-      nodeTypes,
-      edgeTypes,
+      diagramCanvas,
+      tableNodes,
+      connections,
+      selectedTableNode,
+      canvasWidth,
+      canvasHeight,
       hasNodes,
       handleFileChange,
       handleSqlInput,
       parseSql,
       clearSql,
       selectTable,
+      selectTableNode,
+      isPrimaryKey,
+      isForeignKey,
+      startDrag,
       autoLayout,
       exportDiagram,
-      clearDiagram,
-      onConnect,
-      onNodeDragStop,
-      onPaneClick,
-      onNodeClick
+      clearDiagram
     }
   }
 }
@@ -576,16 +675,192 @@ export default {
 .diagram-container {
   flex: 1;
   position: relative;
+  overflow: hidden;
+  background: #fafafa;
 }
 
-.vue-flow-diagram {
+.diagram-canvas {
+  position: relative;
   width: 100%;
   height: 100%;
+  overflow: auto;
+}
+
+.connections-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.connection-path {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.table-node {
+  position: absolute;
+  background: white;
+  border: 2px solid #e4e7ed;
+  border-radius: 8px;
+  min-width: 200px;
+  max-width: 300px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: move;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.table-node:hover {
+  border-color: #409EFF;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.table-node.selected {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.table-node .table-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.table-node .table-icon {
+  display: flex;
+  align-items: center;
+}
+
+.table-node .table-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
+}
+
+.table-node .table-actions {
+  display: flex;
+  align-items: center;
+}
+
+.table-node .table-columns {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.table-node .column-row {
+  padding: 8px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.table-node .column-row:hover {
+  background-color: #f8f9fa;
+}
+
+.table-node .column-row:last-child {
+  border-bottom: none;
+}
+
+.table-node .column-row.primary-key {
+  background-color: #fef0f0;
+  border-left: 3px solid #f56c6c;
+}
+
+.table-node .column-row.foreign-key {
+  background-color: #f0f9ff;
+  border-left: 3px solid #409EFF;
+}
+
+.table-node .column-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.table-node .column-name {
+  font-weight: 500;
+  font-size: 13px;
+  color: #303133;
+}
+
+.table-node .column-type {
+  font-size: 11px;
+  color: #909399;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.table-node .column-constraints {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.table-node .constraint {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.table-node .constraint.not-null {
+  background-color: #fef0f0;
+  color: #f56c6c;
+}
+
+.table-node .constraint.pk {
+  background-color: #f56c6c;
+  color: white;
+}
+
+.table-node .constraint.fk {
+  background-color: #409EFF;
+  color: white;
+}
+
+.table-node .more-columns {
+  font-size: 12px;
+  color: #909399;
+  text-align: center;
+  padding: 8px 16px;
 }
 
 .table-detail h4 {
   margin: 0 0 20px 0;
   color: #303133;
+}
+
+/* 滚动条样式 */
+.table-node .table-columns::-webkit-scrollbar {
+  width: 4px;
+}
+
+.table-node .table-columns::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.table-node .table-columns::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 2px;
+}
+
+.table-node .table-columns::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 /* 响应式设计 */
