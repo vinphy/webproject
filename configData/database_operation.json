@@ -36,9 +36,19 @@
                     {"name": "字段名", "key": "fieldName", "type": "select"},
                     {"name": "字段值", "key": "fieldType", "type": "input"}
                   ]
+                },
+                {
+                  "key": "conditions",
+                  "label": "条件",
+                  "type": "table-editor",
+                  "columns": [
+                    { "name": "字段名", "key": "fieldName", "type": "select" },
+                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                    { "name": "字段值", "key": "fieldValue", "type": "input" }
+                  ]
                 }
               ],
-              "sql_template": "INSERT INTO {{tableName}} ({{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}) VALUES ({{#each fields}}{{#if (isString fieldType)}}'{{fieldType}}'{{else}}{{fieldType}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}});"
+              "sql_template": "INSERT INTO {{tableName}} ({{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}) VALUES ({{#each fields}}{{#if (isString fieldType)}}'{{fieldType}}'{{else}}{{fieldType}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}){{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "insert_condition",
@@ -84,11 +94,21 @@
             "outputs": [
               { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": []
-            }
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              {
+                "key": "conditions",
+                "label": "删除条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              }
+            ],
+            "sql_template": "DELETE FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "where_delete",
@@ -135,11 +155,30 @@
             "outputs": [
               { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": []
-            }
+            "ui_schema":[
+                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+                { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+                { 
+                  "key": "fields", 
+                  "label": "参数", 
+                  "type": "table-editor", 
+                  "columns": [
+                    {"name": "字段名", "key": "fieldName", "type": "select"},
+                    {"name": "字段值", "key": "fieldType", "type": "input"}
+                  ]
+                },
+                {
+                  "key": "conditions",
+                  "label": "条件",
+                  "type": "table-editor",
+                  "columns": [
+                    { "name": "字段名", "key": "fieldName", "type": "select" },
+                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                    { "name": "字段值", "key": "fieldValue", "type": "input" }
+                  ]
+                }
+              ],
+              "sql_template": "UPDATE {{tableName}} SET {{#each fields}}{{fieldName}} = {{#if (isString fieldType)}}'{{fieldType}}'{{else}}{{fieldType}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "where_update",
@@ -186,11 +225,29 @@
             "outputs": [
               { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": []
-            }
+            "ui_schema":[
+                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+                { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+                {
+                  "key": "fields",
+                  "label": "查询字段",
+                  "type": "table-editor",
+                  "columns": [
+                    {"name": "字段名", "key": "fieldName", "type": "select"}
+                  ]
+                },
+                {
+                  "key": "conditions",
+                  "label": "条件",
+                  "type": "table-editor",
+                  "columns": [
+                    { "name": "字段名", "key": "fieldName", "type": "select" },
+                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                    { "name": "字段值", "key": "fieldValue", "type": "input" }
+                  ]
+                }
+              ],
+              "sql_template": "SELECT {{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "where_select",
