@@ -3,10 +3,10 @@
     <router-view v-if="$route.path.startsWith('/login') || $route.path.startsWith('/register')"></router-view>
     <el-container v-else class="layout-container">
       <!-- 侧边栏 -->
-      <el-aside width="220px" class="aside">
-        <div class="logo">
+      <el-aside :width="isCollapse ? '64px' : '220px'" class="aside">
+        <div class="logo" :class="{ 'is-collapse': isCollapse }">
           <img src="./assets/logo.svg" alt="Logo" class="logo-img">
-          <span class="logo-text">vinphy</span>
+          <span class="logo-text" v-show="!isCollapse">vinphy</span>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -14,6 +14,7 @@
           background-color="#304156"
           text-color="#bfcbd9"
           active-text-color="#409EFF"
+          :collapse="isCollapse"
         >
           <el-menu-item index="1" @click="handleMenuClick('dashboard')">
             <el-icon><Monitor /></el-icon>
@@ -155,6 +156,10 @@ const onLogout = () => {
   align-items: center;
   padding: 0 20px;
   background: #2b3649;
+}
+
+.logo.is-collapse {
+  justify-content: center;
 }
 
 .logo-img {
