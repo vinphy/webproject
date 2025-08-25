@@ -20,6 +20,21 @@ app.include_router(code_file_router, prefix="/api/code", tags=["code"])
 app.include_router(bit_test_router, prefix="/api/test", tags=["test"])
 app.include_router(sql_parser_router, prefix="/api/sql", tags=["sql"])
 
+# 认证路由
+from control.auth import router as auth_router
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+
+@app.on_event("startup")
+def on_startup():
+    # 确保默认管理员存在
+    from control.auth import ensure_default_admin
+    from util.db import get_db
+    try:
+        with next(get_db()) as db:
+            ensure_default_admin(db)
+    except Exception as e:
+        print(f"[STARTUP] ensure_default_admin failed: {e}")
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the API"}

@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 import traceback
 
@@ -168,3 +168,7 @@ class FileUtil:
                 'message': f'Failed to write files for module {module_name}: {str(e)}',
                 'results': {}
             } 
+
+
+def get_env(name: str, default: Optional[str] = None) -> Optional[str]:
+    return os.environ.get(name, default) 

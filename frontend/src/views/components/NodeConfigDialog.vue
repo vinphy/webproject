@@ -13,6 +13,8 @@
         :ui-schema="currentNode?.ui_schema || []"
         :initial-data="getDatabaseCreateInitialData()"
         :sql-template="currentNode?.sql_template"
+        :get-tables-by-database="props.getTablesByDatabase"
+        :get-columns-by-database-table="props.getColumnsByDatabaseTable"
         @submit="onDatabaseCreateSubmit"
       />
     </div>

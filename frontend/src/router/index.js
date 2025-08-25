@@ -6,43 +6,72 @@ const routes = [
     path: '/',
     redirect: '/dashboard'
   },
+  { path: '/login', name: 'Login', component: () => import('../views/AuthLogin.vue') },
+  { path: '/register', name: 'Register', component: () => import('../views/AuthRegister.vue') },
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue')
+    component: () => import('../views/Dashboard.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/components',
     name: 'Components',
-    component: () => import('../views/Components.vue')
+    component: () => import('../views/Components.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/logs',
     name: 'Logs',
-    component: () => import('../views/Logs.vue')
+    component: () => import('../views/Logs.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/test',
     name: 'Test',
-    component: () => import('../views/QueryBuilderDemo.vue')
+    component: () => import('../views/QueryBuilderDemo.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/bitTest',
     name: 'BitTest',
-    component: () => import('../views/BitTest.vue')
+    component: () => import('../views/BitTest.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/sqlErDiagram',
     name: 'SqlErDiagram',
-    component: () => import('../views/SqlErDiagram.vue')
+    component: () => import('../views/SqlErDiagram.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/users',
+    name: 'UserManagement',
+    component: () => import('../views/UserManagement.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
   }
 ]
+
+import { getCurrentUser } from '../utils/auth'
 
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
-export default router 
+router.beforeEach((to, from, next) => {
+  const user = getCurrentUser()
+  if (to.meta && to.meta.requiresAuth && !user) {
+    return next({ path: '/login', query: { redirect: to.fullPath } })
+  }
+  if (to.meta && to.meta.roles && user && to.meta.roles.length > 0) {
+    const role = user.role || 'user'
+    if (!to.meta.roles.includes(role)) {
+      return next('/dashboard')
+    }
+  }
+  next()
+})
 
+export default router 
 

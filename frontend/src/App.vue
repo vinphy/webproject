@@ -1,6 +1,7 @@
 <template>
   <div class="app">
-    <el-container class="layout-container">
+    <router-view v-if="$route.path.startsWith('/login') || $route.path.startsWith('/register')"></router-view>
+    <el-container v-else class="layout-container">
       <!-- 侧边栏 -->
       <el-aside width="220px" class="aside">
         <div class="logo">
@@ -18,25 +19,29 @@
             <el-icon><Monitor /></el-icon>
             <span>仪表盘</span>
           </el-menu-item>
-          <el-menu-item index="2" @click="handleMenuClick('components')">
+          <el-menu-item index="2" v-if="can('modules')" @click="handleMenuClick('components')">
             <el-icon><User /></el-icon>
             <span>模块管理</span>
           </el-menu-item>
-          <el-menu-item index="3" @click="handleMenuClick('logs')">
+          <el-menu-item index="3" v-if="can('logs')" @click="handleMenuClick('logs')">
             <el-icon><Goods /></el-icon>
             <span>日志管理</span>
           </el-menu-item>
-          <el-menu-item index="4" @click="handleMenuClick('test')">
+          <el-menu-item index="4" v-if="can('test')" @click="handleMenuClick('test')">
             <el-icon><Goods /></el-icon>
             <span>测试</span>
           </el-menu-item>
-          <el-menu-item index="5" @click="handleMenuClick('bitTest')">
+          <el-menu-item index="5" v-if="can('bit')" @click="handleMenuClick('bitTest')">
             <el-icon><Goods /></el-icon>
             <span>符合性测试</span>
           </el-menu-item>
-          <el-menu-item index="6" @click="handleMenuClick('sqlErDiagram')">
+          <el-menu-item index="6" v-if="can('er')" @click="handleMenuClick('sqlErDiagram')">
             <el-icon><DataAnalysis /></el-icon>
             <span>SQL ER图</span>
+          </el-menu-item>
+          <el-menu-item index="7" v-if="isAdmin" @click="handleMenuClick('users')">
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -58,13 +63,16 @@
             <el-dropdown>
               <span class="user-info">
                 <el-avatar :size="32" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
-                <span class="username">vinphy</span>
+                <span class="username">{{ user?.username || '未登录' }}</span>
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item>个人信息</el-dropdown-item>
-                  <el-dropdown-item>修改密码</el-dropdown-item>
-                  <el-dropdown-item divided>退出登录</el-dropdown-item>
+                  <el-dropdown-item v-if="user" @click="router.push('/permission')">权限管理</el-dropdown-item>
+                  <el-dropdown-item v-if="user" @click="router.push('/dashboard')">个人信息</el-dropdown-item>
+                  <el-dropdown-item v-if="user" @click="router.push('/dashboard')">修改密码</el-dropdown-item>
+                  <el-dropdown-item divided v-if="user" @click="onLogout">退出登录</el-dropdown-item>
+                  <el-dropdown-item v-else @click="router.push('/login')">登录</el-dropdown-item>
+                  <el-dropdown-item v-else @click="router.push('/register')">注册</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -80,14 +88,24 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Monitor, User, Goods, List, Setting, Fold, Expand, DataAnalysis } from '@element-plus/icons-vue'
+import { getCurrentUser, clearToken, clearCurrentUser, userRef } from './utils/auth'
 
 const router = useRouter()
 const isCollapse = ref(false)
 const activeMenu = ref('1')
 const currentPage = ref('仪表盘')
+const user = computed(() => userRef.value)
+const isAdmin = computed(() => (user.value?.role || '') === 'admin')
+
+const can = (key) => {
+  // 简单基于角色的控制：admin全部可见，普通用户隐藏权限管理
+  if (isAdmin.value) return true
+  const allow = ['dashboard', 'modules', 'logs', 'test', 'bit', 'er']
+  return allow.includes(key)
+}
 
 const handleMenuClick = (route) => {
   router.push(`/${route}`)
@@ -98,13 +116,20 @@ const handleMenuClick = (route) => {
     logs: '日志管理',
     test: '测试',
     bitTest: 'bit测试',
-    sqlErDiagram: 'SQL ER图'
+    sqlErDiagram: 'SQL ER图',
+    permission: '权限管理'
   }
   currentPage.value = pageNames[route]
 }
 
 const toggleSidebar = () => {
   isCollapse.value = !isCollapse.value
+}
+
+const onLogout = () => {
+  clearToken();
+  clearCurrentUser();
+  router.replace('/login')
 }
 </script>
 

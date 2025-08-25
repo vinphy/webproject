@@ -1,8 +1,5 @@
 import pymysql
 from datetime import datetime
-import pandas as pd
-from docx import Document
-from docx.shared import Inches
 import io
 import traceback
 import logging
@@ -110,6 +107,9 @@ class BitTestService:
                     logger.warning("No data found for export")
                     raise Exception("没有数据可导出")
                 
+                # 延迟导入pandas和openpyxl
+                import pandas as pd
+                
                 # 创建DataFrame
                 logger.debug("Creating DataFrame")
                 df = pd.DataFrame(data)
@@ -164,6 +164,9 @@ class BitTestService:
                 if not data:
                     logger.warning("No data found for export")
                     raise Exception("没有数据可导出")
+                
+                # 延迟导入python-docx
+                from docx import Document
                 
                 # 创建Word文档
                 logger.debug("Creating Word document")

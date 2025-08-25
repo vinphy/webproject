@@ -46,6 +46,8 @@
           <TableEditor 
             v-model="formData[item.key]" 
             :columns="item.columns"
+            :available-tables="availableTables"
+            :available-columns-map="availableColumnsMap"
           />
         </el-form-item>
       </template>
@@ -79,6 +81,15 @@
     sqlTemplate: {
       type: String,
       default: ''
+    },
+    // 新增外键下拉数据
+    getTablesByDatabase: {
+      type: Function,
+      default: () => async (dbName) => []
+    },
+    getColumnsByDatabaseTable: {
+      type: Function,
+      default: () => async (dbName, tableName) => []
     }
   })
   
@@ -87,6 +98,10 @@
   const formRef = ref(null)
   const formData = ref({})
   
+  // 新增外键下拉数据
+  const availableTables = ref([])
+  const availableColumnsMap = ref({})
+
   // 初始化表单数据
   function buildFormData(schema, initial) {
     const data = {}
@@ -109,6 +124,34 @@
       formRef.value.clearValidate && formRef.value.clearValidate()
     }
   }, { immediate: true })
+
+  // 新增外键下拉数据
+  watch([
+    () => formData.value.databaseName,
+    () => props.uiSchema
+  ], async ([databaseName, uiSchema]) => {
+    if (!databaseName) return
+    // 获取所有表
+    if (typeof window.getTablesByDatabase === 'function') {
+      availableTables.value = window.getTablesByDatabase(databaseName)
+    } else if (props.getTablesByDatabase) {
+      availableTables.value = props.getTablesByDatabase(databaseName)
+    } else {
+      availableTables.value = []
+    }
+    // 获取所有表的字段
+    const map = {}
+    for (const table of availableTables.value) {
+      if (typeof window.getColumnsByDatabaseTable === 'function') {
+        map[table] = await window.getColumnsByDatabaseTable(databaseName, table)
+      } else if (props.getColumnsByDatabaseTable) {
+        map[table] = await props.getColumnsByDatabaseTable(databaseName, table)
+      } else {
+        map[table] = []
+      }
+    }
+    availableColumnsMap.value = map
+  }, { immediate: true })
   
   // 提交表单（保留submit事件，兼容老用法）
   const submitForm = async () => {
@@ -122,38 +165,62 @@
 
   // 生成SQL
   function buildSQL() {
-    try {
-      // 注册辅助函数：判断是否字符串
-      Handlebars.registerHelper('isString', function(value) {
-        return typeof value === 'string';
-      });
-      // 注册辅助函数：判断是否最后一个
-      Handlebars.registerHelper('unlessLast', function(index, array, options) {
-        if (index !== array.length - 1) {
-          return options.fn(this);
-        }
-        return '';
-      });
-      // 如果有sql_template，优先用模板
-      if (props.sqlTemplate) {
+    // 1. 优先用模板
+    if (props.sqlTemplate) {
+      try {
         const template = Handlebars.compile(props.sqlTemplate)
         return template(formData.value)
+      } catch (e) {
+        return 'SQL模板渲染出错'
       }
-      // 否则自动拼接
-      const tableName = formData.value.tableName || 'table_name'
-      const fields = formData.value.fields || []
-      const columns = fields.map(f => f.fieldName).filter(Boolean)
-      const values = fields.map(f => {
-        if (typeof f.fieldType === 'number' || /^[0-9.]+$/.test(f.fieldType)) {
-          return f.fieldType
-        }
-        return `'${f.fieldType}'`
-      })
-      if (columns.length === 0) return '-- 请选择参数'
-      return `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${values.join(', ')});`
-    } catch (e) {
-      return 'SQL渲染出错'
     }
+
+    // 2. 自动拼接
+    const tableName = formData.value.tableName || 'table_name'
+    const fields = formData.value.fields || []
+
+    if (!fields.length) return '-- 请添加字段'
+
+    // 字段定义
+    const fieldLines = []
+    const pkFields = []
+    const uniqueFields = []
+    const foreignKeys = []
+
+    fields.forEach(f => {
+      const name = f.fieldName || f.name || f['字段名']
+      const type = f.fieldType || f.type || f['类型']
+      const length = f.length ? `(${f.length})` : ''
+      const constraint = f.constraint || {}
+
+      let line = `\`${name}\` ${type}${length}`
+
+      // 约束
+      if (constraint.nullable === false || constraint.notNull) line += ' NOT NULL'
+      if (constraint.nullable === true) line += ' NULL'
+      if (constraint.unique) uniqueFields.push(name)
+      if (constraint.autoIncrement) line += ' AUTO_INCREMENT'
+      if (constraint.default !== undefined && constraint.default !== '') line += ` DEFAULT '${constraint.default}'`
+      fieldLines.push(line)
+
+      // 主键
+      if (constraint.primary) pkFields.push(name)
+
+      // 外键
+      if (constraint.hasForeignKey && constraint.foreignKey && constraint.foreignKey.table && constraint.foreignKey.column) {
+        foreignKeys.push(
+          `FOREIGN KEY (\`${name}\`) REFERENCES \`${constraint.foreignKey.table}\`(\`${constraint.foreignKey.column}\`)`
+        )
+      }
+    })
+
+    // 表级约束
+    if (pkFields.length) fieldLines.push(`PRIMARY KEY (${pkFields.map(n => `\`${n}\``).join(', ')})`)
+    if (uniqueFields.length) fieldLines.push(`UNIQUE (${uniqueFields.map(n => `\`${n}\``).join(', ')})`)
+    if (foreignKeys.length) fieldLines.push(...foreignKeys)
+
+    // 拼接完整SQL
+    return `CREATE TABLE \`${tableName}\` (\n  ${fieldLines.join(',\n  ')}\n);`
   }
 
   // 暴露方法供父组件获取表单数据
