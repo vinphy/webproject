@@ -4,14 +4,14 @@ import Home from '../views/Home.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/home'
   },
   { path: '/login', name: 'Login', component: () => import('../views/AuthLogin.vue') },
   { path: '/register', name: 'Register', component: () => import('../views/AuthRegister.vue') },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
+    path: '/home',
+    name: 'Home',
+    component: () => import('../views/Home.vue'),
     meta: { requiresAuth: true }
   },
   {

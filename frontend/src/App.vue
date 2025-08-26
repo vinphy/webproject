@@ -16,9 +16,9 @@
           active-text-color="#409EFF"
           :collapse="isCollapse"
         >
-          <el-menu-item index="1" @click="handleMenuClick('dashboard')">
+          <el-menu-item index="1" @click="handleMenuClick('home')">
             <el-icon><Monitor /></el-icon>
-            <span>仪表盘</span>
+            <span>首页</span>
           </el-menu-item>
           <el-menu-item index="2" v-if="can('modules')" @click="handleMenuClick('components')">
             <el-icon><User /></el-icon>
@@ -112,7 +112,7 @@ const handleMenuClick = (route) => {
   router.push(`/${route}`)
   // 更新当前页面名称
   const pageNames = {
-    dashboard: '仪表盘',
+    home: '首页',
     components: '模块管理',
     logs: '日志管理',
     test: '测试',
