@@ -26,15 +26,12 @@
         <!-- 工作柜台 -->
         <el-card class="panel section-left-bottom" shadow="hover">
           <template #header>
-            <span>工作柜台</span>
+            <span>工作台</span>
           </template>
           <div class="workbench-grid">
-            <div class="tile tile-a"><el-icon><Monitor /></el-icon><span>新建项目</span></div>
-            <div class="tile tile-b"><el-icon><User /></el-icon><span>我的任务</span></div>
-            <div class="tile tile-c"><el-icon><Goods /></el-icon><span>导入用例</span></div>
-            <div class="tile tile-d"><el-icon><DataAnalysis /></el-icon><span>统计报表</span></div>
-            <div class="tile tile-e"><el-icon><Setting /></el-icon><span>系统设置</span></div>
-            <div class="tile tile-f"><el-icon><List /></el-icon><span>更多功能</span></div>
+            <div class="tile tile-a"><el-icon><Monitor /></el-icon><span>项目管理</span></div>
+            <div class="tile tile-b"><el-icon><User /></el-icon><span>测试用例</span></div>
+            <div class="tile tile-c"><el-icon><Goods /></el-icon><span>测试结果</span></div>
           </div>
         </el-card>
       </div>
@@ -310,35 +307,45 @@ onMounted(() => {
 .workbench-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-rows: 1fr; /* 单行，撑满高度 */
+  gap: 20px;
   height: 100%;
-  align-content: center;
+  align-items: stretch; /* 子项拉伸至满高 */
 }
 
+/* 工作柜台卡片内边距加大，仅作用于工作台面板 */
+.section-left-bottom .el-card__body {
+  padding: 16px !important;
+}
+
+/* 工作台块：更大的内边距、轻边框与更柔和的文本颜色 */
 .tile {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  color: #fff;
-  border-radius: 8px;
-  aspect-ratio: 1 / 1;
-  min-height: 60px;
-  max-height: 80px;
+  gap: 12px;
+  height: 100%;
+  padding: 12px;
+  color: #2c3e50; /* 深色文本，适配浅色背景 */
+  border: 1px solid #e5e7eb; /* 轻边框增强层次 */
+  border-radius: 10px;
 }
 
 .tile .el-icon {
-  font-size: 18px;
-  margin-bottom: 4px;
+  font-size: 38px; /* 放大图标 */
+  margin: 0; /* 居中时不需要额外外边距 */
 }
 
 .tile span {
-  font-size: 11px;
+  font-size: 15px; /* 放大文字 */
+  font-weight: 600;
 }
 
-.tile-a { background: #409EFF; }
-.tile-b { background: #67C23A; }
-.tile-c { background: #E6A23C; }
+/* 低饱和度浅色背景 */
+.tile-a { background: #e8f1ff; } /* 柔和浅蓝 */
+.tile-b { background: #eaf7ea; } /* 柔和浅绿 */
+.tile-c { background: #fff4e5; } /* 柔和浅橙 */
 .tile-d { background: #F56C6C; }
 .tile-e { background: #909399; }
 .tile-f { background: #1F2D3D; }
