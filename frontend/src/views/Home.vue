@@ -65,11 +65,7 @@
           <template #header>
             <span>当前正在测试的项目</span>
           </template>
-          <el-form :model="currentProject" label-width="80px" label-position="left" class="project-form" inline size="small">
-            <el-form-item label="项目名称" class="pf-item"><el-input v-model="currentProject.name" disabled /></el-form-item>
-            <el-form-item label="负责人" class="pf-item"><el-input v-model="currentProject.owner" disabled /></el-form-item>
-            <el-form-item label="进度" class="pf-item"><el-input v-model="currentProject.progress" disabled /></el-form-item>
-          </el-form>
+          <HomeProjectItem/>
         </el-card>
       </div>
     </div>
@@ -80,6 +76,8 @@
 import { onMounted, ref, computed } from 'vue'
 import { userRef } from '../utils/auth'
 import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
+import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
+
 
 const user = computed(() => userRef.value)
 

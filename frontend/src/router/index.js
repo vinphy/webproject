@@ -35,7 +35,7 @@ const routes = [
   {
     path: '/bitTest',
     name: 'BitTest',
-    component: () => import('../views/BitTest.vue'),
+    component: () => import('../views/childernVue.vue/HomeProjectItem.vue'),
     meta: { requiresAuth: true }
   },
   {
