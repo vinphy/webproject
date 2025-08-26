@@ -10,9 +10,8 @@
           </template>
           <div class="left-top-row">
             <div class="table-wrap single">
-              <el-table :data="statsRows" size="small" border>
-                <el-table-column prop="label" label="指标" width="120" />
-                <el-table-column prop="value" label="数量" />
+              <el-table :data="statsRows" size="small">
+                <el-table-column prop="name" label="" />
               </el-table>
             </div>
             <div class="chart-wrap single">
@@ -81,10 +80,14 @@ import { Monitor, User, Goods, DataAnalysis, Setting, List } from '@element-plus
 const user = computed(() => userRef.value)
 
 const statsRows = ref([
-  { label: '项目总数', value: 120 },
-  { label: '已完成', value: 75 },
-  { label: '进行中', value: 30 },
-  { label: '待开始', value: 15 }
+  { name: '项目总数', type: 'title' },
+  { name: '120', type: 'value' },
+  { name: '已完成', type: 'title' },
+  { name: '75', type: 'value' },
+  { name: '进行中', type: 'title' },
+  { name: '30', type: 'value' },
+  { name: '待开始', type: 'title' },
+  { name: '15', type: 'value' }
 ])
 
 const monthlyNewProjects = [12, 18, 22, 17, 25, 30, 28, 26, 24, 20, 18, 16]
@@ -135,14 +138,14 @@ onMounted(() => {
 }
 
 .left-section {
-  flex: 0 0 70%;
+  flex: 0 0 65%;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .right-section {
-  flex: 0 0 30%;
+  flex: 0 0 35%;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -195,16 +198,77 @@ onMounted(() => {
 }
 
 .table-wrap.single {
-  flex: 0 0 25%;
+  flex: 0 0 11%;
   min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+}
+
+.table-wrap.single .el-table {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none !important;
+  font-size: 14px;
+}
+
+.table-wrap.single .el-table .el-table__inner-wrapper {
+  height: 100%;
+  border: none !important;
+}
+
+.table-wrap.single .el-table .el-table__header-wrapper {
+  height: 0 !important;
+  display: none !important;
+}
+
+.table-wrap.single .el-table .el-table__body-wrapper {
+  height: 100% !important;
+  overflow: hidden;
+}
+
+.table-wrap.single .el-table .el-table__body {
+  border: none !important;
+}
+
+.table-wrap.single .el-table .el-table__cell {
+  border: none !important;
+  padding: 8px 4px !important;
+  margin: 0 !important;
+  height: calc(100% / 8) !important;
+  line-height: 1.2 !important;
+  font-size: 13px !important;
+}
+
+
+/* 表格行样式 */
+.table-wrap.single .el-table .el-table__row:nth-child(odd) .el-table__cell {
+  font-weight: 600;
+  color: #303133;
+  background-color: #f5f7fa;
+  text-align: center;
+  font-size: 15px !important;
+}
+
+.table-wrap.single .el-table .el-table__row:nth-child(even) .el-table__cell {
+  font-weight: bold;
+  color: #409EFF;
+  text-align: center;
+  font-size: 16px !important;
 }
 
 .chart-wrap.single:nth-child(2) {
-  flex: 0 0 45%;
+  flex: 0 0 38%;
 }
 
 .chart-wrap.single:nth-child(3) {
-  flex: 0 0 30%;
+  flex: 0 0 55%;
 }
 
 .chart-wrap.single {
@@ -217,6 +281,20 @@ onMounted(() => {
   height: 100px !important;
   min-height: 80px;
   max-height: 120px;
+}
+
+.chart-wrap.single:nth-child(2) .chart {
+  height: calc(100% - 20px) !important;
+  margin: 10px 0px 10px 15px !important;
+  min-height: unset !important;
+  max-height: unset !important;
+}
+
+.chart-wrap.single:nth-child(3) .chart {
+  height: calc(100% - 20px) !important;
+  margin: 10px 0px 10px 0px !important;
+  min-height: unset !important;
+  max-height: unset !important;
 }
 
 /* 工作柜台网格 */
@@ -296,16 +374,61 @@ onMounted(() => {
   width: 100%;
 }
 
-/* 表格样式调整 */
-.el-table {
-  font-size: 12px;
+/* 表格样式调整 - 仅针对特定表格 */
+.table-wrap.single .el-table {
+  font-size: 14px;
 }
 
-.el-table .el-table__header-wrapper {
-  height: 32px;
+.table-wrap.single .el-table .el-table__header-wrapper {
+  height: 0 !important;
+  display: none !important;
 }
 
-.el-table .el-table__body-wrapper {
-  height: calc(100% - 32px);
+.table-wrap.single .el-table .el-table__body-wrapper {
+  height: 100% !important;
+  overflow: hidden;
+}
+
+/* 表格列样式 */
+.el-table .el-table__row:nth-child(odd) .el-table__cell {
+  font-weight: 600;
+  color: #303133;
+  background-color: #f5f7fa;
+  text-align: center;
+}
+
+.el-table .el-table__row:nth-child(even) .el-table__cell {
+  font-weight: bold;
+  color: #409EFF;
+  text-align: center;
+  font-size: 16px;
+}
+
+/* 卡片标题样式优化 */
+.panel .el-card__header {
+  padding: 14px 16px !important;
+  box-sizing: border-box;
+}
+
+.panel .el-card__header span {
+  position: relative;
+  display: inline-block;
+  padding-left: 12px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #303133;
+  line-height: 1.4;
+}
+
+.panel .el-card__header span::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  background: #409EFF;
+  border-radius: 2px;
 }
 </style> 
