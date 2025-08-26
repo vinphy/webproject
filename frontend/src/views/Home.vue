@@ -47,11 +47,18 @@
             <span>测试人员基本信息</span>
           </template>
           <div class="profile">
-            <el-avatar :size="72" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
-            <div class="info">
-              <div class="name">{{ user?.username || '未登录' }}</div>
-              <div class="meta">角色：{{ user?.role || '-' }}</div>
-              <div class="meta">邮箱：{{ user?.email || '-' }}</div>
+            <div class="avatar-col">
+              <el-avatar src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
+              <div class="edit-avatar">
+                <el-icon><EditPen /></el-icon>
+                <span>修改头像</span>
+              </div>
+            </div>
+            <div class="info-col">
+              <div class="info-item ">姓名：{{ user?.username || '未登录' }}</div>
+              <div class="info-item">角色：{{ user?.role || '-' }}</div>
+              <div class="info-item">邮箱：{{ user?.email || '-' }}</div>
+              <div class="info-item">已创建项目：{{ createdCount }} 个</div>
             </div>
           </div>
         </el-card>
@@ -75,7 +82,7 @@
 <script setup>
 import { onMounted, ref, computed } from 'vue'
 import { userRef } from '../utils/auth'
-import { Monitor, User, Goods, DataAnalysis, Setting, List } from '@element-plus/icons-vue'
+import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
 
 const user = computed(() => userRef.value)
 
@@ -91,6 +98,8 @@ const statsRows = ref([
 ])
 
 const monthlyNewProjects = [12, 18, 22, 17, 25, 30, 28, 26, 24, 20, 18, 16]
+
+const createdCount = ref(12)
 
 const lineChartRef = ref(null)
 const barChartRef = ref(null)
@@ -164,12 +173,12 @@ onMounted(() => {
 
 /* 右侧布局：上40%，下60% */
 .section-right-top {
-  flex: 0 0 40%;
+  flex: 0 0 30%;
   min-height: 0;
 }
 
 .section-right-bottom {
-  flex: 0 0 60%;
+  flex: 0 0 70%;
   min-height: 0;
 }
 
@@ -334,28 +343,58 @@ onMounted(() => {
 .tile-e { background: #909399; }
 .tile-f { background: #1F2D3D; }
 
-/* 用户信息 */
+/* 右上信息卡片布局 */
 .profile {
   display: flex;
-  align-items: center;
   height: 100%;
+  gap: 12px;
+  align-items: center;
 }
 
-.profile .info {
-  margin-left: 12px;
+.avatar-col {
+  flex: 0 0 40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.profile .name {
+.avatar-col .el-avatar {
+  width: 55%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+}
+
+.edit-avatar {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  color: #409EFF;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.edit-avatar .el-icon {
   font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 6px;
+  margin-right: 4px;
 }
 
-.profile .meta {
-  color: #666;
-  font-size: 11px;
-  margin-top: 2px;
+.info-col {
+  flex: 0 0 60%;
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  row-gap: 6px;
+  align-content: center;
 }
+
+.info-item {
+  display: flex;
+  align-items: center;
+  color: #303133;
+  font-size: 14px;
+}
+
+
 
 /* 项目表单 */
 .project-form {
@@ -430,5 +469,19 @@ onMounted(() => {
   height: 22px;
   background: #409EFF;
   border-radius: 2px;
+}
+
+/* 右上卡片中部分割线（竖线），贴合上下边线 */
+.section-right-top .profile {
+  position: relative;
+}
+.section-right-top .profile::after {
+  content: '';
+  position: absolute;
+  top: -8px; /* 补齐卡片body内边距，贴合上边线 */
+  bottom: -8px; /* 补齐卡片body内边距，贴合下边线 */
+  left: calc(37% + 8px); /* 40%列宽 + body左内边距 */
+  width: 1px;
+  background: var(--el-card-border-color, #EBEEF5);
 }
 </style> 
