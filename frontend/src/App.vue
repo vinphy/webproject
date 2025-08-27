@@ -20,6 +20,10 @@
             <el-icon><Monitor /></el-icon>
             <span>首页</span>
           </el-menu-item>
+          <el-menu-item index="8" v-if="can('projects')" @click="handleMenuClick('projects')">
+            <el-icon><User /></el-icon>
+            <span>项目管理</span>
+          </el-menu-item>
           <el-menu-item index="2" v-if="can('modules')" @click="handleMenuClick('components')">
             <el-icon><User /></el-icon>
             <span>模块管理</span>
@@ -118,7 +122,8 @@ const handleMenuClick = (route) => {
     test: '测试',
     bitTest: 'bit测试',
     sqlErDiagram: 'SQL ER图',
-    permission: '权限管理'
+    permission: '权限管理',
+    projects: '项目管理'
   }
   currentPage.value = pageNames[route]
 }

@@ -49,6 +49,12 @@ const routes = [
     name: 'UserManagement',
     component: () => import('../views/UserManagement.vue'),
     meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/projects',
+    name: 'Projects',
+    component: () => import('../views/Projects.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
