@@ -1,30 +1,32 @@
 <template>
-  <div>
-    <el-card>
+  <div class="user-mgmt-page">
+    <el-card class="page-card" shadow="hover">
       <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-weight:600">RBAC 权限管理</span>
-          <el-button size="small" @click="initLoad" :loading="pageLoading">刷新</el-button>
+        <div class="card-header">
+          <span class="card-title">RBAC 权限管理</span>
+          <div class="header-actions">
+            <el-button size="small" @click="initLoad" :loading="pageLoading">刷新</el-button>
+          </div>
         </div>
       </template>
 
       <el-tabs v-model="activeTab">
         <!-- 用户 -->
         <el-tab-pane label="用户" name="users">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div class="toolbar">
             <el-input v-model="userQuery" placeholder="搜索用户名/邮箱" clearable style="width:260px" @keyup.enter.native="loadUsers" />
-            <div>
+            <div class="toolbar-right">
               <el-button type="primary" @click="openCreateUser">新建用户</el-button>
             </div>
           </div>
 
-          <el-table :data="filteredUsers" size="small" stripe :loading="tableLoading">
+          <el-table :data="filteredUsers" size="small" stripe :loading="tableLoading" class="table">
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="username" label="用户名" />
             <el-table-column prop="email" label="邮箱" />
-            <el-table-column prop="role" label="角色" width="200">
+            <el-table-column prop="role" label="角色" width="220">
               <template #default="{ row }">
-                <el-select v-model="userRole[row.id]" placeholder="选择角色" size="small" style="width:160px" @change="(val)=>assignRole(row.id,val)">
+                <el-select v-model="userRole[row.id]" placeholder="选择角色" size="small" style="width:180px" @change="(val)=>assignRole(row.id,val)">
                   <el-option v-for="r in roles" :key="r.id" :label="r.name" :value="r.name" />
                 </el-select>
               </template>
@@ -34,32 +36,30 @@
 
         <!-- 角色 -->
         <el-tab-pane label="角色" name="roles">
-          <div style="display:flex; gap:16px;">
-            <!-- 角色列表 -->
-            <el-card shadow="never" style="flex: 0 0 360px;">
+          <div class="roles-wrap">
+            <el-card shadow="never" class="roles-list">
               <template #header>
-                <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="sub-header">
                   <span>角色列表</span>
                   <el-button size="small" type="primary" @click="openCreateRole">新建角色</el-button>
                 </div>
               </template>
               <el-table :data="roles" size="small" highlight-current-row @current-change="onSelectRole" :loading="tableLoading">
-                <el-table-column prop="name" label="角色名" />
+                <el-table-column prop="name" label="角色名" width="180" />
                 <el-table-column prop="description" label="描述" />
               </el-table>
             </el-card>
 
-            <!-- 角色权限分配 -->
-            <el-card shadow="never" style="flex:1; min-height: 340px;">
+            <el-card shadow="never" class="roles-assign">
               <template #header>
-                <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="sub-header">
                   <span>为角色分配权限</span>
                   <div v-if="activeRole">
                     <el-tag type="info">当前角色：{{ activeRole.name }}</el-tag>
                   </div>
                 </div>
               </template>
-              <div v-if="activeRole" style="display:flex; gap:12px; align-items:flex-start;">
+              <div v-if="activeRole" class="assign-body">
                 <el-transfer
                   v-model="selectedPermIds"
                   :data="permissionTransferData"
@@ -67,9 +67,9 @@
                   filterable
                   filter-placeholder="搜索权限"
                   :titles="['未分配', '已分配']"
-                  style="flex:1"
+                  class="transfer"
                 />
-                <div style="width:160px; text-align:right;">
+                <div class="assign-actions">
                   <el-button type="primary" :disabled="!activeRole" @click="saveRolePermissions" :loading="permSaving">保存</el-button>
                 </div>
               </div>
@@ -80,11 +80,13 @@
 
         <!-- 权限 -->
         <el-tab-pane label="权限" name="permissions">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span style="font-weight:600">权限列表</span>
-            <el-button type="primary" @click="openCreatePermission">新建权限</el-button>
+          <div class="toolbar">
+            <span class="card-subtitle">权限列表</span>
+            <div class="toolbar-right">
+              <el-button type="primary" @click="openCreatePermission">新建权限</el-button>
+            </div>
           </div>
-          <el-table :data="permissions" size="small" stripe :loading="tableLoading">
+          <el-table :data="permissions" size="small" stripe :loading="tableLoading" class="table">
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="code" label="编码" />
             <el-table-column prop="name" label="名称" />
@@ -95,13 +97,14 @@
     </el-card>
 
     <!-- 新建用户 -->
-    <el-dialog v-model="createVisible" title="新建用户" width="500px">
-      <el-form :model="createForm" label-width="90px">
-        <el-form-item label="用户名"><el-input v-model="createForm.username" /></el-form-item>
-        <el-form-item label="邮箱"><el-input v-model="createForm.email" /></el-form-item>
-        <el-form-item label="密码"><el-input v-model="createForm.password" type="password" /></el-form-item>
+    <el-dialog v-model="createVisible" title="新建用户" width="520px">
+      <!-- 简洁表单 + 基础必填校验 -->
+      <el-form ref="createUserRef" :model="createForm" :rules="createUserRules" label-width="90px">
+        <el-form-item label="用户名" prop="username"><el-input v-model="createForm.username" /></el-form-item>
+        <el-form-item label="邮箱" prop="email"><el-input v-model="createForm.email" /></el-form-item>
+        <el-form-item label="密码" prop="password"><el-input v-model="createForm.password" type="password" /></el-form-item>
         <el-form-item label="角色">
-          <el-select v-model="createForm.role" placeholder="可选" clearable filterable>
+          <el-select v-model="createForm.role" placeholder="可选" clearable filterable style="width:100%">
             <el-option v-for="r in roles" :key="r.id" :label="r.name" :value="r.name" />
           </el-select>
         </el-form-item>
@@ -114,8 +117,8 @@
 
     <!-- 新建角色 -->
     <el-dialog v-model="createRoleVisible" title="新建角色" width="520px">
-      <el-form :model="roleDialogForm" label-width="90px">
-        <el-form-item label="角色名" required>
+      <el-form ref="createRoleRef" :model="roleDialogForm" :rules="createRoleRules" label-width="90px">
+        <el-form-item label="角色名" prop="name">
           <el-input v-model="roleDialogForm.name" />
         </el-form-item>
         <el-form-item label="描述">
@@ -130,11 +133,11 @@
 
     <!-- 新建权限 -->
     <el-dialog v-model="createPermVisible" title="新建权限" width="600px">
-      <el-form :model="permDialogForm" label-width="100px">
-        <el-form-item label="权限编码" required>
+      <el-form ref="createPermRef" :model="permDialogForm" :rules="createPermRules" label-width="100px">
+        <el-form-item label="权限编码" prop="code">
           <el-input v-model="permDialogForm.code" placeholder="如 user.manage" />
         </el-form-item>
-        <el-form-item label="名称" required>
+        <el-form-item label="名称" prop="name">
           <el-input v-model="permDialogForm.name" placeholder="显示名称" />
         </el-form-item>
         <el-form-item label="描述">
@@ -150,6 +153,9 @@
 </template>
 
 <script setup>
+// 说明：
+// - 页面结构优化与样式统一：工具栏、卡片、表格尺寸与间距
+// - 对话框加入规则校验与统一按钮布局
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../utils/auth'
@@ -178,6 +184,10 @@ const permSaving = ref(false)
 
 const createRoleVisible = ref(false)
 const roleDialogForm = reactive({ name: '', description: '' })
+const createRoleRef = ref()
+const createRoleRules = {
+  name: [ { required: true, message: '请填写角色名', trigger: 'blur' } ]
+}
 
 // 权限
 const permissions = ref([])
@@ -187,11 +197,22 @@ const permissionTransferData = computed(() => permissions.value.map(p => ({ id: 
 
 const createPermVisible = ref(false)
 const permDialogForm = reactive({ code: '', name: '', description: '' })
+const createPermRef = ref()
+const createPermRules = {
+  code: [ { required: true, message: '请填写权限编码', trigger: 'blur' } ],
+  name: [ { required: true, message: '请填写权限名称', trigger: 'blur' } ]
+}
 
 // 创建用户对话框
 const createVisible = ref(false)
 const saving = ref(false)
 const createForm = reactive({ username: '', email: '', password: '', role: '' })
+const createUserRef = ref()
+const createUserRules = {
+  username: [ { required: true, message: '请输入用户名', trigger: 'blur' } ],
+  email: [ { required: true, message: '请输入邮箱', trigger: 'blur' } ],
+  password: [ { required: true, message: '请输入密码', trigger: 'blur' }, { min: 6, message: '至少 6 位', trigger: 'blur' } ]
+}
 
 // APIs
 const loadUsers = async () => {
@@ -230,8 +251,10 @@ const initLoad = async () => {
 const openCreateUser = () => { createVisible.value = true }
 
 const createUser = async () => {
-  if (!createForm.username || !createForm.email || !createForm.password) {
-    ElMessage.warning('请完整填写用户信息')
+  if (!createUserRef.value) return
+  try {
+    await createUserRef.value.validate()
+  } catch {
     return
   }
   saving.value = true
@@ -267,10 +290,8 @@ const openCreateRole = () => {
 }
 
 const submitCreateRole = async () => {
-  if (!roleDialogForm.name) {
-    ElMessage.warning('请填写角色名')
-    return
-  }
+  if (!createRoleRef.value) return
+  try { await createRoleRef.value.validate() } catch { return }
   roleCreating.value = true
   try {
     await api.post('/api/auth/roles', { name: roleDialogForm.name, description: roleDialogForm.description })
@@ -292,10 +313,8 @@ const openCreatePermission = () => {
 }
 
 const submitCreatePermission = async () => {
-  if (!permDialogForm.code || !permDialogForm.name) {
-    ElMessage.warning('请填写编码和名称')
-    return
-  }
+  if (!createPermRef.value) return
+  try { await createPermRef.value.validate() } catch { return }
   permCreating.value = true
   try {
     await api.post('/api/auth/permissions', permDialogForm)
@@ -315,24 +334,6 @@ const onSelectRole = async (row) => {
   await loadRolePermissions(row.id)
 }
 
-const createPermission = async () => {
-  if (!permForm.code || !permForm.name) return
-  permCreating.value = true
-  try {
-    await api.post('/api/auth/permissions', permForm)
-    permForm.code = ''
-    permForm.name = ''
-    permForm.description = ''
-    await loadPermissions()
-    if (activeRole.value) await loadRolePermissions(activeRole.value.id)
-    ElMessage.success('已创建权限')
-  } catch (e) {
-    ElMessage.error(e?.response?.data?.detail || '创建权限失败')
-  } finally {
-    permCreating.value = false
-  }
-}
-
 const saveRolePermissions = async () => {
   if (!activeRole.value) return
   permSaving.value = true
@@ -347,4 +348,26 @@ const saveRolePermissions = async () => {
 }
 
 onMounted(initLoad)
-</script> 
+</script>
+
+<style scoped>
+.user-mgmt-page { padding: 16px; }
+.page-card { }
+.card-header { display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-weight: 700; color: #2c3e50; }
+.header-actions { display: flex; gap: 8px; }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.toolbar-right { display: flex; gap: 8px; }
+.table { --el-table-header-text-color: #616b7a; }
+
+.roles-wrap { display: flex; gap: 16px; }
+.roles-list { flex: 0 0 360px; }
+.roles-assign { flex: 1; min-height: 360px; }
+.sub-header { display: flex; align-items: center; justify-content: space-between; }
+.assign-body { display: flex; gap: 12px; align-items: flex-start; }
+.transfer { flex: 1; }
+.assign-actions { width: 160px; text-align: right; }
+
+.card-subtitle { font-weight: 600; }
+</style> 

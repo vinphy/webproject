@@ -42,7 +42,8 @@ def ensure_database_exists():
             conn.close()
     except Exception as e:
         print(f"[DB INIT] ensure_database_exists failed: {e}")
-        raise
+        # 允许应用继续启动，后续请求再尝试连接数据库
+        return
 
 
 def ensure_users_schema():
