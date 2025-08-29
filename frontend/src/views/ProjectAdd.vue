@@ -27,11 +27,12 @@
       <div class="section-sep"></div>
 
       <div class="section-header">
-        <span class="section-title">项目基础信息</span>
+        <span class="section-title">{{ currentStep === 1 ? '项目基础信息' : (currentStep === 2 ? '测试用例选择' : currentStep === 3 ? '项目参数配置' : '项目入库') }}</span>
       </div>
 
       <div class="form-wrap">
         <div v-if="currentStep === 1">
+          <!-- 基础信息表单保持不变 -->
           <el-form ref="formRef" :model="form" :rules="rules" label-width="128px" size="large">
             <el-row :gutter="20">
               <el-col :span="12">
@@ -98,9 +99,54 @@
           </el-form>
         </div>
 
-        <div v-else-if="currentStep === 2" class="placeholder">
-          <div class="section-note">测试用例选择（占位）</div>
-          <el-empty description="测试用例选择（占位）" />
+        <!-- 步骤2：左右布局 -->
+        <div v-else-if="currentStep === 2" class="step2-wrap">
+          <el-row :gutter="16">
+            <el-col :span="6">
+              <div class="step2-left">
+                <div class="left-title">选择执行项</div>
+                <el-tree
+                  ref="step2TreeRef"
+                  :data="treeData"
+                  show-checkbox
+                  node-key="key"
+                  :default-checked-keys="defaultCheckedKeys"
+                  @check="onTreeCheckChange"
+                />
+                <div class="left-tip">勾选“测试用例”后，可在右侧选择具体用例</div>
+              </div>
+            </el-col>
+            <el-col :span="18">
+              <div class="step2-right" :class="{ disabled: !step2Selections.cases }">
+                <div class="right-header">
+                  <span class="h-title">测试用例选择</span>
+                  <span class="h-sub">共 {{ allTestCases.length }} 条，已选 {{ form.selectedTestCaseIds.length }} 条</span>
+                </div>
+                <div class="right-body">
+                  <div v-if="!step2Selections.cases" class="disabled-overlay">
+                    <el-empty description="请先在左侧勾选“测试用例”" />
+                  </div>
+                  <el-transfer
+                    v-else
+                    v-model="form.selectedTestCaseIds"
+                    :data="allTestCases"
+                    filterable
+                    filter-placeholder="搜索测试用例"
+                    :titles="['可选测试用例', '已选测试用例']"
+                    :props="{ key: 'key', label: 'label' }"
+                    :button-texts="['移除', '添加']"
+                  >
+                    <template #left-footer>
+                      <el-button text type="primary" @click="goAddTestCase">
+                        <el-icon style="margin-right: 4px;"><Plus /></el-icon>
+                        新增用例
+                      </el-button>
+                    </template>
+                  </el-transfer>
+                </div>
+              </div>
+            </el-col>
+          </el-row>
         </div>
 
         <div v-else-if="currentStep === 3" class="placeholder">
@@ -146,7 +192,8 @@ const form = reactive({
   teamMembers: [
     { id: 1, name: '李测试', avatar: 'https://picsum.photos/id/1012/60/60' },
     { id: 2, name: '王工程师', avatar: 'https://picsum.photos/id/1027/60/60' }
-  ]
+  ],
+  selectedTestCaseIds: []
 })
 
 const rules = {
@@ -174,6 +221,38 @@ const rules = {
     { required: true, message: '请输入项目描述', trigger: 'blur' },
     { min: 10, message: '不少于 10 个字符', trigger: 'blur' }
   ]
+}
+
+// 左侧树形复选
+const step2Selections = reactive({ vuln: false, fuzz: false, cases: true })
+const treeData = ref([
+  { key: 'vuln', label: '漏洞扫描' },
+  { key: 'fuzz', label: '模糊测试' },
+  { key: 'cases', label: '测试用例' }
+])
+const step2TreeRef = ref()
+const defaultCheckedKeys = ref(Object.keys(step2Selections).filter(k => step2Selections[k]))
+const onTreeCheckChange = () => {
+  const keys = step2TreeRef.value?.getCheckedKeys(true) || []
+  step2Selections.vuln = keys.includes('vuln')
+  step2Selections.fuzz = keys.includes('fuzz')
+  step2Selections.cases = keys.includes('cases')
+}
+
+// 模拟测试用例数据
+const allTestCases = ref([
+  { key: 1, label: '登录功能用例 - 正常登录' },
+  { key: 2, label: '登录功能用例 - 密码错误' },
+  { key: 3, label: '注册功能用例 - 邮箱重复' },
+  { key: 4, label: '项目列表 - 搜索过滤' },
+  { key: 5, label: '接口稳定性 - 重试与超时' },
+  { key: 6, label: '权限控制 - 非法访问拦截' },
+  { key: 7, label: '上传下载 - 大文件断点续传' },
+  { key: 8, label: '移动端适配 - 横竖屏切换' }
+])
+
+const goAddTestCase = () => {
+  router.push('/testcases/add')
 }
 
 const addMember = () => {
@@ -209,12 +288,7 @@ const submitProject = () => {
 
 .single-card :deep(.el-card__body) { padding: 16px; }
 
-.steps-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
+.steps-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 8px; }
 .title-row { display: flex; align-items: center; gap: 10px; }
 .page-title { margin: 0; font-size: 18px; font-weight: 700; color: #2b3a4b; }
 .steps-sub { margin: 6px 0 0 0; color: #8a97a8; font-size: 12px; }
@@ -231,6 +305,23 @@ const submitProject = () => {
 .section-note { color: #8592a6; margin-bottom: 8px; }
 
 .form-wrap { padding-top: 4px; }
+
+/* 步骤二布局与样式 */
+.step2-wrap { padding-top: 4px; }
+.step2-left { background: #fafbff; border: 1px solid #eef2fb; border-radius: 8px; padding: 12px; }
+.step2-left .left-title { font-weight: 700; color: #2c3e50; margin-bottom: 8px; font-size: 16px; }
+.step2-left :deep(.el-tree-node__label) { font-size: 14px; }
+.left-tip { color: #98a2b3; font-size: 12px; margin-top: 10px; }
+
+.step2-right { background: #fff; border: 1px solid #ebeef5; border-radius: 8px; padding: 12px; min-height: 380px; display: flex; flex-direction: column; }
+.step2-right.disabled { opacity: 0.6; pointer-events: none; user-select: none; }
+.right-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.right-header .h-title { font-weight: 600; color: #2c3e50; font-size: 15px; }
+.right-header .h-sub { color: #98a2b3; font-size: 12px; }
+.right-body { flex: 1; display: flex; align-items: center; justify-content: center; }
+.cases-transfer { width: 640px; max-width: 90%; }
+.cases-transfer :deep(.el-transfer__buttons) { padding: 0 8px; }
+.cases-transfer :deep(.el-transfer-panel__header) { font-weight: 600; }
 
 .placeholder { padding: 24px 0 8px; }
 
