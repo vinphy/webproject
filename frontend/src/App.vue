@@ -20,10 +20,6 @@
             <el-icon><Monitor /></el-icon>
             <span>首页</span>
           </el-menu-item>
-          <el-menu-item index="8" v-if="can('projects')" @click="handleMenuClick('projects')">
-            <el-icon><User /></el-icon>
-            <span>项目管理</span>
-          </el-menu-item>
           <el-menu-item index="2" v-if="can('modules')" @click="handleMenuClick('components')">
             <el-icon><User /></el-icon>
             <span>模块管理</span>
@@ -44,7 +40,24 @@
             <el-icon><DataAnalysis /></el-icon>
             <span>SQL ER图</span>
           </el-menu-item>
-          <el-menu-item index="7" v-if="isAdmin" @click="handleMenuClick('users')">
+          
+          <!-- 项目管理菜单 -->
+          <el-sub-menu index="7" v-if="can('projects')">
+            <template #title>
+              <el-icon><Folder /></el-icon>
+              <span>项目管理</span>
+            </template>
+            <el-menu-item index="7-1" @click="handleMenuClick('projects')">
+              <el-icon><List /></el-icon>
+              <span>项目列表</span>
+            </el-menu-item>
+            <el-menu-item index="7-2" @click="handleMenuClick('project-add')">
+              <el-icon><Plus /></el-icon>
+              <span>新增项目</span>
+            </el-menu-item>
+          </el-sub-menu>
+          
+          <el-menu-item index="8" v-if="isAdmin" @click="handleMenuClick('users')">
             <el-icon><User /></el-icon>
             <span>用户管理</span>
           </el-menu-item>
@@ -95,7 +108,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Monitor, User, Goods, List, Setting, Fold, Expand, DataAnalysis } from '@element-plus/icons-vue'
+import { Monitor, User, Goods, List, Setting, Fold, Expand, DataAnalysis, Folder, Plus } from '@element-plus/icons-vue'
 import { getCurrentUser, clearToken, clearCurrentUser, userRef } from './utils/auth'
 
 const router = useRouter()
@@ -108,7 +121,7 @@ const isAdmin = computed(() => (user.value?.role || '') === 'admin')
 const can = (key) => {
   // 简单基于角色的控制：admin全部可见，普通用户隐藏权限管理
   if (isAdmin.value) return true
-  const allow = ['dashboard', 'modules', 'logs', 'test', 'bit', 'er']
+  const allow = ['dashboard', 'modules', 'logs', 'test', 'bit', 'er', 'projects']
   return allow.includes(key)
 }
 
@@ -122,8 +135,10 @@ const handleMenuClick = (route) => {
     test: '测试',
     bitTest: 'bit测试',
     sqlErDiagram: 'SQL ER图',
-    permission: '权限管理',
-    projects: '项目管理'
+    projects: '项目列表',
+    'project-add': '新增项目',
+    users: '用户管理',
+    permission: '权限管理'
   }
   currentPage.value = pageNames[route]
 }

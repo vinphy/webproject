@@ -35,7 +35,7 @@ const routes = [
   {
     path: '/bitTest',
     name: 'BitTest',
-    component: () => import('../views/childernVue.vue/HomeProjectItem.vue'),
+    component: () => import('../views/BitTest.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -54,6 +54,18 @@ const routes = [
     path: '/projects',
     name: 'Projects',
     component: () => import('../views/Projects.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/project-add',
+    name: 'ProjectAdd',
+    component: () => import('../views/ProjectAdd.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/project-detail/:id',
+    name: 'ProjectDetail',
+    component: () => import('../views/ProjectDetail.vue'),
     meta: { requiresAuth: true }
   }
 ]

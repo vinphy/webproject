@@ -5,7 +5,7 @@
       <div class="left-section">
         <!-- 项目执行进度 -->
         <el-card class="panel section-left-top" shadow="hover">
-          <template #header>
+      <template #header>
             <span>项目执行进度</span>
           </template>
           <div class="left-top-row">
@@ -20,14 +20,14 @@
             <div class="chart-wrap single">
               <div ref="barChartRef" class="chart"></div>
             </div>
-          </div>
+        </div>
         </el-card>
 
         <!-- 工作柜台 -->
         <el-card class="panel section-left-bottom" shadow="hover">
           <template #header>
             <span>工作台</span>
-          </template>
+      </template>
           <div class="workbench-grid">
             <div class="tile tile-a"><el-icon><Monitor /></el-icon><span>项目管理</span></div>
             <div class="tile tile-b"><el-icon><User /></el-icon><span>测试用例</span></div>
@@ -65,8 +65,12 @@
           <template #header>
             <span>当前正在测试的项目</span>
           </template>
-          <HomeProjectItem/>
-        </el-card>
+          <el-form :model="currentProject" label-width="80px" label-position="left" class="project-form" inline size="small">
+            <el-form-item label="项目名称" class="pf-item"><el-input v-model="currentProject.name" disabled /></el-form-item>
+            <el-form-item label="负责人" class="pf-item"><el-input v-model="currentProject.owner" disabled /></el-form-item>
+            <el-form-item label="进度" class="pf-item"><el-input v-model="currentProject.progress" disabled /></el-form-item>
+          </el-form>
+    </el-card>
       </div>
     </div>
   </div>
@@ -76,8 +80,6 @@
 import { onMounted, ref, computed } from 'vue'
 import { userRef } from '../utils/auth'
 import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
-import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
-
 
 const user = computed(() => userRef.value)
 
