@@ -126,6 +126,20 @@
         </el-table>
       </el-card>
     </div>
+
+    <!-- 新增：静态图片卡片（5秒后显示） -->
+    <div class="lower-section" v-if="showImages">
+      <el-card class="images-card">
+        <template #header>
+          <span class="section-title">结果图片</span>
+        </template>
+        <div class="images-grid">
+          <div class="img-cell" v-for="(img, idx) in staticImages" :key="idx">
+            <img :src="img" alt="static" />
+          </div>
+        </div>
+      </el-card>
+    </div>
   </div>
 </template>
 
@@ -215,6 +229,15 @@ const appendLog = (txt) => {
   })
 }
 
+// 五秒后展示静态图片
+const showImages = ref(false)
+const staticImages = [
+  new URL('../../assets/add.png', import.meta.url).href,
+  new URL('../../assets/delete.png', import.meta.url).href,
+  new URL('../../assets/update.png', import.meta.url).href,
+  new URL('../../assets/search.png', import.meta.url).href,
+]
+
 onMounted(() => {
   // 1) 日志先启动，确保无论图表是否出错都能看到日志
   const samples = ['拉取代码...OK','安装依赖...OK','启动容器 runner-01...OK','分发批次 #13...OK','执行 login_case...OK (320ms)','执行 add_role...OK (640ms)','执行 sql_scan...WARN','生成报告...OK','归档制品...OK']
@@ -254,6 +277,8 @@ onMounted(() => {
   // 4) 自适应
   const onResize = () => { cpuChart && cpuChart.resize(); gpuChart && gpuChart.resize() }
   window.addEventListener('resize', onResize)
+
+  setTimeout(() => { showImages.value = true }, 5000)
 })
 
 onBeforeUnmount(() => {
@@ -268,7 +293,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.project-detail-container { height: 100vh; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; overflow: hidden; }
+.project-detail-container { height: 100vh; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; overflow: auto; }
 
 /* 右上角全局返回按钮 */
 .global-actions { position: fixed; top: 10px; right: 12px; z-index: 2000; }
@@ -327,6 +352,12 @@ onBeforeUnmount(() => {
 :deep(.el-tag) { padding: 2px 8px; }
 :deep(.el-table) { height: calc(100% - 60px); }
 :deep(.el-table__body-wrapper) { overflow-y: auto; min-height: 0; }
+
+/* 静态图片 2x2 区域（在下半部分卡片中显示） */
+.images-card { border: none; border-radius: 0; }
+.images-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px 16px 16px; }
+.img-cell { background: #fff; border: 1px solid #ebeef5; border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 8px; }
+.img-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 /* 响应式 */
 @media (max-width: 1200px) { .water-left { width: 140px; } .chart-cpu-line.full { height: 140px; } }
