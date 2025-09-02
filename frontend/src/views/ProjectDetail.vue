@@ -1,10 +1,18 @@
 <template>
   <div class="project-detail-container">
+    <!-- 右上角全局返回按钮 -->
+    <div class="global-actions">
+      <el-button @click="router.go(-1)" type="primary" size="small">
+        <el-icon><Back /></el-icon>
+        返回
+      </el-button>
+    </div>
+    
     <!-- 上半部分：左7右3布局 -->
     <div class="upper-section">
-      <!-- 左上部分：上7下3布局（已按您后来修改为6/4，这里保留您当前设置） -->
+      <!-- 左上部分：上7下3布局（保持您当前6/4比例） -->
       <div class="left-section">
-        <!-- 左上上部分：项目基本信息 + 动态图表 -->
+        <!-- 左上上部分：水位图在左 + CPU 折线图在下 -->
         <div class="left-upper">
           <el-card class="info-card">
             <template #header>
@@ -14,84 +22,38 @@
               </div>
             </template>
 
-            <!-- 动态图表区：CPU折线图 + 水位图 -->
-            <div class="charts-row">
-              <div class="chart-box">
+            <div class="charts-vertical">
+              <div class="top-row">
+                <div class="water-left">
+                  <div class="chart-title">资源占用（水位）</div>
+                  <div class="water-wrapper">
+                    <div class="water-circle">
+                      <div class="wave" :style="waterWaveStyle"></div>
+                      <div class="water-text">{{ waterLevel }}%</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="gpu-right">
+                  <div class="chart-title">GPU 使用率</div>
+                  <div ref="gpuLineRef" class="chart-gpu-line"></div>
+                </div>
+              </div>
+              <div class="bottom-row">
                 <div class="chart-title">CPU 使用率</div>
-                <div ref="cpuLineRef" class="chart-cpu-line"></div>
-              </div>
-              <div class="chart-box">
-                <div class="chart-title">资源占用（水位）</div>
-                <div class="water-wrapper">
-                  <div class="water-circle">
-                    <div class="wave" :style="waterWaveStyle"></div>
-                    <div class="water-text">{{ waterLevel }}%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 原有信息网格 -->
-            <div class="info-grid">
-              <div class="info-row">
-                <div class="info-item">
-                  <label>项目名称</label>
-                  <span class="info-value">{{ project.name }}</span>
-                </div>
-                <div class="info-item">
-                  <label>项目类型</label>
-                  <span class="info-value">{{ project.type }}</span>
-                </div>
-                <div class="info-item">
-                  <label>优先级</label>
-                  <el-tag :type="getPriorityType(project.priority)" size="small">{{ project.priority }}</el-tag>
-                </div>
-              </div>
-              
-              <div class="info-row">
-                <div class="info-item">
-                  <label>项目负责人</label>
-                  <span class="info-value">{{ project.manager }}</span>
-                </div>
-                <div class="info-item">
-                  <label>创建时间</label>
-                  <span class="info-value">{{ project.createTime }}</span>
-                </div>
-                <div class="info-item">
-                  <label>预计完成</label>
-                  <span class="info-value">{{ project.expectedEndTime || '未设置' }}</span>
-                </div>
-              </div>
-              
-              <div class="info-row full-width">
-                <div class="info-item">
-                  <label>项目描述</label>
-                  <p class="description">{{ project.description }}</p>
-                </div>
-              </div>
-              
-              <div class="info-row full-width" v-if="project.tags && project.tags.length">
-                <div class="info-item">
-                  <label>项目标签</label>
-                  <div class="tags-container">
-                    <el-tag v-for="tag in project.tags" :key="tag" size="small" style="margin-right: 8px;">
-                      {{ tag }}
-                    </el-tag>
-                  </div>
-                </div>
+                <div ref="cpuLineRef" class="chart-cpu-line full"></div>
               </div>
             </div>
           </el-card>
         </div>
         
-        <!-- 左上下部分：测试用例滚动列表 -->
+        <!-- 左上下部分：测试用例滚动列表（显示全部，可手动滚动） -->
         <div class="left-lower">
           <el-card class="stats-card">
             <template #header>
               <span class="section-title">测试用例</span>
             </template>
             <div class="cases-scroller" ref="casesScrollerRef">
-              <div class="case-item" v-for="item in visibleCases" :key="item.id">
+              <div class="case-item" v-for="item in allCases" :key="item.id">
                 <div class="case-name">{{ item.name }}</div>
                 <div class="case-status">
                   <el-tag :type="getTaskStatusType(item.status)">{{ item.status }}</el-tag>
@@ -105,14 +67,19 @@
         </div>
       </div>
       
-      <!-- 右上部分：回执动态日志 -->
+      <!-- 右上部分：运行监控（仅日志，GPU 已在左上展示） -->
       <div class="right-section">
         <el-card class="progress-card">
           <template #header>
-            <span class="section-title">回执日志</span>
+            <span class="section-title">运行监控</span>
           </template>
-          <div class="logs-pane" ref="logsPaneRef">
-            <div class="log-line" v-for="(log, idx) in logs" :key="idx">{{ log }}</div>
+          <div class="right-monitor">
+            <div class="logs-block">
+              <div class="chart-title">回执日志</div>
+              <div class="logs-pane" ref="logsPaneRef">
+                <div class="log-line" v-for="(log, idx) in logs" :key="idx">{{ log }}</div>
+              </div>
+            </div>
           </div>
         </el-card>
       </div>
@@ -128,10 +95,6 @@
               <el-button type="primary" @click="addTask" size="small">
                 <el-icon><Plus /></el-icon>
                 添加任务
-              </el-button>
-              <el-button @click="router.go(-1)" size="small">
-                <el-icon><Back /></el-icon>
-                返回
               </el-button>
             </div>
           </div>
@@ -163,14 +126,6 @@
         </el-table>
       </el-card>
     </div>
-
-    <!-- 返回按钮（当没有任务数据时显示） -->
-    <div class="no-task-actions" v-if="!hasTaskData">
-      <el-button @click="router.go(-1)" type="primary">
-        <el-icon><Back /></el-icon>
-        返回
-      </el-button>
-    </div>
   </div>
 </template>
 
@@ -185,25 +140,23 @@ const route = useRoute()
 const loading = ref(false)
 
 // 计算是否有任务数据
-const hasTaskData = computed(() => {
-  return tasks.value && tasks.value.length > 0
-})
+const hasTaskData = computed(() => tasks.value && tasks.value.length > 0)
 
 // 动态图表 refs
 const cpuLineRef = ref(null)
+const gpuLineRef = ref(null)
 let cpuChart = null
+let gpuChart = null
 
 // 水位图（CSS 实现）数据
-const waterLevel = ref(62) // 初始水位百分比
-const waterWaveStyle = computed(() => ({
-  transform: `translate(-50%, -${waterLevel.value}%)`,
-}))
+const waterLevel = ref(62)
+const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
 
 // 动态日志
 const logs = ref([])
 const logsPaneRef = ref(null)
 
-// 测试用例滚动列表
+// 测试用例列表（显示全部，可滚动）
 const allCases = ref([
   { id: 1, name: '登录功能-正向', status: '已完成', progress: 100 },
   { id: 2, name: '注册功能-异常邮箱', status: '进行中', progress: 65 },
@@ -213,15 +166,15 @@ const allCases = ref([
   { id: 6, name: '接口稳定性-压测', status: '进行中', progress: 30 },
   { id: 7, name: '批量导入-边界值', status: '已完成', progress: 100 },
   { id: 8, name: '导出报告-多格式', status: '待开始', progress: 0 },
+  { id: 9, name: '权限边界-组合', status: '进行中', progress: 40 },
+  { id: 10, name: '报告模板-多语言', status: '待开始', progress: 0 },
 ])
-const visibleCases = ref(allCases.value.slice(0, 6))
-const casesScrollerRef = ref(null)
 
 // 模拟项目数据
 const project = ref({
   id: 1,
   name: '智能测试平台',
-  description: '基于AI的自动化测试平台，支持多种测试类型和报告生成。该平台集成了机器学习算法，能够自动识别测试用例的优先级，优化测试执行顺序，提高测试效率。',
+  description: '基于AI的自动化测试平台，支持多种测试类型和报告生成。',
   status: '进行中',
   type: '自动化测试',
   priority: '高',
@@ -230,283 +183,143 @@ const project = ref({
   expectedEndTime: '2024-03-15 18:00:00',
   progress: 75,
   tags: ['Web应用', 'AI', '自动化'],
-  remarks: '这是一个重要的测试平台项目，需要重点关注性能和稳定性。',
-  totalTasks: 12,
-  completedTasks: 9,
-  inProgressTasks: 2,
-  pendingTasks: 1
 })
 
 // 模拟任务数据（下半部分按需显示）
-const tasks = ref([
-])
+const tasks = ref([])
 
-const getStatusType = (status) => {
-  const types = {
-    '进行中': 'warning',
-    '已完成': 'success',
-    '待开始': 'info'
-  }
-  return types[status] || 'info'
-}
-
-const getPriorityType = (priority) => {
-  const types = {
-    '低': 'info',
-    '中': 'warning',
-    '高': 'danger',
-    '紧急': 'danger'
-  }
-  return types[priority] || 'info'
-}
-
-const getTaskStatusType = (status) => {
-  const types = {
-    '已完成': 'success',
-    '进行中': 'warning',
-    '待开始': 'info'
-  }
-  return types[status] || 'info'
-}
+const getStatusType = (s) => ({ '进行中': 'warning', '已完成': 'success', '待开始': 'info' }[s] || 'info')
+const getPriorityType = (p) => ({ '低': 'info', '中': 'warning', '高': 'danger', '紧急': 'danger' }[p] || 'info')
+const getTaskStatusType = (s) => ({ '已完成': 'success', '进行中': 'warning', '待开始': 'info' }[s] || 'info')
 
 const addTask = () => {
   ElMessage.info('添加任务功能待实现')
-  // 模拟添加任务后显示下半部分
   setTimeout(() => {
-    tasks.value.push({
-      id: Date.now(),
-      name: '新任务',
-      assignee: '新成员',
-      status: '待开始',
-      progress: 0,
-      startTime: new Date().toLocaleString(),
-      endTime: '待定'
-    })
-    // 滚动到下半部分
-    setTimeout(() => {
-      const lowerSection = document.querySelector('.lower-section')
-      if (lowerSection) {
-        lowerSection.scrollIntoView({ behavior: 'smooth' })
-      }
-    }, 100)
+    tasks.value.push({ id: Date.now(), name: '新任务', assignee: '新成员', status: '待开始', progress: 0, startTime: new Date().toLocaleString(), endTime: '待定' })
+    setTimeout(() => { const lower = document.querySelector('.lower-section'); lower && lower.scrollIntoView({ behavior: 'smooth' }) }, 100)
   }, 500)
 }
 
-const viewTask = (task) => { ElMessage.info(`查看任务：${task.name}`) }
-const editTask = (task) => { ElMessage.info(`编辑任务：${task.name}`) }
+const viewTask = (t) => ElMessage.info(`查看任务：${t.name}`)
+const editTask = (t) => ElMessage.info(`编辑任务：${t.name}`)
 
-let cpuTimer = null
-let waterTimer = null
-let casesTimer = null
-let logsTimer = null
+let cpuTimer = null, gpuTimer = null, waterTimer = null, casesTimer = null, logsTimer = null
+
+// 动态日志追加：若用户未上滑则自动滚到底；若用户正在查看历史则不打断
+const isNearBottom = (el) => (el.scrollHeight - el.scrollTop - el.clientHeight) < 40
+const appendLog = (txt) => {
+  logs.value.push(`[${new Date().toLocaleTimeString()}] ${txt}`)
+  requestAnimationFrame(() => {
+    const el = logsPaneRef.value
+    if (el && isNearBottom(el)) el.scrollTop = el.scrollHeight
+  })
+}
 
 onMounted(() => {
-  // CPU 折线图
-  const line = echarts.init(cpuLineRef.value)
-  cpuChart = line
-  const xData = Array.from({ length: 30 }, (_, i) => i + 1)
-  let cpuSeries = Array.from({ length: 30 }, () => Math.round(20 + Math.random() * 40))
-  line.setOption({
-    animation: true,
-    tooltip: { trigger: 'axis' },
-    grid: { left: 30, right: 10, top: 20, bottom: 20 },
-    xAxis: { type: 'category', data: xData, axisLabel: { show: false } },
-    yAxis: { type: 'value', min: 0, max: 100, splitLine: { show: true } },
-    series: [{ type: 'line', smooth: true, data: cpuSeries, areaStyle: {}, name: 'CPU%' }]
-  })
-  cpuTimer = setInterval(() => {
-    cpuSeries.shift()
-    const next = Math.max(0, Math.min(100, cpuSeries[cpuSeries.length - 1] + Math.round(-10 + Math.random() * 20)))
-    cpuSeries.push(next)
-    waterLevel.value = Math.round(next * 0.8)
-    line.setOption({ series: [{ data: cpuSeries }] })
-  }, 1200)
+  // 1) 日志先启动，确保无论图表是否出错都能看到日志
+  const samples = ['拉取代码...OK','安装依赖...OK','启动容器 runner-01...OK','分发批次 #13...OK','执行 login_case...OK (320ms)','执行 add_role...OK (640ms)','执行 sql_scan...WARN','生成报告...OK','归档制品...OK']
+  let i = 0
+  appendLog('初始化运行监控...')
+  logsTimer = setInterval(() => { appendLog(samples[i % samples.length]); i++ }, 1200)
 
-  // 水位动画（CSS）
-  waterTimer = setInterval(() => {
-    // 轻微波动
-    const delta = Math.round(-2 + Math.random() * 4)
-    waterLevel.value = Math.max(0, Math.min(100, waterLevel.value + delta))
-  }, 1800)
+  // 2) 图表初始化加守护，失败不影响日志
+  try {
+    if (cpuLineRef.value && typeof echarts !== 'undefined') {
+      const cpu = echarts.init(cpuLineRef.value); cpuChart = cpu
+      const xData = Array.from({ length: 30 }, (_, k) => k + 1)
+      let cpuSeries = Array.from({ length: 30 }, () => Math.round(20 + Math.random() * 40))
+      cpu.setOption({ animation: true, tooltip: { trigger: 'axis' }, grid: { left: 30, right: 10, top: 20, bottom: 20 }, xAxis: { type: 'category', data: xData, axisLabel: { show: false } }, yAxis: { type: 'value', min: 0, max: 100 }, series: [{ type: 'line', smooth: true, data: cpuSeries, areaStyle: {}, name: 'CPU%' }] })
+      cpuTimer = setInterval(() => { cpuSeries.shift(); const n = Math.max(0, Math.min(100, cpuSeries.at(-1) + Math.round(-10 + Math.random() * 20))); cpuSeries.push(n); waterLevel.value = Math.round(n * 0.8); cpu.setOption({ series: [{ data: cpuSeries }] }) }, 1200)
+    }
+  } catch (e) { console.warn('CPU 图表初始化失败，已忽略：', e) }
 
-  // 测试用例滚动与状态更新
+  try {
+    if (gpuLineRef.value && typeof echarts !== 'undefined') {
+      const gpu = echarts.init(gpuLineRef.value); gpuChart = gpu
+      const xData = Array.from({ length: 30 }, (_, k) => k + 1)
+      let gpuSeries = Array.from({ length: 30 }, () => Math.round(10 + Math.random() * 60))
+      gpu.setOption({ animation: true, tooltip: { trigger: 'axis' }, grid: { left: 30, right: 10, top: 10, bottom: 20 }, xAxis: { type: 'category', data: xData, axisLabel: { show: false } }, yAxis: { type: 'value', min: 0, max: 100 }, series: [{ type: 'line', smooth: true, data: gpuSeries, areaStyle: { opacity: 0.2 }, name: 'GPU%', lineStyle: { color: '#9b59b6' }, itemStyle: { color: '#9b59b6' } }] })
+      gpuTimer = setInterval(() => { gpuSeries.shift(); const n = Math.max(0, Math.min(100, gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20))); gpuSeries.push(n); gpu.setOption({ series: [{ data: gpuSeries }] }) }, 1300)
+    }
+  } catch (e) { console.warn('GPU 图表初始化失败，已忽略：', e) }
+
+  // 3) 用例状态动态推进（用户可自由滚动）
   casesTimer = setInterval(() => {
-    // 轮播可视用例
-    allCases.value.push(allCases.value.shift())
-    visibleCases.value = allCases.value.slice(0, 6)
-    // 随机推进进行中用例
     allCases.value.forEach(c => {
-      if (c.status === '进行中') {
-        c.progress = Math.min(100, c.progress + Math.round(Math.random() * 10))
-        if (c.progress >= 100) c.status = '已完成'
-      } else if (c.status === '待开始' && Math.random() > 0.9) {
-        c.status = '进行中'; c.progress = 5
-      }
+      if (c.status === '进行中') { c.progress = Math.min(100, c.progress + Math.round(Math.random() * 8)); if (c.progress >= 100) c.status = '已完成' }
+      else if (c.status === '待开始' && Math.random() > 0.92) { c.status = '进行中'; c.progress = 5 }
     })
-  }, 2000)
+  }, 2200)
 
-  // 动态日志追加
-  const sampleLogs = [
-    '正在创建测试环境...OK',
-    '拉取最新代码...OK',
-    '启动容器: case-runner-01...OK',
-    '分发测试用例批次 #12...OK',
-    '执行用例 login_success...OK (320ms)',
-    '执行用例 rbac_role_add...OK (742ms)',
-    '执行用例 sql_injection_scan...WARN (低危)',
-    '汇总报告生成中...OK',
-    '上传报告到对象存储...OK',
-  ]
-  const appendLog = (text) => {
-    logs.value.push(`[${new Date().toLocaleTimeString()}] ${text}`)
-    // 自动滚屏
-    requestAnimationFrame(() => {
-      const el = logsPaneRef.value
-      if (el) el.scrollTop = el.scrollHeight
-    })
-  }
-  let idx = 0
-  logsTimer = setInterval(() => {
-    appendLog(sampleLogs[idx % sampleLogs.length])
-    idx++
-  }, 1200)
-
-  // 自适应
-  const onResize = () => { cpuChart && cpuChart.resize() }
+  // 4) 自适应
+  const onResize = () => { cpuChart && cpuChart.resize(); gpuChart && gpuChart.resize() }
   window.addEventListener('resize', onResize)
 })
 
 onBeforeUnmount(() => {
   cpuTimer && clearInterval(cpuTimer)
+  gpuTimer && clearInterval(gpuTimer)
   waterTimer && clearInterval(waterTimer)
   casesTimer && clearInterval(casesTimer)
   logsTimer && clearInterval(logsTimer)
-  if (cpuChart) { cpuChart.dispose(); cpuChart = null }
+  cpuChart && cpuChart.dispose()
+  gpuChart && gpuChart.dispose()
 })
 </script>
 
 <style scoped>
-.project-detail-container {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  box-sizing: border-box;
-  overflow: hidden;
-}
+.project-detail-container { height: 100vh; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; overflow: hidden; }
+
+/* 右上角全局返回按钮 */
+.global-actions { position: fixed; top: 10px; right: 12px; z-index: 2000; }
 
 /* 上半部分：左7右3布局 */
-.upper-section {
-  height: 90vh;
-  display: flex;
-  gap: 0;
-  margin-bottom: 0;
-  border-bottom: 2px solid #ebeef5;
-  min-height: 0;
-}
+.upper-section { height: 90vh; display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #ebeef5; min-height: 0; }
 
-/* 左侧部分：上8下2布局 */
-.left-section {
-  flex: 7;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border-right: 2px solid #ebeef5;
-  min-height: 0;
-}
-
-.left-upper {
-  flex: 6;
-  border-bottom: 2px solid #ebeef5;
-  min-height: 0;
-}
-
-.left-lower {
-  flex: 4;
-  min-height: 0;
-}
+/* 左侧部分：上6下4布局（当前比例） */
+.left-section { flex: 7; display: flex; flex-direction: column; gap: 0; border-right: 2px solid #ebeef5; min-height: 0; }
+.left-upper { flex: 6; border-bottom: 2px solid #ebeef5; min-height: 0; display: flex; flex-direction: column; }
+.left-lower { flex: 4; min-height: 0; display: flex; flex-direction: column; }
+.left-upper .el-card, .left-lower .el-card, .right-section .el-card { display: flex; flex-direction: column; }
+.left-upper .el-card :deep(.el-card__body), .left-lower .el-card :deep(.el-card__body), .right-section .el-card :deep(.el-card__body) { display: flex; flex-direction: column; min-height: 0; }
 
 /* 右侧部分 */
-.right-section {
-  flex: 3;
-  min-height: 0;
-}
+.right-section { flex: 3; min-height: 0; }
 
-/* 下半部分 */
-.lower-section {
-  min-height: 0;
-}
-
-/* 卡片样式 */
-.info-card, .stats-card, .progress-card, .tasks-card {
-  height: 100%;
-  margin: 0;
-  border-radius: 0;
-  border: none;
-}
-
-/* 卡片标题 */
-:deep(.el-card__header) {
-  padding: 16px 20px;
-  border-bottom: 2px solid #ebeef5;
-  background: #fafafa;
-  border-radius: 0;
-}
-
+/* 卡片与标题 */
+.info-card, .stats-card, .progress-card, .tasks-card { height: 100%; margin: 0; border-radius: 0; border: none; }
+:deep(.el-card__header) { padding: 16px 20px; border-bottom: 2px solid #ebeef5; background: #fafafa; border-radius: 0; }
 .section-title { font-size: 18px; font-weight: 600; color: #303133; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
 .header-actions { display: flex; gap: 12px; }
 
-/* 动态图表区 */
-.charts-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 16px 16px 0 16px;
-}
-.chart-box { background: #fff; border: 1px solid #ebeef5; border-radius: 8px; padding: 10px; }
-.chart-title { font-size: 13px; color: #606266; margin-bottom: 6px; }
-.chart-cpu-line { width: 100%; height: 140px; }
+/* 左上：水位+GPU 同行，CPU 在下；确保滚动容器生效 */
+.charts-vertical { display: flex; flex-direction: column; height: calc(100% - 60px); padding: 12px 16px; gap: 12px; min-height: 0; }
+.top-row { display: flex; gap: 16px; align-items: stretch; min-height: 0; }
+.water-left { width: 200px; flex: 0 0 auto; }
+.gpu-right { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.chart-gpu-line { width: 100%; height: 140px; }
+.bottom-row { flex: 1; min-height: 0; }
+.chart-title { font-size: 13px; color: #606266; margin: 4px 0 6px; }
+.chart-cpu-line.full { width: 100%; height: 160px; }
 
 /* CSS 水位图 */
 .water-wrapper { display: flex; justify-content: center; align-items: center; }
-.water-circle {
-  position: relative; width: 120px; height: 120px; border-radius: 50%;
-  background: radial-gradient(closest-side, #e8f3ff 92%, transparent 93% 100%), conic-gradient(#3ba0ff 0%, #3ba0ff 0%);
-  overflow: hidden; border: 1px solid #cfe3ff;
-}
-.wave {
-  position: absolute; left: 50%; bottom: 0; width: 200%; height: 200%;
-  background: rgba(59,160,255,0.4);
-  transform: translate(-50%, -60%);
-  border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%;
-  animation: waveMove 4s linear infinite;
-}
-.water-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 700; color: #3b6db3; }
-@keyframes waveMove {
-  0% { transform: translate(-50%, -60%) rotate(0deg); }
-  100% { transform: translate(-50%, -60%) rotate(360deg); }
-}
+.water-circle { position: relative; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(closest-side, #e8f3ff 92%, transparent 93% 100%), conic-gradient(#3ba0ff 0%, #3ba0ff 0%); overflow: hidden; border: 1px solid #cfe3ff; }
+.wave { position: absolute; left: 50%; bottom: 0; width: 200%; height: 200%; background: rgba(59,160,255,0.4); transform: translate(-50%, -60%); border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; animation: waveMove 4s linear infinite; }
+.water-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 700; color: #3b6db3; font-size: 16px; }
+@keyframes waveMove { 0% { transform: translate(-50%, -60%) rotate(0deg); } 100% { transform: translate(-50%, -60%) rotate(360deg); } }
 
-/* 信息网格布局 */
-.info-grid { padding: 20px; height: calc(100% - 60px); overflow-y: auto; min-height: 0; }
-.info-row { display: flex; gap: 20px; margin-bottom: 20px; flex-shrink: 0; }
-.info-row.full-width { flex-direction: column; }
-.info-item { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.info-item label { font-weight: 600; color: #606266; font-size: 14px; }
-.info-value { color: #303133; font-size: 15px; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #409EFF; }
-.description { margin: 0; color: #606266; line-height: 1.6; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #67C23A; }
-.tags-container { margin-top: 8px; }
-
-/* 测试用例滚动列表 */
-.cases-scroller { height: calc(100% - 60px); overflow-y: auto; padding: 12px 16px; }
-.case-item { display: grid; grid-template-columns: 1.5fr 0.8fr 1.7fr; align-items: center; gap: 12px; padding: 8px 10px; border-bottom: 1px dashed #e5e7eb; }
+/* 左下：测试用例滚动列表 */
+.cases-scroller { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; }
+.case-item { display: grid; grid-template-columns: 1.6fr 0.8fr 1.6fr; align-items: center; gap: 12px; padding: 8px 10px; border-bottom: 1px dashed #e5e7eb; }
 .case-name { color: #303133; font-size: 13px; }
 .case-status { text-align: center; }
-.case-progress { }
 
-/* 日志面板 */
-.logs-pane { height: calc(100% - 60px); overflow-y: auto; padding: 12px 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; color: #2c3e50; background: #fafafa; border-left: 3px solid #e6eef7; }
+/* 右侧：运行监控（日志可滚动） */
+.right-monitor { display: flex; flex-direction: column; height: calc(100% - 60px); padding: 12px 16px; gap: 12px; }
+.logs-block { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.logs-pane { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; color: #2c3e50; background: #fafafa; border-left: 3px solid #e6eef7; }
 .log-line { padding: 4px 0; white-space: pre-wrap; }
 
 /* 任务表格 */
@@ -515,9 +328,7 @@ onBeforeUnmount(() => {
 :deep(.el-table) { height: calc(100% - 60px); }
 :deep(.el-table__body-wrapper) { overflow-y: auto; min-height: 0; }
 
-/* 响应式调整 */
-@media (max-width: 1200px) {
-  .info-row { flex-direction: column; gap: 15px; }
-}
+/* 响应式 */
+@media (max-width: 1200px) { .water-left { width: 140px; } .chart-cpu-line.full { height: 140px; } }
 </style>
     
