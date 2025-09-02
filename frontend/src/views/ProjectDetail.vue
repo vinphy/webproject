@@ -1,135 +1,173 @@
 <template>
   <div class="project-detail-container">
-    <div class="page-header">
-      <h2>项目详情</h2>
-      <div class="header-actions">
-        <el-button type="primary" @click="editProject">编辑项目</el-button>
-        <el-button @click="router.go(-1)">返回</el-button>
-      </div>
-    </div>
-
-    <div class="detail-content" v-loading="loading">
-      <!-- 基本信息卡片 -->
-      <el-card class="info-card">
-        <template #header>
-          <div class="card-header">
-            <span>基本信息</span>
-            <el-tag :type="getStatusType(project.status)">{{ project.status }}</el-tag>
-          </div>
-        </template>
-        
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <div class="info-item">
-              <label>项目名称：</label>
-              <span>{{ project.name }}</span>
+    <!-- 上半部分：左7右3布局 -->
+    <div class="upper-section">
+      <!-- 左上部分：上8下2布局 -->
+      <div class="left-section">
+        <!-- 左上上部分：项目基本信息 (占80%) -->
+        <div class="left-upper">
+          <el-card class="info-card">
+            <template #header>
+              <div class="card-header">
+                <span class="section-title">项目基本信息</span>
+                <el-tag :type="getStatusType(project.status)" size="large">{{ project.status }}</el-tag>
+              </div>
+            </template>
+            
+            <div class="info-grid">
+              <div class="info-row">
+                <div class="info-item">
+                  <label>项目名称</label>
+                  <span class="info-value">{{ project.name }}</span>
+                </div>
+                <div class="info-item">
+                  <label>项目类型</label>
+                  <span class="info-value">{{ project.type }}</span>
+                </div>
+                <div class="info-item">
+                  <label>优先级</label>
+                  <el-tag :type="getPriorityType(project.priority)" size="small">{{ project.priority }}</el-tag>
+                </div>
+              </div>
+              
+              <div class="info-row">
+                <div class="info-item">
+                  <label>项目负责人</label>
+                  <span class="info-value">{{ project.manager }}</span>
+                </div>
+                <div class="info-item">
+                  <label>创建时间</label>
+                  <span class="info-value">{{ project.createTime }}</span>
+                </div>
+                <div class="info-item">
+                  <label>预计完成</label>
+                  <span class="info-value">{{ project.expectedEndTime || '未设置' }}</span>
+                </div>
+              </div>
+              
+              <div class="info-row full-width">
+                <div class="info-item">
+                  <label>项目描述</label>
+                  <p class="description">{{ project.description }}</p>
+                </div>
+              </div>
+              
+              <div class="info-row full-width" v-if="project.tags && project.tags.length">
+                <div class="info-item">
+                  <label>项目标签</label>
+                  <div class="tags-container">
+                    <el-tag v-for="tag in project.tags" :key="tag" size="small" style="margin-right: 8px;">
+                      {{ tag }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
             </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="info-item">
-              <label>项目类型：</label>
-              <span>{{ project.type }}</span>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="info-item">
-              <label>优先级：</label>
-              <el-tag :type="getPriorityType(project.priority)">{{ project.priority }}</el-tag>
-            </div>
-          </el-col>
-        </el-row>
-        
-        <el-row :gutter="20">
-          <el-col :span="8">
-            <div class="info-item">
-              <label>项目负责人：</label>
-              <span>{{ project.manager }}</span>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="info-item">
-              <label>创建时间：</label>
-              <span>{{ project.createTime }}</span>
-            </div>
-          </el-col>
-          <el-col :span="8">
-            <div class="info-item">
-              <label>预计完成：</label>
-              <span>{{ project.expectedEndTime || '未设置' }}</span>
-            </div>
-          </el-col>
-        </el-row>
-        
-        <div class="info-item full-width">
-          <label>项目描述：</label>
-          <p class="description">{{ project.description }}</p>
+          </el-card>
         </div>
         
-        <div class="info-item full-width" v-if="project.tags && project.tags.length">
-          <label>项目标签：</label>
-          <div class="tags-container">
-            <el-tag v-for="tag in project.tags" :key="tag" size="small" style="margin-right: 8px;">
-              {{ tag }}
-            </el-tag>
-          </div>
-        </div>
-      </el-card>
-
-      <!-- 进度信息卡片 -->
-      <el-card class="progress-card">
-        <template #header>
-          <span>进度信息</span>
-        </template>
-        
-        <div class="progress-info">
-          <div class="progress-item">
-            <div class="progress-label">整体进度</div>
-            <el-progress 
-              :percentage="project.progress" 
-              :status="getProgressStatus(project.progress)"
-              :stroke-width="20"
-            />
-          </div>
-          
-          <el-row :gutter="20" class="progress-stats">
-            <el-col :span="6">
+        <!-- 左上下部分：项目统计 (占20%) -->
+        <div class="left-lower">
+          <el-card class="stats-card">
+            <template #header>
+              <span class="section-title">项目统计</span>
+            </template>
+            <div class="stats-grid">
               <div class="stat-item">
                 <div class="stat-number">{{ project.totalTasks || 0 }}</div>
                 <div class="stat-label">总任务数</div>
               </div>
-            </el-col>
-            <el-col :span="6">
               <div class="stat-item">
                 <div class="stat-number completed">{{ project.completedTasks || 0 }}</div>
                 <div class="stat-label">已完成</div>
               </div>
-            </el-col>
-            <el-col :span="6">
               <div class="stat-item">
                 <div class="stat-number in-progress">{{ project.inProgressTasks || 0 }}</div>
                 <div class="stat-label">进行中</div>
               </div>
-            </el-col>
-            <el-col :span="6">
               <div class="stat-item">
                 <div class="stat-number pending">{{ project.pendingTasks || 0 }}</div>
                 <div class="stat-label">待开始</div>
               </div>
-            </el-col>
-          </el-row>
+            </div>
+          </el-card>
         </div>
-      </el-card>
-
-      <!-- 任务列表卡片 -->
+      </div>
+      
+      <!-- 右上部分：项目进度 -->
+      <div class="right-section">
+        <el-card class="progress-card">
+          <template #header>
+            <span class="section-title">项目进度</span>
+          </template>
+          
+          <div class="progress-content">
+            <div class="progress-main">
+              <div class="progress-label">整体进度</div>
+              <el-progress 
+                :percentage="project.progress" 
+                :status="getProgressStatus(project.progress)"
+                :stroke-width="24"
+                class="main-progress"
+              />
+              <div class="progress-text">{{ project.progress }}%</div>
+            </div>
+            
+            <div class="progress-timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot completed"></div>
+                <div class="timeline-content">
+                  <div class="timeline-title">需求分析</div>
+                  <div class="timeline-date">2024-01-15 ~ 2024-01-20</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot completed"></div>
+                <div class="timeline-content">
+                  <div class="timeline-title">系统设计</div>
+                  <div class="timeline-date">2024-01-21 ~ 2024-01-25</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot in-progress"></div>
+                <div class="timeline-content">
+                  <div class="timeline-title">核心开发</div>
+                  <div class="timeline-date">2024-01-26 ~ 2024-02-15</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot pending"></div>
+                <div class="timeline-content">
+                  <div class="timeline-title">系统测试</div>
+                  <div class="timeline-date">2024-02-16 ~ 2024-03-01</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </div>
+    
+    <!-- 下半部分：任务管理 -->
+    <div class="lower-section" v-if="hasTaskData">
       <el-card class="tasks-card">
         <template #header>
           <div class="card-header">
-            <span>任务列表</span>
-            <el-button size="small" type="primary" @click="addTask">添加任务</el-button>
+            <span class="section-title">任务管理</span>
+            <div class="header-actions">
+              <el-button type="primary" @click="addTask" size="small">
+                <el-icon><Plus /></el-icon>
+                添加任务
+              </el-button>
+              <el-button @click="router.go(-1)" size="small">
+                <el-icon><Back /></el-icon>
+                返回
+              </el-button>
+            </div>
           </div>
         </template>
         
-        <el-table :data="tasks" style="width: 100%">
+        <el-table :data="tasks" style="width: 100%" v-loading="loading">
           <el-table-column prop="name" label="任务名称" min-width="200" />
           <el-table-column prop="assignee" label="负责人" width="120" align="center" />
           <el-table-column prop="status" label="状态" width="100" align="center">
@@ -154,26 +192,32 @@
           </el-table-column>
         </el-table>
       </el-card>
-
-      <!-- 备注信息卡片 -->
-      <el-card class="remarks-card" v-if="project.remarks">
-        <template #header>
-          <span>备注信息</span>
-        </template>
-        <p class="remarks-content">{{ project.remarks }}</p>
-      </el-card>
+    </div>
+    
+    <!-- 返回按钮（当没有任务数据时显示） -->
+    <div class="no-task-actions" v-if="!hasTaskData">
+      <el-button @click="router.go(-1)" type="primary">
+        <el-icon><Back /></el-icon>
+        返回
+      </el-button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Plus, Back } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
 const loading = ref(false)
+
+// 计算是否有任务数据
+const hasTaskData = computed(() => {
+  return tasks.value && tasks.value.length > 0
+})
 
 // 模拟项目数据
 const project = ref({
@@ -278,12 +322,28 @@ const getTaskStatusType = (status) => {
   return types[status] || 'info'
 }
 
-const editProject = () => {
-  router.push(`/project-edit/${project.value.id}`)
-}
-
 const addTask = () => {
   ElMessage.info('添加任务功能待实现')
+  // 模拟添加任务后显示下半部分
+  setTimeout(() => {
+    // 这里可以添加实际的任务数据
+    tasks.value.push({
+      id: Date.now(),
+      name: '新任务',
+      assignee: '新成员',
+      status: '待开始',
+      progress: 0,
+      startTime: new Date().toLocaleString(),
+      endTime: '待定'
+    })
+    // 滚动到下半部分
+    setTimeout(() => {
+      const lowerSection = document.querySelector('.lower-section')
+      if (lowerSection) {
+        lowerSection.scrollIntoView({ behavior: 'smooth' })
+      }
+    }, 100)
+  }, 500)
 }
 
 const viewTask = (task) => {
@@ -301,50 +361,92 @@ onMounted(() => {
   // 模拟加载数据
   setTimeout(() => {
     loading.value = false
+    // 初始时清空任务数据，只显示上半部分
+    tasks.value = []
   }, 500)
 })
 </script>
 
 <style scoped>
 .project-detail-container {
-  padding: 20px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0;
-  color: #303133;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.detail-content {
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-/* 卡片标题更突出 */
-:deep(.el-card__header) {
-  padding: 14px 16px;
-  font-weight: 600;
-  font-size: 15px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.info-card, .progress-card, .tasks-card, .remarks-card {
+/* 上半部分：左7右3布局 */
+.upper-section {
+  height: 90vh;
+  display: flex;
+  gap: 0;
   margin-bottom: 0;
+  border-bottom: 2px solid #ebeef5;
+  min-height: 0;
+}
+
+/* 左侧部分：上8下2布局 */
+.left-section {
+  flex: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-right: 2px solid #ebeef5;
+  min-height: 0;
+}
+
+.left-upper {
+  flex: 6;
+  border-bottom: 2px solid #ebeef5;
+  min-height: 0;
+}
+
+.left-lower {
+  flex: 4;
+  min-height: 0;
+}
+
+/* 右侧部分 */
+.right-section {
+  flex: 3;
+  min-height: 0;
+}
+
+/* 下半部分 */
+.lower-section {
+  min-height: 0;
+}
+
+/* 无任务数据时的返回按钮 */
+.no-task-actions {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* 卡片样式 */
+.info-card, .stats-card, .progress-card, .tasks-card {
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+}
+
+/* 卡片标题 */
+:deep(.el-card__header) {
+  padding: 16px 20px;
+  border-bottom: 2px solid #ebeef5;
+  background: #fafafa;
+  border-radius: 0;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .card-header {
@@ -353,66 +455,87 @@ onMounted(() => {
   align-items: center;
 }
 
-/* 信息行排版优化：右对齐标签，留固定宽度 */
-.info-item {
-  margin-bottom: 14px;
+.header-actions {
   display: flex;
-  align-items: flex-start;
+  gap: 12px;
 }
 
-.info-item.full-width {
+/* 信息网格布局 */
+.info-grid {
+  padding: 20px;
+  height: calc(100% - 60px);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.info-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.info-row.full-width {
   flex-direction: column;
+}
+
+.info-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .info-item label {
   font-weight: 600;
   color: #606266;
-  width: 100px;
-  text-align: right;
-  margin-right: 8px;
+  font-size: 14px;
 }
 
-.info-item span {
+.info-value {
   color: #303133;
+  font-size: 15px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #409EFF;
 }
 
 .description {
-  margin: 8px 0 0 0;
+  margin: 0;
   color: #606266;
   line-height: 1.6;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #67C23A;
 }
 
 .tags-container {
   margin-top: 8px;
 }
 
-.progress-info {
-  padding: 20px 0;
-}
-
-.progress-item {
-  margin-bottom: 24px;
-}
-
-.progress-label {
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #303133;
-}
-
-.progress-stats {
-  margin-top: 10px;
+/* 统计卡片 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 15px;
+  height: calc(100% - 60px);
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .stat-item {
   text-align: center;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding: 10px 8px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
 }
 
 .stat-number {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: #409EFF;
   margin-bottom: 6px;
@@ -424,10 +547,103 @@ onMounted(() => {
 
 .stat-label {
   color: #606266;
-  font-size: 13px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
-/* 表格与标签的视觉优化 */
+/* 进度卡片 */
+.progress-content {
+  padding: 20px;
+  height: calc(100% - 60px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.progress-main {
+  text-align: center;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.progress-main {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.progress-label {
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #303133;
+  font-size: 16px;
+}
+
+.main-progress {
+  margin-bottom: 10px;
+}
+
+.progress-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #409EFF;
+}
+
+/* 时间线 */
+.progress-timeline {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 10px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.timeline-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 20px;
+  bottom: -20px;
+  width: 2px;
+  background: #e4e7ed;
+}
+
+.timeline-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 12px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.timeline-dot.completed { background: #67C23A; }
+.timeline-dot.in-progress { background: #E6A23C; }
+.timeline-dot.pending { background: #909399; }
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-title {
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.timeline-date {
+  color: #909399;
+  font-size: 12px;
+}
+
+/* 任务表格 */
 :deep(.el-table th), :deep(.el-table td) {
   font-size: 13px;
 }
@@ -436,10 +652,26 @@ onMounted(() => {
   padding: 2px 8px;
 }
 
-.remarks-content {
-  color: #606266;
-  line-height: 1.6;
-  margin: 0;
+/* 表格容器 */
+:deep(.el-table) {
+  height: calc(100% - 60px);
+}
+
+:deep(.el-table__body-wrapper) {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 15px;
+  }
 }
 </style>
     
