@@ -38,71 +38,86 @@
     <div class="module-container">
       <!-- 左侧模块列表 -->
       <div class="module-list">
-        <h3 class="module-title">模块列表</h3>
+        <div class="module-list-header">
+          <!-- <h3 class="module-title">模块列表</h3> -->
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="showTestCaseDialog = true"
+            class="module-manage-btn"
+          >
+            <el-icon><Setting /></el-icon>
+            模块列表
+          </el-button>
+        </div>
+        
         <div class="module-categories">
-        <!-- 第一级：大层级 -->
-        <div 
-          v-for="(categoryData, categoryKey) in availableModules" 
-          :key="categoryKey"
-          class="module-category"
-        >
-          <!-- 大层级标题 -->
+          <!-- 第一级：大层级 -->
           <div 
-            class="category-header"
-            @click="toggleCategory(categoryKey)"
-            :class="{ 'expanded': expandedCategories.includes(categoryKey) }"
-            :title="categoryData.description"
+            v-for="(categoryData, categoryKey) in availableModules" 
+            :key="categoryKey"
+            class="module-category"
           >
-            <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
-            <span class="category-name">{{ categoryData.name }}</span>
-            <span class="expand-icon">{{ expandedCategories.includes(categoryKey) ? '▼' : '▶' }}</span>
-          </div>
-          
-          <!-- 第二级：子层级 -->
-          <div 
-            v-if="expandedCategories.includes(categoryKey)"
-            class="sub-categories"
-          >
+            <!-- 大层级标题 -->
             <div 
-              v-for="(subCategoryData, subCategoryKey) in categoryData.children" 
-              :key="subCategoryKey"
-              class="sub-category"
+              class="category-header"
+              @click="toggleCategory(categoryKey)"
+              :class="{ 'expanded': expandedCategories.includes(categoryKey) }"
+              :title="categoryData.description"
             >
-              <!-- 子层级标题 -->
+              <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
+              <span class="category-name">{{ categoryData.name }}</span>
+              <span class="expand-icon">{{ expandedCategories.includes(categoryKey) ? '▼' : '▶' }}</span>
+            </div>
+            
+            <!-- 第二级：子层级 -->
+            <div 
+              v-if="expandedCategories.includes(categoryKey)"
+              class="sub-categories"
+            >
               <div 
-                class="sub-category-header"
-                @click="toggleSubCategory(categoryKey, subCategoryKey)"
-                :class="{ 'expanded': expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) }"
-                :title="subCategoryData.description"
+                v-for="(subCategoryData, subCategoryKey) in categoryData.children" 
+                :key="subCategoryKey"
+                class="sub-category"
               >
-                <img :src="subCategoryData.icon" class="sub-category-icon" alt="子分类图标" />
-                <span class="sub-category-name">{{ subCategoryData.name }}</span>
-                <span class="expand-icon">{{ expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) ? '▼' : '▶' }}</span>
-              </div>
-              
-              <!-- 第三级：模块列表 -->
-              <div 
-                v-if="expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`)"
-                class="sub-modules"
-              >
+                <!-- 子层级标题 -->
                 <div 
-                  v-for="module in subCategoryData.children" 
-                  :key="module.id"
-                  class="module-item"
-                  :data-subtype="module.subType"
-                  draggable="true"
-                  @dragstart="handleDragStart($event, module)"
-                  :title="module.description"
+                  class="sub-category-header"
+                  @click="toggleSubCategory(categoryKey, subCategoryKey)"
+                  :class="{ 'expanded': expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) }"
+                  :title="subCategoryData.description"
                 >
-                  <!-- <img :src="module.icon || subCategoryData.icon" class="module-icon" alt="模块图标" /> -->
-                  <div class="module-info">
-                    <span class="module-name">{{ module.name }}</span>
+                  <div class="sub-category-content">
+                    <img :src="subCategoryData.icon" class="sub-category-icon" alt="子分类图标" />
+                    <span class="sub-category-name">{{ subCategoryData.name }}</span>
+                    <span class="expand-icon">{{ expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) ? '▼' : '▶' }}</span>
+                  </div>
+                </div>
+                
+                <!-- 第三级：模块列表 -->
+                <div 
+                  v-if="expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`)"
+                  class="sub-modules"
+                >
+                  <div 
+                    v-for="module in subCategoryData.children" 
+                    :key="module.id"
+                    class="module-item"
+                    :data-subtype="module.subType"
+                    draggable="true"
+                    @dragstart="handleDragStart($event, module)"
+                    :title="module.description"
+                  >
+                    <div class="module-content">
+                      <div class="module-info">
+                        <span class="module-name">{{ module.name }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -473,7 +488,8 @@ import {
   Back,
   Folder,
   FolderOpened,
-  Delete
+  Delete,
+  Setting
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 import NodeConfigDialog from './components/NodeConfigDialog.vue'
@@ -2182,13 +2198,41 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
 }
 
 .module-list {
-  width: 180px;
+  width: 200px;
   background: #ffffff;
   border-right: 1px solid #e4e7ed;
-  padding: 16px;
+  padding: 0;
   overflow-y: auto;
   flex-shrink: 0;
   max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 模块列表头部 */
+.module-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #e4e7ed;
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.module-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.module-manage-btn {
+  font-size: 24px;
+  padding: 20px 12px;
+  height: 28px;
 }
 
 /* 自定义滚动条样式 */
@@ -2210,28 +2254,393 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   background: #a8a8a8;
 }
 
-.module-list h3 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-  position: sticky;
-  top: 0;
+.module-categories {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 第一级：大层级样式 */
+.module-category {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
   background: #ffffff;
-  z-index: 10;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 }
 
-.module-title {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+.module-category:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+/*一集标题*/
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  border-bottom: 1px solid #e4e7ed;
+  min-height: 22px;
+}
+
+.category-header:hover {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.category-header.expanded {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-bottom: 1px solid #409eff;
+}
+
+.category-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.category-name {
+  font-size: 14px;
   font-weight: 600;
   color: #303133;
-  border-bottom: 2px solid #409eff;
-  padding-bottom: 8px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.expand-icon {
+  font-size: 12px;
+  color: #409eff;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+/* 第二级：子层级样式 */
+.sub-categories {
+  background: #fafafa;
+  border-top: 1px solid #e4e7ed;
+}
+
+.sub-category {
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+}
+
+.sub-category:last-child {
+  border-bottom: none;
+}
+
+.sub-category-header {
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.sub-category-header:hover {
+  background: #f0f9ff;
+}
+
+.sub-category-header.expanded {
+  background: #f0f9ff;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+/*二级标题*/
+.sub-category-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px 10px 28px;
+  position: relative;
+  min-height: 18px;
+}
+
+.sub-category-content::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #409eff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #e3f2fd;
+}
+
+.sub-category-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sub-category-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 第三级：模块列表样式 */
+.sub-modules {
+  background: #ffffff;
+  padding: 6px 18px 8px 0px;
+  border-top: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.module-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  background: #ffffff;
+  cursor: grab;
+  transition: all 0.3s ease;
+  user-select: none;
+  min-height: 28px;
+  position: relative;
+  margin-left: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.module-item:hover {
+  border-color: #409eff;
+  background: #f0f9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.15);
+}
+
+.module-item:active {
+  cursor: grabbing;
+  transform: translateY(0);
+}
+
+.module-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding-right: 40px;
+}
+
+.module-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #303133;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+/* 为不同类型的模块添加左侧颜色标识 */
+.module-item[data-type="insert"] {
+  border-left: 3px solid #409eff;
+}
+
+.module-item[data-type="update"] {
+  border-left: 3px solid #67c23a;
+}
+
+.module-item[data-type="select"] {
+  border-left: 3px solid #e6a23c;
+}
+
+.module-item[data-type="delete"] {
+  border-left: 3px solid #f56c6c;
+}
+
+.module-item[data-type="create"] {
+  border-left: 3px solid #722ed1;
+}
+
+.module-item[data-type="custom"] {
+  border-left: 3px solid #909399;
+}
+
+/* 子类型标识 - 调整位置和大小 */
+.module-item[data-subtype="base"]::after {
+  content: "基础";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #e1f5fe;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="where"]::after {
+  content: "条件";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #fce4d6;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="batch"]::after {
+  content: "批量";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #d9ecff;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="join"]::after {
+  content: "关联";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #e1f5fe;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="aggregate"]::after {
+  content: "聚合";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #722ed1;
+  background: #f9f0ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #efdbff;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="table"]::after {
+  content: "表";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #fde2e2;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="database"]::after {
+  content: "库";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #fce4d6;
+  line-height: 1.2;
+}
+
+/* 其他子类型标识保持相同样式 */
+.module-item[data-subtype="data_process"]::after {
+  content: "处理";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #909399;
+  background: #f4f4f5;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #e9e9eb;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="data_analysis"]::after {
+  content: "分析";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #e1f5fe;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="data_transform"]::after {
+  content: "转换";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #d9ecff;
+  line-height: 1.2;
+}
+
+.module-item[data-subtype="upsert"]::after {
+  content: "插入或更新";
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 1px 4px;
+  border-radius: 8px;
+  border: 1px solid #d9ecff;
+  line-height: 1.2;
+}
+
+/* 其他样式保持不变... */
 .canvas-area {
   flex: 1;
   display: flex;
@@ -2240,71 +2649,6 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   overflow: hidden;
   min-width: 0;
 }
-
-
-  
-  .module-categories {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .module-category {
-    border: 1px solid #e4e7ed;
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  
-  .category-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    background: #f5f7fa;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-  }
-
-  .category-header:hover {
-    background: #ecf5ff;
-  }
-  .category-header.expanded {
-    background: #ecf5ff;
-    border-bottom: 1px solid #e4e7ed;
-  }
-  
-  .category-icon {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-  
-  .category-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #303133;
-    flex: 1;
-  }
-  
-  .module-item {
-    padding: 4px 6px;
-    gap: 6px;
-  }
-  
-  .module-icon {
-    width: 14px;
-    height: 14px;
-  }
-  
-  .module-name {
-    font-size: 12px;
-  }
-  
-  .module-desc {
-    font-size: 10px;
-  }
 
 .tabs-container {
   background: #fafafa;
@@ -2333,13 +2677,10 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   position: relative;
   min-height: 500px;
   background: #f5f7fa;
-  /* 背景网格
-  background-image: 
-    linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px); */
   background-size: 20px 20px;
 }
 
+/* 其他样式保持不变... */
 .connections-layer {
   position: absolute;
   top: 0;
@@ -4040,9 +4381,9 @@ h3 {
     font-size: 10px;
     max-width: 80px;
   }
-  
+  /* 二级标题间距 */
   .sub-category-header {
-    padding: 8px 10px 8px 20px;
+    padding: 1px;
   }
   
   .sub-category-name {
