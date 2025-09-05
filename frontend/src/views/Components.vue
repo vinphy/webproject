@@ -1,5 +1,40 @@
 <template>
   <div class="module-management">
+    <!-- 测试用例输入弹框 -->
+    <el-dialog
+      v-model="showTestCaseDialog"
+      title="创建测试用例"
+      width="400px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+    >
+      <el-form :model="testCaseForm" :rules="testCaseRules" ref="testCaseFormRef">
+        <el-form-item label="测试用例名称" prop="name">
+          <el-input 
+            v-model="testCaseForm.name" 
+            placeholder="请输入测试用例名称"
+          />
+        </el-form-item>
+        <el-form-item label="测试用例描述" prop="description">
+          <el-input 
+            v-model="testCaseForm.description" 
+            placeholder="请输入测试用例描述"
+            type="textarea"
+            rows="3"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showTestCaseDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleTestCaseConfirm">
+            确认
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+
     <div class="module-container">
       <!-- 左侧模块列表 -->
       <div class="module-list">
@@ -83,7 +118,7 @@
               :class="{ 'active': tab.active }"
               @click="switchTab(tab.id)"
             >
-              <span class="tab-title">{{ tab.title }}</span>
+              <span class="tab-title">{{testCaseForm.name || tab.title }}</span>
               <span 
                 v-if="tabs.length > 1" 
                 class="tab-close"
@@ -443,6 +478,40 @@ import {
 import { ElMessageBox, ElMessage, ElLoading } from 'element-plus'
 import NodeConfigDialog from './components/NodeConfigDialog.vue'
 
+//测试用例相关状态
+const showTestCaseDialog = ref(true)
+const testCaseForm = ref({
+  name: '',
+  description: ''
+})
+const testCaseRules = ref({
+  name: [
+    { required: true, message: '请输入测试用例名称', trigger: 'blur' },
+    { max: 50, message: '名称不能超过50个字符', trigger: 'blur' }
+  ],
+  description: [
+    { max: 200, message: '描述不能超过200个字符', trigger: 'blur' }
+  ]
+})
+const testCaseFormRef = ref(null)
+
+// 处理测试用例确认
+const handleTestCaseConfirm = async () => {
+  if (!testCaseFormRef.value) return
+  
+  try {
+    await testCaseFormRef.value.validate()
+    // 验证通过，关闭对话框
+    showTestCaseDialog.value = false
+    // 可以在这里添加保存测试用例信息的逻辑
+    console.log('测试用例信息:', testCaseForm.value)
+    ElMessage.success('测试用例创建成功')
+  } catch (error) {
+    // 验证失败，不关闭对话框
+    console.log('测试用例信息验证失败:', error)
+  }
+}
+
 // 可用模块列表
 const availableModules = ref({})
 
@@ -620,7 +689,7 @@ const selectedNode = ref(null)
 const tabs = ref([
   {
     id: 'main',
-    title: '主绘制界面',
+    title: '未命名',
     active: true,
     nodes: [],
     connections: [],
@@ -2264,9 +2333,10 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   position: relative;
   min-height: 500px;
   background: #f5f7fa;
+  /* 背景网格
   background-image: 
     linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px); */
   background-size: 20px 20px;
 }
 
