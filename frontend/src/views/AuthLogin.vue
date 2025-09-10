@@ -4,6 +4,10 @@
     卡片内包含品牌区、表单区与辅助链接。
   -->
   <div class="login-page">
+    <!-- Particles.js 背景 -->
+    <div id="particles-js" class="particles-container"></div>
+
+
     <el-card class="login-card" shadow="hover">
       <!-- 品牌/标题区 -->
       <div class="brand">
@@ -124,9 +128,34 @@ const onSubmit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #f6f8fc 0%, #eef2f8 100%);
+  position: relative;
+  overflow: hidden;
+
+  /* background: linear-gradient(180deg, #f6f8fc 0%, #eef2f8 100%); */
 }
-.login-card { width: 420px; padding: 8px 10px; }
+.particles-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+#particles-js {
+  width: 100%;
+  height: 100%;
+}
+
+
+.login-card { width: 420px; padding: 8px 10px; 
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
 .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .brand-text .title { font-size: 18px; font-weight: 700; color: #2b3a4b; }
 .brand-text .subtitle { color: #8a97a8; font-size: 12px; }
