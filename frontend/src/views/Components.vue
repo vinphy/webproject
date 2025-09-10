@@ -52,72 +52,72 @@
         </div>
         
         <div class="module-categories">
-          <!-- 第一级：大层级 -->
+        <!-- 第一级：大层级 -->
+        <div 
+          v-for="(categoryData, categoryKey) in availableModules" 
+          :key="categoryKey"
+          class="module-category"
+        >
+          <!-- 大层级标题 -->
           <div 
-            v-for="(categoryData, categoryKey) in availableModules" 
-            :key="categoryKey"
-            class="module-category"
+            class="category-header"
+            @click="toggleCategory(categoryKey)"
+            :class="{ 'expanded': expandedCategories.includes(categoryKey) }"
+            :title="categoryData.description"
           >
-            <!-- 大层级标题 -->
+            <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
+            <span class="category-name">{{ categoryData.name }}</span>
+            <span class="expand-icon">{{ expandedCategories.includes(categoryKey) ? '▼' : '▶' }}</span>
+          </div>
+          
+          <!-- 第二级：子层级 -->
+          <div 
+            v-if="expandedCategories.includes(categoryKey)"
+            class="sub-categories"
+          >
             <div 
-              class="category-header"
-              @click="toggleCategory(categoryKey)"
-              :class="{ 'expanded': expandedCategories.includes(categoryKey) }"
-              :title="categoryData.description"
+              v-for="(subCategoryData, subCategoryKey) in categoryData.children" 
+              :key="subCategoryKey"
+              class="sub-category"
             >
-              <img :src="categoryData.icon" class="category-icon" alt="分类图标" />
-              <span class="category-name">{{ categoryData.name }}</span>
-              <span class="expand-icon">{{ expandedCategories.includes(categoryKey) ? '▼' : '▶' }}</span>
-            </div>
-            
-            <!-- 第二级：子层级 -->
-            <div 
-              v-if="expandedCategories.includes(categoryKey)"
-              class="sub-categories"
-            >
+              <!-- 子层级标题 -->
               <div 
-                v-for="(subCategoryData, subCategoryKey) in categoryData.children" 
-                :key="subCategoryKey"
-                class="sub-category"
+                class="sub-category-header"
+                @click="toggleSubCategory(categoryKey, subCategoryKey)"
+                :class="{ 'expanded': expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) }"
+                :title="subCategoryData.description"
               >
-                <!-- 子层级标题 -->
-                <div 
-                  class="sub-category-header"
-                  @click="toggleSubCategory(categoryKey, subCategoryKey)"
-                  :class="{ 'expanded': expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) }"
-                  :title="subCategoryData.description"
-                >
                   <div class="sub-category-content">
-                    <img :src="subCategoryData.icon" class="sub-category-icon" alt="子分类图标" />
-                    <span class="sub-category-name">{{ subCategoryData.name }}</span>
-                    <span class="expand-icon">{{ expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) ? '▼' : '▶' }}</span>
+                <img :src="subCategoryData.icon" class="sub-category-icon" alt="子分类图标" />
+                <span class="sub-category-name">{{ subCategoryData.name }}</span>
+                <span class="expand-icon">{{ expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`) ? '▼' : '▶' }}</span>
                   </div>
-                </div>
-                
-                <!-- 第三级：模块列表 -->
+              </div>
+              
+              <!-- 第三级：模块列表 -->
+              <div 
+                v-if="expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`)"
+                class="sub-modules"
+              >
                 <div 
-                  v-if="expandedSubCategories.includes(`${categoryKey}-${subCategoryKey}`)"
-                  class="sub-modules"
+                  v-for="module in subCategoryData.children" 
+                  :key="module.id"
+                  class="module-item"
+                  :data-subtype="module.subType"
+                  draggable="true"
+                  @dragstart="handleDragStart($event, module)"
+                  :title="module.description"
                 >
-                  <div 
-                    v-for="module in subCategoryData.children" 
-                    :key="module.id"
-                    class="module-item"
-                    :data-subtype="module.subType"
-                    draggable="true"
-                    @dragstart="handleDragStart($event, module)"
-                    :title="module.description"
-                  >
                     <div class="module-content">
-                      <div class="module-info">
-                        <span class="module-name">{{ module.name }}</span>
+                  <div class="module-info">
+                    <span class="module-name">{{ module.name }}</span>
                       </div>
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -133,7 +133,7 @@
               :class="{ 'active': tab.active }"
               @click="switchTab(tab.id)"
             >
-              <span class="tab-title">{{testCaseForm.name || tab.title }}</span>
+              <span class="tab-title">{{ tab.title }}</span>
               <span 
                 v-if="tabs.length > 1" 
                 class="tab-close"
@@ -142,7 +142,7 @@
                 ×
               </span>
             </div>
-            <div class="tab-add" @click="addNewTab('新绘制界面')">
+            <div class="tab-add" @click="addNewTab('未命名')">
               +
             </div>
           </div>
@@ -519,8 +519,11 @@ const handleTestCaseConfirm = async () => {
     await testCaseFormRef.value.validate()
     // 验证通过，关闭对话框
     showTestCaseDialog.value = false
-    // 可以在这里添加保存测试用例信息的逻辑
-    console.log('测试用例信息:', testCaseForm.value)
+    // 将当前活动tab标题更新为测试用例名称
+    const currentTab = tabs.value.find(t => t.id === activeTabId.value)
+    if (currentTab && testCaseForm.value.name) {
+      currentTab.title = testCaseForm.value.name
+    }
     ElMessage.success('测试用例创建成功')
   } catch (error) {
     // 验证失败，不关闭对话框
@@ -2033,7 +2036,7 @@ const addNewTab = (title, modelData = null) => {
   const newTabId = `tab_${Date.now()}`
   const newTab = {
     id: newTabId,
-    title: title,
+    title: '未命名',
     active: false,
     nodes: modelData ? modelData.nodes || [] : [],
     connections: modelData ? modelData.connections || [] : [],
@@ -2260,14 +2263,14 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
+  }
+  
 /* 第一级：大层级样式 */
-.module-category {
-  border: 1px solid #e4e7ed;
+  .module-category {
+    border: 1px solid #e4e7ed;
   border-radius: 8px;
   background: #ffffff;
-  overflow: hidden;
+    overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
@@ -2275,48 +2278,48 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
 .module-category:hover {
   border-color: #409eff;
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
-}
-
+  }
+  
 /*一集标题*/
-.category-header {
-  display: flex;
-  align-items: center;
+  .category-header {
+    display: flex;
+    align-items: center;
   gap: 10px;
   padding: 14px 16px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
   border-bottom: 1px solid #e4e7ed;
   min-height: 22px;
-}
+  }
 
-.category-header:hover {
+  .category-header:hover {
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-}
+  }
 
-.category-header.expanded {
+  .category-header.expanded {
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
   border-bottom: 1px solid #409eff;
-}
-
-.category-icon {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.category-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #303133;
-  flex: 1;
+  }
+  
+  .category-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  
+  .category-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+    flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
+  }
+  
 .expand-icon {
   font-size: 12px;
   color: #409eff;
@@ -2364,8 +2367,8 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   padding: 10px 16px 10px 28px;
   position: relative;
   min-height: 18px;
-}
-
+  }
+  
 .sub-category-content::before {
   content: '';
   position: absolute;
@@ -2380,14 +2383,14 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
 }
 
 .sub-category-icon {
-  width: 14px;
-  height: 14px;
+    width: 14px;
+    height: 14px;
   object-fit: contain;
   flex-shrink: 0;
-}
-
+  }
+  
 .sub-category-name {
-  font-size: 12px;
+    font-size: 12px;
   font-weight: 500;
   color: #606266;
   flex: 1;
@@ -2648,7 +2651,7 @@ const getColumnsByDatabaseTable = async (databaseName, tableName) => {
   background: #ffffff;
   overflow: hidden;
   min-width: 0;
-}
+  }
 
 .tabs-container {
   background: #fafafa;
