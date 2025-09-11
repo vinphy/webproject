@@ -422,7 +422,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, ArrowLeft, Check } from '@element-plus/icons-vue'
@@ -432,6 +432,9 @@ const currentStep = ref(1)
 const formRef = ref()
 const paramsFormRef = ref()
 const submitting = ref(false)
+
+// 数据持久化存储键
+const STORAGE_KEY = 'project_add_draft'
 
 const form = reactive({
   projectCode: '',
@@ -462,6 +465,9 @@ const projectParams = reactive({
   dingtalkWebhook: '',
   remarks: ''
 })
+
+// 步骤2选择状态
+const step2Selections = reactive({ vuln: false, fuzz: false, cases: true })
 
 const rules = {
   projectCode: [
@@ -512,7 +518,6 @@ const paramsRules = {
 }
 
 // 左侧树形复选
-const step2Selections = reactive({ vuln: false, fuzz: false, cases: true })
 const treeData = ref([
   { key: 'vuln', label: '漏洞扫描' },
   { key: 'fuzz', label: '模糊测试' },
@@ -538,6 +543,48 @@ const allTestCases = ref([
   { key: 7, label: '上传下载 - 大文件断点续传' },
   { key: 8, label: '移动端适配 - 横竖屏切换' }
 ])
+
+// 数据持久化相关函数
+const saveDraft = () => {
+  const draftData = {
+    currentStep: currentStep.value,
+    form: { ...form },
+    projectParams: { ...projectParams },
+    step2Selections: { ...step2Selections }
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData))
+}
+
+const loadDraft = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const draftData = JSON.parse(saved)
+      currentStep.value = draftData.currentStep || 1
+      
+      // 恢复表单数据
+      Object.assign(form, draftData.form || {})
+      Object.assign(projectParams, draftData.projectParams || {})
+      Object.assign(step2Selections, draftData.step2Selections || {})
+      
+      // 更新树形选择状态
+      defaultCheckedKeys.value = Object.keys(step2Selections).filter(k => step2Selections[k])
+      
+      ElMessage.info('已恢复草稿数据')
+    }
+  } catch (error) {
+    console.error('加载草稿失败:', error)
+  }
+}
+
+const clearDraft = () => {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
+// 监听数据变化，自动保存草稿
+watch([form, projectParams, step2Selections, currentStep], () => {
+  saveDraft()
+}, { deep: true })
 
 const goAddTestCase = () => {
   router.push('/testcases/add')
@@ -579,14 +626,31 @@ const submitProject = async () => {
     // 模拟提交延迟
     await new Promise(resolve => setTimeout(resolve, 2000))
     
-    // 这里可以调用实际的API提交项目数据
+    // 生成项目数据
     const projectData = {
-      ...form,
-      projectParams,
-      step2Selections
+      id: Date.now(), // 简单的ID生成
+      name: form.projectName,
+      description: form.projectDesc,
+      status: '待开始',
+      progress: 0,
+      createTime: new Date().toLocaleString('zh-CN'),
+      // 保存完整配置数据
+      config: {
+        ...form,
+        projectParams,
+        step2Selections
+      }
     }
     
+    // 保存到项目列表
+    const existingProjects = JSON.parse(localStorage.getItem('projects') || '[]')
+    existingProjects.unshift(projectData) // 添加到列表开头
+    localStorage.setItem('projects', JSON.stringify(existingProjects))
+    
     console.log('提交项目数据:', projectData)
+    
+    // 清除草稿
+    clearDraft()
     
     ElMessage.success('项目创建成功！')
     router.push('/projects')
@@ -668,6 +732,16 @@ const getDataSourceName = (source) => {
   }
   return sourceMap[source] || source
 }
+
+// 生命周期
+onMounted(() => {
+  loadDraft()
+})
+
+onUnmounted(() => {
+  // 组件卸载时保存草稿
+  saveDraft()
+})
 </script>
 
 <style scoped>
