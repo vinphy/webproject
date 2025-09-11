@@ -422,16 +422,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, onMounted, onUnmounted, onActivated, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, ArrowLeft, Check } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 const currentStep = ref(1)
 const formRef = ref()
 const paramsFormRef = ref()
 const submitting = ref(false)
+const didSubmit = ref(false)  // 标记是否刚刚提交成功
+const hasLoadedDraft = ref(false)   // 标记是否已加载/重置过（避免重复 load）
 
 // 数据持久化存储键
 const STORAGE_KEY = 'project_add_draft'
@@ -623,35 +626,39 @@ const editStep = (step) => {
 const submitProject = async () => {
   submitting.value = true
   try {
-    // 模拟提交延迟
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // 生成项目数据
+    await new Promise(r => setTimeout(r, 2000))
+
+    const existingProjects = JSON.parse(localStorage.getItem('projects') || '[]')
+    const nextId = existingProjects.length
+      ? Math.max(...existingProjects.map(p => Number(p.id) || 0)) + 1
+      : 1
+
+    const deepClone = (o) => JSON.parse(JSON.stringify(o))
+
     const projectData = {
-      id: Date.now(), // 简单的ID生成
+      id: nextId,
       name: form.projectName,
       description: form.projectDesc,
       status: '待开始',
       progress: 0,
       createTime: new Date().toLocaleString('zh-CN'),
-      // 保存完整配置数据
-      config: {
+      config: deepClone({
         ...form,
         projectParams,
         step2Selections
-      }
+      })
     }
-    
-    // 保存到项目列表
-    const existingProjects = JSON.parse(localStorage.getItem('projects') || '[]')
-    existingProjects.unshift(projectData) // 添加到列表开头
+
+    // 去重：若已存在相同 id（极少见），则替换，否则插入
+    const idx = existingProjects.findIndex(p => p.id === projectData.id)
+    if (idx > -1) existingProjects.splice(idx, 1, projectData)
+    else existingProjects.unshift(projectData)
+
     localStorage.setItem('projects', JSON.stringify(existingProjects))
-    
-    console.log('提交项目数据:', projectData)
-    
-    // 清除草稿
+
     clearDraft()
-    
+    resetFormData() // 重置回第1步，方便再次创建新项目
+    didSubmit.value = true  // 标记为已提交
     ElMessage.success('项目创建成功！')
     router.push('/projects')
   } catch (error) {
@@ -734,14 +741,50 @@ const getDataSourceName = (source) => {
 }
 
 // 生命周期
+const handleFreshReset = () => {
+  clearDraft()
+  resetFormData()
+  hasLoadedDraft.value = true
+}
+
+// 1) 组件 setup 阶段立即处理 fresh，避免先渲染到第4步
+if (String(route.query.fresh || '') === '1') {
+  handleFreshReset()
+}
+
+// 2) mounted 时如果没有 fresh 才加载草稿
 onMounted(() => {
-  loadDraft()
+  if (!hasLoadedDraft.value) {
+    loadDraft()
+    hasLoadedDraft.value = true
+  }
 })
 
-onUnmounted(() => {
-  // 组件卸载时保存草稿
-  saveDraft()
+// 3) 组件被 keep-alive 激活时，如带 fresh 再次强制重置
+onActivated(() => {
+  if (String(route.query.fresh || '') === '1') {
+    handleFreshReset()
+  }
 })
+
+// 4) 监听路由参数变化，用户切换到 fresh=1 时立刻重置
+watch(() => route.query.fresh, (val) => {
+  if (String(val || '') === '1') {
+    handleFreshReset()
+  }
+})
+
+// 卸载时仅在未提交时保存草稿
+onUnmounted(() => {
+  if (!didSubmit.value) {
+    saveDraft()
+  }
+})
+
+const resetFormData = () => {
+  formRef.value?.resetFields?.()
+  paramsFormRef.value?.resetFields?.()
+}
 </script>
 
 <style scoped>
