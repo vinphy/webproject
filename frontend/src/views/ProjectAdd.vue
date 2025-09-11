@@ -113,7 +113,7 @@
                   :default-checked-keys="defaultCheckedKeys"
                   @check="onTreeCheckChange"
                 />
-                <div class="left-tip">勾选“测试用例”后，可在右侧选择具体用例</div>
+                <div class="left-tip">勾选"测试用例"后，可在右侧选择具体用例</div>
               </div>
             </el-col>
             <el-col :span="18">
@@ -124,7 +124,7 @@
                 </div>
                 <div class="right-body">
                   <div v-if="!step2Selections.cases" class="disabled-overlay">
-                    <el-empty description="请先在左侧勾选“测试用例”" />
+                    <el-empty description="请先在左侧勾选测试用例" />
                   </div>
                   <el-transfer
                     v-else
@@ -149,14 +149,264 @@
           </el-row>
         </div>
 
-        <div v-else-if="currentStep === 3" class="placeholder">
-          <div class="section-note">项目参数配置（占位）</div>
-          <el-empty description="项目参数配置（占位）" />
+        <!-- 步骤3：项目参数配置 -->
+        <div v-else-if="currentStep === 3" class="step3-wrap">
+          <el-form ref="paramsFormRef" :model="projectParams" :rules="paramsRules" label-width="140px" size="large">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="测试环境" prop="testEnvironment">
+                  <el-select v-model="projectParams.testEnvironment" placeholder="请选择测试环境" style="width: 100%">
+                    <el-option label="开发环境" value="dev" />
+                    <el-option label="测试环境" value="test" />
+                    <el-option label="预生产环境" value="staging" />
+                    <el-option label="生产环境" value="prod" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="优先级" prop="priority">
+                  <el-select v-model="projectParams.priority" placeholder="请选择优先级" style="width: 100%">
+                    <el-option label="低" value="low" />
+                    <el-option label="中" value="medium" />
+                    <el-option label="高" value="high" />
+                    <el-option label="紧急" value="urgent" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="并发用户数" prop="concurrentUsers">
+                  <el-input-number v-model="projectParams.concurrentUsers" :min="1" :max="10000" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="测试轮次" prop="testRounds">
+                  <el-input-number v-model="projectParams.testRounds" :min="1" :max="10" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="超时时间(分钟)" prop="timeout">
+                  <el-input-number v-model="projectParams.timeout" :min="5" :max="1440" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="重试次数" prop="retryCount">
+                  <el-input-number v-model="projectParams.retryCount" :min="0" :max="5" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+
+            <el-form-item label="测试配置">
+              <el-checkbox-group v-model="projectParams.testConfigs">
+                <el-checkbox label="auto_retry">自动重试失败用例</el-checkbox>
+                <el-checkbox label="parallel_execution">并行执行测试</el-checkbox>
+                <el-checkbox label="data_cleanup">测试后清理数据</el-checkbox>
+                <el-checkbox label="report_generation">自动生成报告</el-checkbox>
+                <el-checkbox label="notification">测试完成通知</el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+
+            <el-form-item label="测试数据源">
+              <el-radio-group v-model="projectParams.dataSource">
+                <el-radio label="mock">模拟数据</el-radio>
+                <el-radio label="staging">预生产数据</el-radio>
+                <el-radio label="production">生产数据(脱敏)</el-radio>
+                <el-radio label="custom">自定义数据</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="通知配置">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="邮件通知" label-width="100px">
+                    <el-input v-model="projectParams.emailNotification" placeholder="输入邮箱地址，多个用逗号分隔" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="钉钉通知" label-width="100px">
+                    <el-input v-model="projectParams.dingtalkWebhook" placeholder="输入钉钉机器人Webhook地址" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form-item>
+
+            <el-form-item label="备注">
+              <el-input v-model="projectParams.remarks" type="textarea" :rows="3" placeholder="请输入项目参数相关备注" />
+            </el-form-item>
+          </el-form>
         </div>
 
-        <div v-else-if="currentStep === 4" class="placeholder">
-          <div class="section-note">项目入库（占位）</div>
-          <el-empty description="项目入库（占位）" />
+        <!-- 步骤4：项目入库确认 -->
+        <div v-else-if="currentStep === 4" class="step4-wrap">
+          <div class="confirmation-header">
+            <el-icon size="24" color="#67C23A"><Check /></el-icon>
+            <span class="confirmation-title">请确认项目信息</span>
+            <p class="confirmation-subtitle">请仔细核对以下信息，确认无误后提交项目</p>
+          </div>
+
+          <div class="confirmation-content">
+            <!-- 基础信息确认 -->
+            <div class="confirmation-section">
+              <div class="section-header">
+                <h3 class="section-title">基础信息</h3>
+                <el-button text type="primary" @click="editStep(1)">编辑</el-button>
+              </div>
+              <div class="section-content">
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">项目编号：</span>
+                      <span class="value">{{ form.projectCode }}</span>
+                    </div>
+                  </el-col>
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">项目名称：</span>
+                      <span class="value">{{ form.projectName }}</span>
+                    </div>
+                  </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">项目类型：</span>
+                      <el-tag type="primary">{{ form.projectType }}</el-tag>
+                    </div>
+                  </el-col>
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">测试负责人：</span>
+                      <span class="value">{{ form.testLeader }}</span>
+                    </div>
+                  </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">开始日期：</span>
+                      <span class="value">{{ formatDate(form.startDate) }}</span>
+                    </div>
+                  </el-col>
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">结束日期：</span>
+                      <span class="value">{{ formatDate(form.endDate) }}</span>
+                    </div>
+                  </el-col>
+                </el-row>
+                <div class="info-item">
+                  <span class="label">项目描述：</span>
+                  <span class="value">{{ form.projectDesc }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">测试成员：</span>
+                  <div class="members-preview">
+                    <el-avatar v-for="member in form.teamMembers" :key="member.id" :size="32" :src="member.avatar" :title="member.name" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 测试用例选择确认 -->
+            <div class="confirmation-section">
+              <div class="section-header">
+                <h3 class="section-title">测试用例选择</h3>
+                <el-button text type="primary" @click="editStep(2)">编辑</el-button>
+              </div>
+              <div class="section-content">
+                <div class="execution-items">
+                  <el-tag v-if="step2Selections.vuln" type="success" size="large">漏洞扫描</el-tag>
+                  <el-tag v-if="step2Selections.fuzz" type="warning" size="large">模糊测试</el-tag>
+                  <el-tag v-if="step2Selections.cases" type="primary" size="large">测试用例</el-tag>
+                </div>
+                <div v-if="step2Selections.cases && form.selectedTestCaseIds.length > 0" class="test-cases-preview">
+                  <div class="test-cases-title">已选择的测试用例 ({{ form.selectedTestCaseIds.length }} 条)：</div>
+                  <div class="test-cases-list">
+                    <el-tag v-for="caseId in form.selectedTestCaseIds" :key="caseId" class="test-case-tag">
+                      {{ getTestCaseName(caseId) }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 项目参数配置确认 -->
+            <div class="confirmation-section">
+              <div class="section-header">
+                <h3 class="section-title">项目参数配置</h3>
+                <el-button text type="primary" @click="editStep(3)">编辑</el-button>
+              </div>
+              <div class="section-content">
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">测试环境：</span>
+                      <el-tag :type="getEnvironmentTagType(projectParams.testEnvironment)">
+                        {{ getEnvironmentName(projectParams.testEnvironment) }}
+                      </el-tag>
+                    </div>
+                  </el-col>
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">优先级：</span>
+                      <el-tag :type="getPriorityTagType(projectParams.priority)">
+                        {{ getPriorityName(projectParams.priority) }}
+                      </el-tag>
+                    </div>
+                  </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">并发用户数：</span>
+                      <span class="value">{{ projectParams.concurrentUsers }}</span>
+                    </div>
+                  </el-col>
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">测试轮次：</span>
+                      <span class="value">{{ projectParams.testRounds }}</span>
+                    </div>
+                  </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">超时时间：</span>
+                      <span class="value">{{ projectParams.timeout }} 分钟</span>
+                    </div>
+                  </el-col>
+                  <el-col :span="12">
+                    <div class="info-item">
+                      <span class="label">重试次数：</span>
+                      <span class="value">{{ projectParams.retryCount }}</span>
+                    </div>
+                  </el-col>
+                </el-row>
+                <div class="info-item">
+                  <span class="label">测试配置：</span>
+                  <div class="config-tags">
+                    <el-tag v-for="config in projectParams.testConfigs" :key="config" size="small">
+                      {{ getConfigName(config) }}
+                    </el-tag>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="label">测试数据源：</span>
+                  <el-tag type="info">{{ getDataSourceName(projectParams.dataSource) }}</el-tag>
+                </div>
+                <div v-if="projectParams.remarks" class="info-item">
+                  <span class="label">备注：</span>
+                  <span class="value">{{ projectParams.remarks }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -164,7 +414,7 @@
         <el-button :disabled="currentStep === 1" @click="prevStep">上一步</el-button>
         <div class="right">
           <el-button v-if="currentStep < 4" type="primary" @click="nextStep">下一步</el-button>
-          <el-button v-else type="success" @click="submitProject">提交项目</el-button>
+          <el-button v-else type="success" :loading="submitting" @click="submitProject">提交项目</el-button>
         </div>
       </div>
     </el-card>
@@ -180,6 +430,8 @@ import { Plus, ArrowLeft, Check } from '@element-plus/icons-vue'
 const router = useRouter()
 const currentStep = ref(1)
 const formRef = ref()
+const paramsFormRef = ref()
+const submitting = ref(false)
 
 const form = reactive({
   projectCode: '',
@@ -194,6 +446,21 @@ const form = reactive({
     { id: 2, name: '王工程师', avatar: 'https://picsum.photos/id/1027/60/60' }
   ],
   selectedTestCaseIds: []
+})
+
+// 项目参数配置
+const projectParams = reactive({
+  testEnvironment: 'test',
+  priority: 'medium',
+  concurrentUsers: 10,
+  testRounds: 1,
+  timeout: 30,
+  retryCount: 2,
+  testConfigs: ['auto_retry', 'report_generation'],
+  dataSource: 'mock',
+  emailNotification: '',
+  dingtalkWebhook: '',
+  remarks: ''
 })
 
 const rules = {
@@ -220,6 +487,27 @@ const rules = {
   projectDesc: [
     { required: true, message: '请输入项目描述', trigger: 'blur' },
     { min: 10, message: '不少于 10 个字符', trigger: 'blur' }
+  ]
+}
+
+const paramsRules = {
+  testEnvironment: [
+    { required: true, message: '请选择测试环境', trigger: 'change' }
+  ],
+  priority: [
+    { required: true, message: '请选择优先级', trigger: 'change' }
+  ],
+  concurrentUsers: [
+    { required: true, message: '请输入并发用户数', trigger: 'blur' }
+  ],
+  testRounds: [
+    { required: true, message: '请输入测试轮次', trigger: 'blur' }
+  ],
+  timeout: [
+    { required: true, message: '请输入超时时间', trigger: 'blur' }
+  ],
+  retryCount: [
+    { required: true, message: '请输入重试次数', trigger: 'blur' }
   ]
 }
 
@@ -269,6 +557,10 @@ const nextStep = async () => {
     if (!formRef.value) return
     const valid = await formRef.value.validate().catch(() => false)
     if (!valid) return
+  } else if (currentStep.value === 3) {
+    if (!paramsFormRef.value) return
+    const valid = await paramsFormRef.value.validate().catch(() => false)
+    if (!valid) return
   }
   currentStep.value = Math.min(4, currentStep.value + 1)
 }
@@ -277,9 +569,104 @@ const prevStep = () => {
   currentStep.value = Math.max(1, currentStep.value - 1)
 }
 
-const submitProject = () => {
-  ElMessage.success('项目提交成功')
-  router.push('/projects')
+const editStep = (step) => {
+  currentStep.value = step
+}
+
+const submitProject = async () => {
+  submitting.value = true
+  try {
+    // 模拟提交延迟
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // 这里可以调用实际的API提交项目数据
+    const projectData = {
+      ...form,
+      projectParams,
+      step2Selections
+    }
+    
+    console.log('提交项目数据:', projectData)
+    
+    ElMessage.success('项目创建成功！')
+    router.push('/projects')
+  } catch (error) {
+    ElMessage.error('项目创建失败，请重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 辅助函数
+const formatDate = (date) => {
+  if (!date) return '-'
+  return new Date(date).toLocaleDateString('zh-CN')
+}
+
+const getTestCaseName = (caseId) => {
+  const testCase = allTestCases.value.find(c => c.key === caseId)
+  return testCase ? testCase.label : `用例 ${caseId}`
+}
+
+const getEnvironmentName = (env) => {
+  const envMap = {
+    dev: '开发环境',
+    test: '测试环境',
+    staging: '预生产环境',
+    prod: '生产环境'
+  }
+  return envMap[env] || env
+}
+
+const getEnvironmentTagType = (env) => {
+  const typeMap = {
+    dev: 'info',
+    test: 'primary',
+    staging: 'warning',
+    prod: 'danger'
+  }
+  return typeMap[env] || 'info'
+}
+
+const getPriorityName = (priority) => {
+  const priorityMap = {
+    low: '低',
+    medium: '中',
+    high: '高',
+    urgent: '紧急'
+  }
+  return priorityMap[priority] || priority
+}
+
+const getPriorityTagType = (priority) => {
+  const typeMap = {
+    low: 'info',
+    medium: 'primary',
+    high: 'warning',
+    urgent: 'danger'
+  }
+  return typeMap[priority] || 'primary'
+}
+
+const getConfigName = (config) => {
+  const configMap = {
+    auto_retry: '自动重试',
+    parallel_execution: '并行执行',
+    data_cleanup: '数据清理',
+    report_generation: '报告生成',
+    notification: '完成通知'
+  }
+  return configMap[config] || config
+}
+
+const getDataSourceName = (source) => {
+  const sourceMap = {
+    mock: '模拟数据',
+    staging: '预生产数据',
+    production: '生产数据(脱敏)',
+    custom: '自定义数据'
+  }
+  return sourceMap[source] || source
 }
 </script>
 
@@ -322,6 +709,126 @@ const submitProject = () => {
 .cases-transfer { width: 640px; max-width: 90%; }
 .cases-transfer :deep(.el-transfer__buttons) { padding: 0 8px; }
 .cases-transfer :deep(.el-transfer-panel__header) { font-weight: 600; }
+
+/* 步骤三样式 */
+.step3-wrap { padding-top: 4px; }
+
+/* 步骤四确认页面样式 */
+.step4-wrap { padding-top: 4px; }
+
+.confirmation-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  border: 1px solid #bae6fd;
+}
+
+.confirmation-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0369a1;
+  margin-left: 8px;
+}
+
+.confirmation-subtitle {
+  margin: 8px 0 0 0;
+  color: #0c4a6e;
+  font-size: 14px;
+}
+
+.confirmation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirmation-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.confirmation-section .section-header {
+  background: #f9fafb;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
+}
+
+.confirmation-section .section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.section-content {
+  padding: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  min-height: 24px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item .label {
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 100px;
+  margin-right: 8px;
+}
+
+.info-item .value {
+  color: #111827;
+  flex: 1;
+}
+
+.members-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.execution-items {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.test-cases-preview {
+  margin-top: 12px;
+}
+
+.test-cases-title {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.test-cases-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.test-case-tag {
+  margin: 2px;
+}
+
+.config-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
 .placeholder { padding: 24px 0 8px; }
 
