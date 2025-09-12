@@ -1,7 +1,15 @@
 <template>
   <div class="project-detail-container">
-    <!-- 右上角全局返回按钮 -->
+    <!-- 右上角全局操作按钮 -->
     <div class="global-actions">
+      <el-button @click="executeProject" type="success" size="small">
+        <el-icon><VideoPlay /></el-icon>
+        执行
+      </el-button>
+      <el-button @click="deleteProject" type="danger" size="small">
+        <el-icon><Delete /></el-icon>
+        删除
+      </el-button>
       <el-button @click="router.go(-1)" type="primary" size="small">
         <el-icon><Back /></el-icon>
         返回
@@ -12,7 +20,7 @@
     <div class="upper-section">
       <!-- 左上部分：上7下3布局（保持您当前6/4比例） -->
       <div class="left-section">
-        <!-- 左上上部分：水位图在左 + CPU 折线图在下 -->
+        <!-- 左上上部分：项目信息 + 水位图在左 + CPU 折线图在下 -->
         <div class="left-upper">
           <el-card class="info-card">
             <template #header>
@@ -21,6 +29,46 @@
                 <el-tag :type="getStatusType(project.status)" size="large">{{ project.status }}</el-tag>
               </div>
             </template>
+
+            <!-- 项目详细信息 -->
+            <div class="project-info">
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">项目ID：</span>
+                  <span class="info-value">{{ project.id }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">项目名称：</span>
+                  <span class="info-value">{{ project.name }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">项目类型：</span>
+                  <span class="info-value">{{ project.type }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">优先级：</span>
+                  <el-tag :type="getPriorityType(project.priority)" size="small">{{ project.priority }}</el-tag>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">负责人：</span>
+                  <span class="info-value">{{ project.manager }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">创建时间：</span>
+                  <span class="info-value">{{ project.createTime }}</span>
+                </div>
+                <div class="info-item full-width">
+                  <span class="info-label">项目描述：</span>
+                  <span class="info-value">{{ project.description }}</span>
+                </div>
+                <div class="info-item full-width">
+                  <span class="info-label">项目标签：</span>
+                  <div class="tags-container">
+                    <el-tag v-for="tag in project.tags" :key="tag" size="small" class="tag-item">{{ tag }}</el-tag>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="charts-vertical">
               <div class="top-row">
@@ -74,6 +122,26 @@
             <span class="section-title">运行监控</span>
           </template>
           <div class="right-monitor">
+            <!-- 项目运行状态信息 -->
+            <div class="monitor-info">
+              <div class="monitor-item">
+                <span class="monitor-label">运行状态：</span>
+                <el-tag :type="getStatusType(project.status)" size="small">{{ project.status }}</el-tag>
+              </div>
+              <div class="monitor-item">
+                <span class="monitor-label">总体进度：</span>
+                <el-progress :percentage="project.progress" :stroke-width="8" />
+              </div>
+              <div class="monitor-item">
+                <span class="monitor-label">预期完成：</span>
+                <span class="monitor-value">{{ project.expectedEndTime }}</span>
+              </div>
+              <div class="monitor-item">
+                <span class="monitor-label">已用时间：</span>
+                <span class="monitor-value">{{ getElapsedTime() }}</span>
+              </div>
+            </div>
+            
             <div class="logs-block">
               <div class="chart-title">回执日志</div>
               <div class="logs-pane" ref="logsPaneRef">
@@ -146,8 +214,8 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Plus, Back } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Back, VideoPlay, Delete } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -205,6 +273,41 @@ const tasks = ref([])
 const getStatusType = (s) => ({ '进行中': 'warning', '已完成': 'success', '待开始': 'info' }[s] || 'info')
 const getPriorityType = (p) => ({ '低': 'info', '中': 'warning', '高': 'danger', '紧急': 'danger' }[p] || 'info')
 const getTaskStatusType = (s) => ({ '已完成': 'success', '进行中': 'warning', '待开始': 'info' }[s] || 'info')
+
+// 计算已用时间
+const getElapsedTime = () => {
+  const start = new Date(project.value.createTime)
+  const now = new Date()
+  const diff = now - start
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  return `${days}天${hours}小时`
+}
+
+// 执行项目
+const executeProject = () => {
+  ElMessage.success('开始执行项目...')
+  // 这里可以添加执行项目的逻辑
+}
+
+// 删除项目
+const deleteProject = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这个项目吗？删除后无法恢复！',
+      '确认删除',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    ElMessage.success('项目已删除')
+    router.go(-1)
+  } catch {
+    ElMessage.info('已取消删除')
+  }
+}
 
 const addTask = () => {
   ElMessage.info('添加任务功能待实现')
@@ -295,8 +398,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .project-detail-container { height: 100vh; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; overflow: auto; }
 
-/* 右上角全局返回按钮 */
-.global-actions { position: fixed; top: 10px; right: 12px; z-index: 2000; }
+/* 右上角全局操作按钮 */
+.global-actions { position: fixed; top: 10px; right: 12px; z-index: 2000; display: flex; gap: 8px; }
 
 /* 上半部分：左7右3布局 */
 .upper-section { height: 90vh; display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #ebeef5; min-height: 0; }
@@ -318,15 +421,24 @@ onBeforeUnmount(() => {
 .card-header { display: flex; justify-content: space-between; align-items: center; }
 .header-actions { display: flex; gap: 12px; }
 
+/* 项目详细信息 */
+.project-info { padding: 16px; border-bottom: 1px solid #ebeef5; margin-bottom: 12px; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.info-item { display: flex; align-items: center; gap: 8px; }
+.info-item.full-width { grid-column: 1 / -1; }
+.info-label { font-size: 13px; color: #606266; font-weight: 500; min-width: 80px; }
+.info-value { font-size: 13px; color: #303133; }
+.tags-container { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag-item { margin: 0; }
+
 /* 左上：水位+GPU 同行，CPU 在下；确保滚动容器生效 */
-.charts-vertical { display: flex; flex-direction: column; height: calc(100% - 60px); padding: 12px 16px; gap: 12px; min-height: 0; }
+.charts-vertical { display: flex; flex-direction: column; height: calc(100% - 200px); padding: 12px 16px; gap: 12px; min-height: 0; }
 .top-row { display: flex; gap: 16px; align-items: stretch; min-height: 0; }
 .water-left { width: 200px; flex: 0 0 auto; }
 .gpu-right { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
 .chart-gpu-line { width: 100%; height: 140px; }
 .bottom-row { flex: 1; min-height: 0; }
 .chart-title { font-size: 13px; color: #606266; margin: 4px 0 6px; }
-.chart-cpu-line.full { width: 100%; height: 160px; }
 
 /* CSS 水位图 */
 .water-wrapper { display: flex; justify-content: center; align-items: center; }
@@ -343,6 +455,11 @@ onBeforeUnmount(() => {
 
 /* 右侧：运行监控（日志可滚动） */
 .right-monitor { display: flex; flex-direction: column; height: calc(100% - 60px); padding: 12px 16px; gap: 12px; }
+.monitor-info { padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px; }
+.monitor-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.monitor-item:last-child { margin-bottom: 0; }
+.monitor-label { font-size: 12px; color: #606266; font-weight: 500; min-width: 80px; }
+.monitor-value { font-size: 12px; color: #303133; }
 .logs-block { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .logs-pane { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; color: #2c3e50; background: #fafafa; border-left: 3px solid #e6eef7; }
 .log-line { padding: 4px 0; white-space: pre-wrap; }
