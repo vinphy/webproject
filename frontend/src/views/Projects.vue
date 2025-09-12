@@ -42,6 +42,7 @@
         row-key="id"
         class="projects-table"
         @selection-change="onSelectionChange"
+        @row-dblclick="onRowDblClick"
       >
         <!-- 多选 -->
         <el-table-column type="selection" width="46" align="left" header-align="left" />
@@ -188,6 +189,10 @@ const getExecFlags = (row) => {
   currentPage.value = 1
 }
 const handleCurrentChange = (val) => { currentPage.value = val }
+
+const onRowDblClick = (row) => {
+  router.push(`/project-detail/${row.id}`)
+}
 
 onMounted(() => { loadProjects() })
 onActivated(() => { loadProjects() })
