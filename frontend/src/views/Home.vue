@@ -27,11 +27,20 @@
         <el-card class="panel section-left-bottom" shadow="hover">
           <template #header>
             <span>工作台</span>
-      </template>
+          </template>
           <div class="workbench-grid">
-            <div class="tile tile-a"><el-icon><Monitor /></el-icon><span>项目管理</span></div>
-            <div class="tile tile-b"><el-icon><User /></el-icon><span>测试用例</span></div>
-            <div class="tile tile-c"><el-icon><Goods /></el-icon><span>测试结果</span></div>
+            <div class="tile tile-a" @click="navigateToProjects">
+              <el-icon><Monitor /></el-icon>
+              <span>项目管理</span>
+            </div>
+            <div class="tile tile-b" @click="navigateToTestCases">
+              <el-icon><User /></el-icon>
+              <span>测试用例</span>
+            </div>
+            <div class="tile tile-c" @click="navigateToTestResults">
+              <el-icon><Goods /></el-icon>
+              <span>测试结果</span>
+            </div>
           </div>
         </el-card>
       </div>
@@ -77,8 +86,23 @@ import { onMounted, ref, computed } from 'vue'
 import { userRef } from '../utils/auth'
 import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
 import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
+import { useRouter } from 'vue-router'
 
 const user = computed(() => userRef.value)
+const router = useRouter()
+
+// 导航到项目管理页面
+const navigateToProjects = () => {
+  router.push('/projects')
+}
+// 导航到测试用例页面
+const navigateToTestCases = () => {
+  router.push('/test-cases')
+}
+// 导航到测试结果页面
+const navigateToTestResults = () => {
+  router.push('/test-results')
+}
 
 const statsRows = ref([
   { name: '项目总数', type: 'title' },
