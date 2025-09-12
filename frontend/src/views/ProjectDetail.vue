@@ -1,21 +1,5 @@
 <template>
   <div class="project-detail-container">
-    <!-- 右上角全局操作按钮 -->
-    <div class="global-actions">
-      <el-button @click="executeProject" type="success" size="small">
-        <el-icon><VideoPlay /></el-icon>
-        执行
-      </el-button>
-      <el-button @click="deleteProject" type="danger" size="small">
-        <el-icon><Delete /></el-icon>
-        删除
-      </el-button>
-      <el-button @click="router.go(-1)" type="primary" size="small">
-        <el-icon><Back /></el-icon>
-        返回
-      </el-button>
-    </div>
-    
     <!-- 上半部分：左7右3布局 -->
     <div class="upper-section">
       <!-- 左上部分：上7下3布局（保持您当前6/4比例） -->
@@ -86,10 +70,10 @@
                   <div ref="gpuLineRef" class="chart-gpu-line"></div>
                 </div>
               </div>
-              <div class="bottom-row">
+              <!-- <div class="bottom-row">
                 <div class="chart-title">CPU 使用率</div>
                 <div ref="cpuLineRef" class="chart-cpu-line full"></div>
-              </div>
+              </div> -->
             </div>
           </el-card>
         </div>
@@ -119,7 +103,24 @@
       <div class="right-section">
         <el-card class="progress-card">
           <template #header>
-            <span class="section-title">运行监控</span>
+            <div class="card-header">
+              <span class="section-title">运行监控</span>
+              <!-- 固定在运行监控标题右侧的操作按钮 -->
+              <div class="fixed-header-actions">
+                <el-button @click="executeProject" type="success" size="small">
+                  <el-icon><VideoPlay /></el-icon>
+                  执行
+                </el-button>
+                <el-button @click="deleteProject" type="danger" size="small">
+                  <el-icon><Delete /></el-icon>
+                  删除
+                </el-button>
+                <el-button @click="router.go(-1)" type="primary" size="small">
+                  <el-icon><Back /></el-icon>
+                  返回
+                </el-button>
+              </div>
+            </div>
           </template>
           <div class="right-monitor">
             <!-- 项目运行状态信息 -->
@@ -212,7 +213,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed ,nextTick} from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Back, VideoPlay, Delete } from '@element-plus/icons-vue'
@@ -335,10 +336,10 @@ const appendLog = (txt) => {
 // 五秒后展示静态图片
 const showImages = ref(false)
 const staticImages = [
-  new URL('../../assets/add.png', import.meta.url).href,
-  new URL('../../assets/delete.png', import.meta.url).href,
-  new URL('../../assets/update.png', import.meta.url).href,
-  new URL('../../assets/search.png', import.meta.url).href,
+  new URL('/src/assets/gnuradio.png', import.meta.url).href,
+  new URL('/src/assets/gnuradio.png', import.meta.url).href,
+  new URL('/src/assets/gnuradio.png', import.meta.url).href,
+  new URL('/src/assets/gnuradio.png', import.meta.url).href,
 ]
 
 onMounted(() => {
@@ -381,7 +382,21 @@ onMounted(() => {
   const onResize = () => { cpuChart && cpuChart.resize(); gpuChart && gpuChart.resize() }
   window.addEventListener('resize', onResize)
 
-  setTimeout(() => { showImages.value = true }, 5000)
+  setTimeout(() => { 
+    showImages.value = true 
+    // 等待DOM更新完成后再滚动
+    nextTick(() => {
+      setTimeout(() => {
+        const imagesSection = document.querySelector('.images-card')
+        if (imagesSection) {
+          imagesSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          })
+        }
+      }, 100)
+    })
+  }, 5000)
 })
 
 onBeforeUnmount(() => {
@@ -396,87 +411,352 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.project-detail-container { height: 100vh; display: flex; flex-direction: column; padding: 0; box-sizing: border-box; overflow: auto; }
+.project-detail-container { 
+  min-height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  padding: 0; 
+  box-sizing: border-box; 
+  overflow-x: hidden; 
+}
 
-/* 右上角全局操作按钮 */
-.global-actions { position: fixed; top: 10px; right: 12px; z-index: 2000; display: flex; gap: 8px; }
-
-/* 上半部分：左7右3布局 */
-.upper-section { height: 90vh; display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid #ebeef5; min-height: 0; }
+/* 上半部分：左7右3布局 - 修复高度问题 */
+.upper-section { 
+  height: 90vh; 
+  display: flex; 
+  gap: 0; 
+  margin-bottom: 0; 
+  border-bottom: 2px solid #ebeef5; 
+  min-height: 0; 
+  flex-shrink: 0; /* 防止被压缩 */
+}
 
 /* 左侧部分：上6下4布局（当前比例） */
-.left-section { flex: 7; display: flex; flex-direction: column; gap: 0; border-right: 2px solid #ebeef5; min-height: 0; }
-.left-upper { flex: 6; border-bottom: 2px solid #ebeef5; min-height: 0; display: flex; flex-direction: column; }
-.left-lower { flex: 4; min-height: 0; display: flex; flex-direction: column; }
-.left-upper .el-card, .left-lower .el-card, .right-section .el-card { display: flex; flex-direction: column; }
-.left-upper .el-card :deep(.el-card__body), .left-lower .el-card :deep(.el-card__body), .right-section .el-card :deep(.el-card__body) { display: flex; flex-direction: column; min-height: 0; }
+.left-section { 
+  flex: 7; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 0; 
+  border-right: 2px solid #ebeef5; 
+  min-height: 0; 
+}
+.left-upper { 
+  flex: 6; 
+  border-bottom: 2px solid #ebeef5; 
+  min-height: 0; 
+  display: flex; 
+  flex-direction: column; 
+}
+.left-lower { 
+  flex: 4; 
+  min-height: 0; 
+  display: flex; 
+  flex-direction: column; 
+}
+.left-upper .el-card, .left-lower .el-card, .right-section .el-card { 
+  display: flex; 
+  flex-direction: column; 
+  height: 100%;
+}
+.left-upper .el-card :deep(.el-card__body), .left-lower .el-card :deep(.el-card__body), .right-section .el-card :deep(.el-card__body) { 
+  display: flex; 
+  flex-direction: column; 
+  min-height: 0; 
+  flex: 1;
+}
 
 /* 右侧部分 */
-.right-section { flex: 3; min-height: 0; }
+.right-section { 
+  flex: 3; 
+  min-height: 0; 
+}
 
 /* 卡片与标题 */
-.info-card, .stats-card, .progress-card, .tasks-card { height: 100%; margin: 0; border-radius: 0; border: none; }
-:deep(.el-card__header) { padding: 16px 20px; border-bottom: 2px solid #ebeef5; background: #fafafa; border-radius: 0; }
-.section-title { font-size: 18px; font-weight: 600; color: #303133; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
-.header-actions { display: flex; gap: 12px; }
+.info-card, .stats-card, .progress-card, .tasks-card { 
+  height: 100%; 
+  margin: 0; 
+  border-radius: 0; 
+  border: none; 
+}
+:deep(.el-card__header) { 
+  padding: 16px 20px; 
+  border-bottom: 2px solid #ebeef5; 
+  background: #fafafa; 
+  border-radius: 0; 
+}
+.section-title { 
+  font-size: 18px; 
+  font-weight: 600; 
+  color: #303133; 
+}
+.card-header { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+}
+
+/* 固定在运行监控标题右侧的操作按钮 */
+.fixed-header-actions {
+  position: fixed;
+  top: 76px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 2000;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ebeef5;
+}
+
+.header-actions { 
+  display: flex; 
+  gap: 12px; 
+}
 
 /* 项目详细信息 */
-.project-info { padding: 16px; border-bottom: 1px solid #ebeef5; margin-bottom: 12px; }
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.info-item { display: flex; align-items: center; gap: 8px; }
-.info-item.full-width { grid-column: 1 / -1; }
-.info-label { font-size: 13px; color: #606266; font-weight: 500; min-width: 80px; }
-.info-value { font-size: 13px; color: #303133; }
-.tags-container { display: flex; gap: 6px; flex-wrap: wrap; }
-.tag-item { margin: 0; }
+.project-info { 
+  padding: 16px; 
+  border-bottom: 1px solid #ebeef5; 
+  margin-bottom: 12px; 
+  flex-shrink: 0; /* 防止被压缩 */
+}
+.info-grid { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 12px; 
+}
+.info-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+}
+.info-item.full-width { 
+  grid-column: 1 / -1; 
+}
+.info-label { 
+  font-size: 13px; 
+  color: #606266; 
+  font-weight: 500; 
+  min-width: 80px; 
+}
+.info-value { 
+  font-size: 13px; 
+  color: #303133; 
+}
+.tags-container { 
+  display: flex; 
+  gap: 6px; 
+  flex-wrap: wrap; 
+}
+.tag-item { 
+  margin: 0; 
+}
 
 /* 左上：水位+GPU 同行，CPU 在下；确保滚动容器生效 */
-.charts-vertical { display: flex; flex-direction: column; height: calc(100% - 200px); padding: 12px 16px; gap: 12px; min-height: 0; }
-.top-row { display: flex; gap: 16px; align-items: stretch; min-height: 0; }
-.water-left { width: 200px; flex: 0 0 auto; }
-.gpu-right { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-.chart-gpu-line { width: 100%; height: 140px; }
-.bottom-row { flex: 1; min-height: 0; }
-.chart-title { font-size: 13px; color: #606266; margin: 4px 0 6px; }
+.charts-vertical { 
+  display: flex; 
+  flex-direction: column; 
+  flex: 1; 
+  padding: 12px 16px; 
+  gap: 12px; 
+  min-height: 0; 
+}
+.top-row { 
+  display: flex; 
+  gap: 16px; 
+  align-items: stretch; 
+  min-height: 0; 
+}
+.water-left { 
+  width: 200px; 
+  flex: 0 0 auto; 
+}
+.gpu-right { 
+  flex: 1 1 0; 
+  min-width: 0; 
+  display: flex; 
+  flex-direction: column; 
+}
+.chart-gpu-line { 
+  width: 100%; 
+  height: 140px; 
+}
+.bottom-row { 
+  flex: 1; 
+  min-height: 0; 
+}
+.chart-title { 
+  font-size: 13px; 
+  color: #606266; 
+  margin: 4px 0 6px; 
+}
 
 /* CSS 水位图 */
-.water-wrapper { display: flex; justify-content: center; align-items: center; }
-.water-circle { position: relative; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(closest-side, #e8f3ff 92%, transparent 93% 100%), conic-gradient(#3ba0ff 0%, #3ba0ff 0%); overflow: hidden; border: 1px solid #cfe3ff; }
-.wave { position: absolute; left: 50%; bottom: 0; width: 200%; height: 200%; background: rgba(59,160,255,0.4); transform: translate(-50%, -60%); border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; animation: waveMove 4s linear infinite; }
-.water-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: 700; color: #3b6db3; font-size: 16px; }
-@keyframes waveMove { 0% { transform: translate(-50%, -60%) rotate(0deg); } 100% { transform: translate(-50%, -60%) rotate(360deg); } }
+.water-wrapper { 
+  display: flex; 
+  justify-content: left; 
+  align-items: center; 
+}
+.water-circle { 
+  position: relative; 
+  width: 100px; 
+  height: 100px; 
+  border-radius: 50%; 
+  background: radial-gradient(closest-side, #e8f3ff 92%, transparent 93% 100%), conic-gradient(#3ba0ff 0%, #3ba0ff 0%); 
+  overflow: hidden; 
+  border: 1px solid #cfe3ff; 
+}
+.wave { 
+  position: absolute; 
+  left: 50%; 
+  bottom: 0; 
+  width: 200%; 
+  height: 200%; 
+  background: rgba(59,160,255,0.4); 
+  transform: translate(-50%, -60%); 
+  border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; 
+  animation: waveMove 4s linear infinite; 
+}
+.water-text { 
+  position: absolute; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%); 
+  font-weight: 700; 
+  color: #3b6db3; 
+  font-size: 16px; 
+}
+@keyframes waveMove { 
+  0% { transform: translate(-50%, -60%) rotate(0deg); } 
+  100% { transform: translate(-50%, -60%) rotate(360deg); } 
+}
 
 /* 左下：测试用例滚动列表 */
-.cases-scroller { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; }
-.case-item { display: grid; grid-template-columns: 1.6fr 0.8fr 1.6fr; align-items: center; gap: 12px; padding: 8px 10px; border-bottom: 1px dashed #e5e7eb; }
-.case-name { color: #303133; font-size: 13px; }
-.case-status { text-align: center; }
+.cases-scroller { 
+  flex: 1; 
+  min-height: 0; 
+  overflow-y: auto; 
+  padding: 12px 16px; 
+}
+.case-item { 
+  display: grid; 
+  grid-template-columns: 1.6fr 0.8fr 1.6fr; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 8px 10px; 
+  border-bottom: 1px dashed #e5e7eb; 
+}
+.case-name { 
+  color: #303133; 
+  font-size: 13px; 
+}
+.case-status { 
+  text-align: center; 
+}
 
 /* 右侧：运行监控（日志可滚动） */
-.right-monitor { display: flex; flex-direction: column; height: calc(100% - 60px); padding: 12px 16px; gap: 12px; }
-.monitor-info { padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px; }
-.monitor-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.monitor-item:last-child { margin-bottom: 0; }
-.monitor-label { font-size: 12px; color: #606266; font-weight: 500; min-width: 80px; }
-.monitor-value { font-size: 12px; color: #303133; }
-.logs-block { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.logs-pane { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; color: #2c3e50; background: #fafafa; border-left: 3px solid #e6eef7; }
-.log-line { padding: 4px 0; white-space: pre-wrap; }
+.right-monitor { 
+  display: flex; 
+  flex-direction: column; 
+  height: 100%; 
+  padding: 12px 16px; 
+  gap: 12px; 
+}
+.monitor-info { 
+  padding: 12px; 
+  background: #f8f9fa; 
+  border-radius: 6px; 
+  margin-bottom: 8px; 
+  flex-shrink: 0; /* 防止被压缩 */
+}
+.monitor-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  margin-bottom: 8px; 
+}
+.monitor-item:last-child { 
+  margin-bottom: 0; 
+}
+.monitor-label { 
+  font-size: 12px; 
+  color: #606266; 
+  font-weight: 500; 
+  min-width: 80px; 
+}
+.monitor-value { 
+  font-size: 12px; 
+  color: #303133; 
+}
+.logs-block { 
+  flex: 1; 
+  min-height: 0; 
+  display: flex; 
+  flex-direction: column; 
+}
+.logs-pane { 
+  flex: 1; 
+  min-height: 0; 
+  overflow-y: auto; 
+  padding: 12px 16px; 
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+  font-size: 12px; 
+  color: #2c3e50; 
+  background: #fafafa; 
+  border-left: 3px solid #e6eef7; 
+}
+.log-line { 
+  padding: 4px 0; 
+  white-space: pre-wrap; 
+}
 
 /* 任务表格 */
-:deep(.el-table th), :deep(.el-table td) { font-size: 13px; }
-:deep(.el-tag) { padding: 2px 8px; }
-:deep(.el-table) { height: calc(100% - 60px); }
-:deep(.el-table__body-wrapper) { overflow-y: auto; min-height: 0; }
+:deep(.el-table th), :deep(.el-table td) { 
+  font-size: 13px; 
+}
+:deep(.el-tag) { 
+  padding: 2px 8px; 
+}
+:deep(.el-table) { 
+  height: calc(100% - 60px); 
+}
+:deep(.el-table__body-wrapper) { 
+  overflow-y: auto; 
+  min-height: 0; 
+}
 
 /* 静态图片 2x2 区域（在下半部分卡片中显示） */
-.images-card { border: none; border-radius: 0; }
-.images-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; padding: 10px 16px 16px; }
-.img-cell { background: #fff; border: 1px solid #ebeef5; border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 8px; }
-.img-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.images-card { 
+  border: none; 
+  border-radius: 0; 
+}
+.images-grid { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  grid-template-rows: 1fr 1fr; 
+  gap: 10px; 
+  padding: 10px 16px 16px; 
+}
+.img-cell { 
+  background: #fff; 
+  border: 1px solid #ebeef5; 
+  border-radius: 6px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  padding: 8px; 
+}
+.img-cell img { 
+  max-width: 100%; 
+  max-height: 100%; 
+  object-fit: contain; 
+}
 
 /* 响应式 */
-@media (max-width: 1200px) { .water-left { width: 140px; } .chart-cpu-line.full { height: 140px; } }
+@media (max-width: 1200px) { 
+  .water-left { width: 140px; } 
+  .chart-cpu-line.full { height: 140px; } 
+}
 </style>
-    
