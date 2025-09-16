@@ -20,10 +20,41 @@
             <el-icon><Monitor /></el-icon>
             <span>首页</span>
           </el-menu-item>
-          <el-menu-item index="2" v-if="can('modules')" @click="handleMenuClick('components')">
+          <!-- 项目管理菜单 -->
+          <el-sub-menu index="7" v-if="can('projects')">
+            <template #title>
+              <el-icon><Folder /></el-icon>
+              <span>项目管理</span>
+            </template>
+            <el-menu-item index="7-1" @click="handleMenuClick('projects')">
+              <el-icon><List /></el-icon>
+              <span>项目列表</span>
+            </el-menu-item>
+            <el-menu-item index="7-2" @click="handleMenuClick('project-add')">
+              <el-icon><Plus /></el-icon>
+              <span>新增项目</span>
+            </el-menu-item>
+          </el-sub-menu>
+          <!-- <el-menu-item index="2" v-if="can('modules')" @click="handleMenuClick('components')">
             <el-icon><User /></el-icon>
-            <span>模块管理</span>
-          </el-menu-item>
+            <span>测试用例</span>
+          </el-menu-item> -->
+          <el-sub-menu index="2" v-if="can('modules')">
+            <template #title>
+              <el-icon><User /></el-icon>
+              <span>测试用例</span>
+            </template>
+            <el-menu-item index="2-1" @click="handleMenuClick('test-cases')">
+              <el-icon><List /></el-icon>
+              <span>测试用例列表</span>
+            </el-menu-item>
+            <el-menu-item index="2-2" @click="handleMenuClick('components')">
+              <el-icon><Plus /></el-icon>
+              <span>新增测试用例</span>
+            </el-menu-item>
+          </el-sub-menu>
+
+
           <el-menu-item index="3" v-if="can('logs')" @click="handleMenuClick('logs')">
             <el-icon><Goods /></el-icon>
             <span>日志管理</span>
@@ -41,21 +72,7 @@
             <span>SQL ER图</span>
           </el-menu-item>
           
-          <!-- 项目管理菜单 -->
-          <el-sub-menu index="7" v-if="can('projects')">
-            <template #title>
-              <el-icon><Folder /></el-icon>
-              <span>项目管理</span>
-            </template>
-            <el-menu-item index="7-1" @click="handleMenuClick('projects')">
-              <el-icon><List /></el-icon>
-              <span>项目列表</span>
-            </el-menu-item>
-            <el-menu-item index="7-2" @click="handleMenuClick('project-add')">
-              <el-icon><Plus /></el-icon>
-              <span>新增项目</span>
-            </el-menu-item>
-          </el-sub-menu>
+          
           
           <el-menu-item index="8" v-if="isAdmin" @click="handleMenuClick('users')">
             <el-icon><User /></el-icon>
@@ -130,7 +147,7 @@ const handleMenuClick = (route) => {
   // 更新当前页面名称
   const pageNames = {
     home: '首页',
-    components: '模块管理',
+    components: '测试用例',
     logs: '日志管理',
     test: '测试',
     bitTest: 'bit测试',
@@ -138,7 +155,8 @@ const handleMenuClick = (route) => {
     projects: '项目列表',
     'project-add': '新增项目',
     users: '用户管理',
-    permission: '权限管理'
+    permission: '权限管理',
+    'test-cases':'测试用例列表'
   }
   currentPage.value = pageNames[route]
 }
