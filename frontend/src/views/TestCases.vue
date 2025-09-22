@@ -105,9 +105,9 @@ const loadCases = () => {
 		} else {
 			// 首次初始化一些示例数据
 			cases.value = [
-				{ id: 101, name: '登录功能-正向', description: '校验正确账号密码成功登录', type: '功能', status: '可执行', createTime: '2024-01-12 10:00:00' },
-				{ id: 102, name: '注册-性能基线', description: '注册接口并发50用户压测', type: '性能', status: '草稿', createTime: '2024-01-13 09:30:00' },
-				{ id: 103, name: '表单-XSS检测', description: '检测输入字段XSS防护', type: '安全', status: '可执行', createTime: '2024-01-14 15:20:00' }
+				{ id: 101, name: '数据库插入语句语法校验', description: '验证插入语句语法，涵盖各种插入规则', type: '功能', status: '可执行', createTime: '2024-01-12 10:00:00' },
+				{ id: 102, name: '数据库新增语句语法校验', description: '验证新增语句语法，涵盖各种插入规则', type: '性能', status: '草稿', createTime: '2024-01-13 09:30:00' },
+				{ id: 103, name: '数据库查询语句语法校验', description: '验证查询语句语法，涵盖各种插入规则。包含聚合查询、模糊查询、关联查询登', type: '安全', status: '可执行', createTime: '2024-01-14 15:20:00' }
 			]
 			localStorage.setItem('test_cases', JSON.stringify(cases.value))
 		}

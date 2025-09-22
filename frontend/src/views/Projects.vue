@@ -100,7 +100,7 @@ import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-
+  
 const router = useRouter()
 const loading = ref(false)
 const searchQuery = ref('')
@@ -137,8 +137,8 @@ const saveProjects = () => {
   try {
     localStorage.setItem('projects', JSON.stringify(projects.value))
   } catch {}
-}
-
+    }
+    
 const filteredProjects = computed(() => {
   let filtered = projects.value
   if (searchQuery.value) {
@@ -156,18 +156,18 @@ const filteredProjects = computed(() => {
 
 const onSelectionChange = (rows) => {
   selectedRows.value = rows
-}
-
+  }
+  
 const executeSelected = () => {
   const ids = selectedRows.value.map(r => r.id).join(', ')
   if (!ids) return
   ElMessage.success(`已触发执行：${ids}`)
-}
-
+  }
+  
 const getStatusType = (status) => {
   const types = { '进行中': 'warning', '已完成': 'success', '待开始': 'info' }
   return types[status] || 'info'
-}
+      }
 
 const getProgressStatus = (progress) => {
   if (progress === 100) return 'success'
@@ -187,13 +187,13 @@ const getExecFlags = (row) => {
   const handleSizeChange = (val) => {
     pageSize.value = val
   currentPage.value = 1
-}
+  }
 const handleCurrentChange = (val) => { currentPage.value = val }
-
+  
 const onRowDblClick = (row) => {
   router.push(`/project-detail/${row.id}`)
-}
-
+  }
+  
 onMounted(() => { loadProjects() })
 onActivated(() => { loadProjects() })
   </script>
@@ -201,8 +201,8 @@ onActivated(() => { loadProjects() })
   <style scoped>
 .projects-container {
   padding: 20px;
-}
-
+  }
+  
 .page-header {
     display: flex;
   justify-content: space-between;
@@ -213,8 +213,8 @@ onActivated(() => { loadProjects() })
 .page-header h2 {
   margin: 0;
   color: #303133;
-}
-
+  }
+  
 .projects-card {
     margin-bottom: 20px;
   }
@@ -224,11 +224,11 @@ onActivated(() => { loadProjects() })
     align-items: center;
   gap: 16px;
   margin-bottom: 20px;
-}
+  }
 .search-bar .spacer {
   flex: 1 1 auto;
-}
-
+  }
+  
 .pagination {
     display: flex;
   justify-content: center;
@@ -240,8 +240,8 @@ onActivated(() => { loadProjects() })
 .projects-table :deep(.el-table__body .el-table__cell) {
   padding: 8px 12px;          /* 一致的左右内边距 */
   text-align: left;           /* 强制左对齐 */
-}
-
+  }
+  
 /* 禁止 cell 内部被无意设置为 flex 导致的两端对齐等问题 */
 .projects-table :deep(.el-table__header .cell),
 .projects-table :deep(.el-table__body .cell) {
@@ -254,14 +254,14 @@ onActivated(() => { loadProjects() })
 .projects-table :deep(.el-table__header .cell) {
   font-size: 14px;
   font-weight: 600;
-}
-
+  }
+  
 /* 表体略小于表头，统一左对齐由列属性保证 */
 .projects-table :deep(.el-table__body .cell) {
     font-size: 12px;
   line-height: 20px;
-}
-
+  }
+  
 /* ID 列固定不换行，等宽数字方便比对 */
 .projects-table :deep(.col-id .cell) {
   white-space: nowrap;

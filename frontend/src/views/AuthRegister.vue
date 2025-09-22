@@ -1,6 +1,9 @@
 <template>
   <!-- 注册页：统一居中布局，卡片内包含品牌区 + 表单 + 辅助链接 -->
   <div class="register-page">
+    <!-- Particles.js 背景 -->
+    <div id="particles-js" class="particles-container"></div>
+
     <el-card class="register-card" shadow="hover">
       <div class="brand">
         <el-avatar :size="48" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
@@ -36,9 +39,10 @@
           </el-input>
         </el-form-item>
         <el-form-item>
-          <el-select v-model="form.role" placeholder="选择角色（可选）" style="width: 100%" clearable>
-            <el-option label="admin" value="admin" />
-            <el-option label="user" value="user" />
+          <el-select v-model="form.role" placeholder="注册码" style="width: 100%" clearable>
+            <template #prefix><el-icon><View /></el-icon></template>
+            <!-- <el-option label="admin" value="admin" /> -->
+            <!-- <el-option label="user" value="user" /> -->
           </el-select>
         </el-form-item>
 
@@ -146,8 +150,37 @@ const onSubmit = async () => {
 </script>
 
 <style scoped>
-.register-page { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #f6f8fc 0%, #eef2f8 100%); }
-.register-card { width: 460px; padding: 8px 10px; }
+.register-page { 
+  height: 100vh; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  /* background: linear-gradient(180deg, #f6f8fc 0%, #eef2f8 100%); */
+  position: relative;
+  overflow: hidden;
+}
+.particles-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+#particles-js {
+  width: 100%;
+  height: 100%;
+}
+
+.register-card { width: 460px; padding: 8px 10px; 
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
 .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .brand-text .title { font-size: 18px; font-weight: 700; color: #2b3a4b; }
 .brand-text .subtitle { color: #8a97a8; font-size: 12px; }
