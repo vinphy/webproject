@@ -28,6 +28,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/logs/:id',
+    name: 'LogDetail',
+    component: () => import('../views/LogDetail.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/test',
     name: 'Test',
     component: () => import('../views/QueryBuilderDemo.vue'),
