@@ -80,6 +80,12 @@ const routes = [
     name: 'TestCases',
     component: () => import('../views/TestCases.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/test-case-detail/:id',
+    name: 'TestCaseDetail',
+    component: () => import('../views/TestCaseDetail.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

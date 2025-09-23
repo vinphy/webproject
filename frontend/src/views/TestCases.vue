@@ -150,8 +150,7 @@ const handleSizeChange = (val) => {
 const handleCurrentChange = (val) => { currentPage.value = val }
 
 const onRowDblClick = (row) => {
-	// 预留：双击进入测试用例详情（后续可实现）
-	// router.push(`/test-case-detail/${row.id}`)
+	router.push(`/test-case-detail/${row.id}`)
 }
 
 const createCase = () => {
