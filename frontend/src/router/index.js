@@ -7,7 +7,8 @@ const routes = [
     redirect: '/home'
   },
   { path: '/login', name: 'Login', component: () => import('../views/AuthLogin.vue') },
-  { path: '/register', name: 'Register', component: () => import('../views/AuthRegister.vue') },
+  { path: '/register', name: 'Register', component: () => import('../views/AuthLogin2.vue') },
+  // { path: '/register', name: 'Register', component: () => import('../views/AuthRegister.vue') },
   {
     path: '/home',
     name: 'Home',
