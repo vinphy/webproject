@@ -11,7 +11,7 @@
       </template>
 
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="时间">{{ logItem.createdAt }}</el-descriptions-item>
+        <el-descriptions-item label="时间">{{ logItem.created_at }}</el-descriptions-item>
         <el-descriptions-item label="类型">{{ logItem.type }}</el-descriptions-item>
         <el-descriptions-item label="来源">{{ logItem.source }}</el-descriptions-item>
         <el-descriptions-item label="用户">{{ logItem.user }}</el-descriptions-item>
@@ -30,24 +30,31 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { api } from '@/utils/auth'
 
 const route = useRoute()
 const router = useRouter()
 const logItem = ref(null)
 const message = ref('')
 
-const loadLog = () => {
-  const id = Number(route.params.id)
-  const saved = localStorage.getItem('logs')
-  if (!saved) return
-  try {
-    const list = JSON.parse(saved)
-    const found = (Array.isArray(list) ? list : []).find(it => Number(it.id) === id)
-    if (found) {
-      logItem.value = found
-      message.value = found.message || ''
-    }
-  } catch {}
+// const loadLog = () => {
+//   const id = Number(route.params.id)
+//   const saved = localStorage.getItem('logs')
+//   if (!saved) return
+//   try {
+//     const list = JSON.parse(saved)
+//     const found = (Array.isArray(list) ? list : []).find(it => Number(it.id) === id)
+//     if (found) {
+//       logItem.value = found
+//       message.value = found.message || ''
+//     }
+//   } catch {}
+
+const loadLog = async () => {
+  const id = route.params.id
+  const { data } = await api.get(`/api/logs/${id}`)
+  logItem.value = data
+  message.value = data.message || ''
 }
 
 const typeTag = computed(() => {

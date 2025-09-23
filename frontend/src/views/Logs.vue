@@ -36,11 +36,12 @@
 
         <div class="spacer"></div>
 
+        <el-button @click="onSearch">查询</el-button>
         <el-button @click="resetFilters">重置</el-button>
       </div>
 
       <el-table
-        :data="pagedLogs"
+        :data="logs"
         style="width: 100%"
         v-loading="loading"
         row-key="id"
@@ -53,7 +54,7 @@
             <el-tag :type="getTypeTag(row.type)" size="small">{{ row.type }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="时间" width="180" align="left" header-align="left" />
+        <el-table-column prop="created_at" label="时间" width="180" align="left" header-align="left" />
         <el-table-column prop="source" label="来源" width="160" align="left" header-align="left" show-overflow-tooltip />
         <el-table-column prop="user" label="用户" width="140" align="left" header-align="left" />
         <el-table-column prop="message" label="内容" min-width="360" align="left" header-align="left" show-overflow-tooltip />
@@ -64,7 +65,7 @@
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
-          :total="filteredTotal"
+          :total="total"
           layout="total, sizes, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
@@ -75,10 +76,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated } from 'vue'
+import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { api } from '@/utils/auth'
 
 const router = useRouter()
 const loading = ref(false)
@@ -88,30 +90,45 @@ const dateRange = ref([])
 const currentPage = ref(1)
 const pageSize = ref(10)
 
-// 简单本地数据源，后续可替换为接口
 const logs = ref([])
 
-const loadLogs = () => {
+// 示例：在 Logs.vue 中替换 loadLogs
+
+// const loadLogs = () => {
+//   try {
+//     loading.value = true
+//     const saved = localStorage.getItem('logs')
+//     if (saved && saved !== 'null' && saved !== 'undefined') {
+//       const parsed = JSON.parse(saved)
+//       logs.value = Array.isArray(parsed) ? parsed : []
+//     } else {
+//       // 初始化示例日志
+//       const now = new Date()
+//       const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
+//       const demo = [
+//         { id: 1, type: '操作日志', createdAt: fmt(new Date(now.getTime()-3600_000)), source: '项目管理', user: 'admin', message: '创建项目：智能测试平台' },
+//         { id: 2, type: '运行日志', createdAt: fmt(new Date(now.getTime()-1800_000)), source: '任务调度', user: 'system', message: '开始执行漏洞扫描任务#42' },
+//         { id: 3, type: '异常日志', createdAt: fmt(new Date(now.getTime()-1200_000)), source: '接口服务', user: 'system', message: '请求超时：/api/run/start 504' },
+//         { id: 4, type: '正常日志', createdAt: fmt(new Date(now.getTime()-600_000)), source: '监控服务', user: 'system', message: 'CPU使用率 35%，内存 62%' },
+//         { id: 5, type: '操作日志', createdAt: fmt(new Date(now.getTime()-300_000)), source: '用例管理', user: 'tester', message: '更新测试用例：登录功能-正向' }
+//       ]
+//       logs.value = demo
+//       localStorage.setItem('logs', JSON.stringify(logs.value))
+const total = ref(0)
+const loadLogs = async () => {
+  loading.value = true
   try {
-    loading.value = true
-    const saved = localStorage.getItem('logs')
-    if (saved && saved !== 'null' && saved !== 'undefined') {
-      const parsed = JSON.parse(saved)
-      logs.value = Array.isArray(parsed) ? parsed : []
-    } else {
-      // 初始化示例日志
-      const now = new Date()
-      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
-      const demo = [
-        { id: 1, type: '操作日志', createdAt: fmt(new Date(now.getTime()-3600_000)), source: '项目管理', user: 'admin', message: '创建项目：智能测试平台' },
-        { id: 2, type: '运行日志', createdAt: fmt(new Date(now.getTime()-1800_000)), source: '任务调度', user: 'system', message: '开始执行漏洞扫描任务#42' },
-        { id: 3, type: '异常日志', createdAt: fmt(new Date(now.getTime()-1200_000)), source: '接口服务', user: 'system', message: '请求超时：/api/run/start 504' },
-        { id: 4, type: '正常日志', createdAt: fmt(new Date(now.getTime()-600_000)), source: '监控服务', user: 'system', message: 'CPU使用率 35%，内存 62%' },
-        { id: 5, type: '操作日志', createdAt: fmt(new Date(now.getTime()-300_000)), source: '用例管理', user: 'tester', message: '更新测试用例：登录功能-正向' }
-      ]
-      logs.value = demo
-      localStorage.setItem('logs', JSON.stringify(logs.value))
+    const params = {
+      page: currentPage.value,
+      size: pageSize.value,
+      type: typeFilter.value || '',
+      keyword: keyword.value || '',
+      startDate: dateRange.value?.[0] || undefined,
+      endDate: dateRange.value?.[1] || undefined,
     }
+    const { data } = await api.get('/api/logs/list', { params })
+    logs.value = data.items || []
+    total.value = data.total || 0
   } catch (e) {
     ElMessage.error('加载日志失败')
   } finally {
@@ -119,49 +136,24 @@ const loadLogs = () => {
   }
 }
 
-const inDateRange = (createdAt) => {
-  if (!dateRange.value || dateRange.value.length !== 2) return true
-  const [start, end] = dateRange.value
-  const t = new Date(createdAt.replace(/-/g,'/')).getTime()
-  const s = new Date(`${start} 00:00:00`.replace(/-/g,'/')).getTime()
-  const e = new Date(`${end} 23:59:59`.replace(/-/g,'/')).getTime()
-  return t >= s && t <= e
-}
-
-const filteredLogs = computed(() => {
-  let data = logs.value
-  if (keyword.value) {
-    const q = keyword.value.toLowerCase()
-    data = data.filter(l =>
-      (l.message || '').toLowerCase().includes(q) ||
-      (l.source || '').toLowerCase().includes(q) ||
-      (l.user || '').toLowerCase().includes(q)
-    )
-  }
-  if (typeFilter.value) {
-    data = data.filter(l => l.type === typeFilter.value)
-  }
-  data = data.filter(l => inDateRange(l.createdAt))
-  // 按时间倒序
-  return [...data].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
-})
-
-const filteredTotal = computed(() => filteredLogs.value.length)
-
-const pagedLogs = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return filteredLogs.value.slice(start, start + pageSize.value)
-})
-
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  loadLogs()
 }
-const handleCurrentChange = (val) => { currentPage.value = val }
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  loadLogs()
+}
 
 const getTypeTag = (type) => {
   const map = { '操作日志': 'primary', '运行日志': 'success', '异常日志': 'danger', '正常日志': 'info' }
   return map[type] || 'info'
+}
+
+const onSearch = () => {
+  currentPage.value = 1
+  loadLogs()
 }
 
 const resetFilters = () => {
@@ -169,6 +161,7 @@ const resetFilters = () => {
   typeFilter.value = ''
   dateRange.value = []
   currentPage.value = 1
+  loadLogs()
 }
 
 const onRowDblClick = (row) => {

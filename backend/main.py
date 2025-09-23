@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from control.codeFile import router as code_file_router
 from control.bit_test_control import router as bit_test_router
 from control.sql_parser_control import router as sql_parser_router
+from control.logs_control import router as logs_router
 
 app = FastAPI()
 
@@ -19,6 +20,7 @@ app.add_middleware(
 app.include_router(code_file_router, prefix="/api/code", tags=["code"])
 app.include_router(bit_test_router, prefix="/api/test", tags=["test"])
 app.include_router(sql_parser_router, prefix="/api/sql", tags=["sql"])
+app.include_router(logs_router, prefix="/api/logs", tags=["logs"])
 
 # 认证路由
 from control.auth import router as auth_router
