@@ -1,20 +1,9 @@
 <template>
-  <!-- 注册页：统一居中布局，卡片内包含品牌区 + 表单 + 辅助链接 -->
-  <div class="register-page">
-    <!-- Particles.js 背景 -->
-    <div id="particles-js" class="particles-container"></div>
-
-    <el-card class="register-card" shadow="hover">
-      <div class="brand">
-        <el-avatar :size="48" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
-        <div class="brand-text">
-          <div class="title">创建账户</div>
-          <div class="subtitle">填写信息完成注册并自动登录</div>
-        </div>
-      </div>
+  <!-- 注册页采用与登录页一致的居中浅灰背景与卡片风格，保留注册表单与密码强度提示 -->
+  <AuthCard title="创建账户" subtitle="填写信息完成注册并自动登录">
 
       <!-- 表单：用户名/邮箱/密码/确认密码/角色（可选） -->
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="0" class="register-form" @keyup.enter.native="onSubmit">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="0" class="login-form" @keyup.enter.native="onSubmit">
         <el-form-item prop="username">
           <el-input v-model.trim="form.username" placeholder="用户名" clearable>
             <template #prefix><el-icon><User /></el-icon></template>
@@ -38,17 +27,27 @@
             <template #prefix><el-icon><Lock /></el-icon></template>
           </el-input>
         </el-form-item>
-        <el-form-item>
-          <el-select v-model="form.role" placeholder="注册码" style="width: 100%" clearable>
+        <!-- <el-form-item>
+          <el-input v-model="form.role" placeholder="注册码" style="width: 100%" clearable class="role-select">
             <template #prefix><el-icon><View /></el-icon></template>
-            <!-- <el-option label="admin" value="admin" /> -->
-            <!-- <el-option label="user" value="user" /> -->
-          </el-select>
+          </el-input>
+        </el-form-item> -->
+
+        <el-form-item prop="role">
+          <!-- 只读输入用于显示已选文件名，点击弹出文件选择框 -->
+          <el-input v-model="form.role" placeholder="注册码（点击选择文件）" readonly class="role-select" @click="onChooseFile">
+            <template #prefix><el-icon><View /></el-icon></template>
+            <template #suffix>
+              <el-icon v-if="selectedFile" class="clickable" @click.stop="clearSelectedFile">×</el-icon>
+            </template>
+          </el-input>
+          <!-- 隐藏的文件输入框 -->
+          <input ref="fileInput" type="file" style="display:none" @change="onFileChange" />
         </el-form-item>
 
         <div class="row between">
           <div class="strength">
-            <span>密码强度：</span>
+            <span style="color: #8a97a8;">密码强度：</span>
             <el-tag :type="strengthTag.type" size="small">{{ strengthTag.text }}</el-tag>
           </div>
           <el-link type="primary" :underline="false" @click="goLogin">已有账号？去登录</el-link>
@@ -58,8 +57,11 @@
           <el-button type="primary" class="submit-btn" :loading="loading" @click="onSubmit">注册并登录</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
-  </div>
+
+      <template #tips>
+        <!-- 这里可以放置额外提示或链接 -->
+      </template>
+    </AuthCard>
 </template>
 
 <script setup>
@@ -71,12 +73,15 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Message, Lock, View, Hide } from '@element-plus/icons-vue'
 import { api, setToken, setCurrentUser } from '../utils/auth'
+import AuthCard from '../components/AuthCard.vue'
 
 const router = useRouter()
 const formRef = ref()
 const form = reactive({ username: '', email: '', password: '', confirm: '', role: '' })
 const loading = ref(false)
 const showPwd = ref(false)
+const fileInput = ref(null)
+const selectedFile = ref(null)
 
 // 简单密码强度估算：长度 + 字符类别
 const strengthScore = computed(() => {
@@ -130,8 +135,17 @@ const onSubmit = async () => {
   }
   loading.value = true
   try {
-    // 注册
-    await api.post('/api/auth/register', { username: form.username, email: form.email, password: form.password, role: form.role })
+    // 注册：如果选择了文件则使用 FormData 上传，否则使用 JSON
+    if (selectedFile.value) {
+      const fd = new FormData()
+      fd.append('username', form.username)
+      fd.append('email', form.email)
+      fd.append('password', form.password)
+      fd.append('role_file', selectedFile.value)
+      await api.post('/api/auth/register', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    } else {
+      await api.post('/api/auth/register', { username: form.username, email: form.email, password: form.password, role: form.role })
+    }
     // 注册后直接登录
     const data = new URLSearchParams()
     data.append('username', form.username)
@@ -147,47 +161,37 @@ const onSubmit = async () => {
     loading.value = false
   }
 }
+
+// 文件选择相关
+const onChooseFile = () => {
+  if (fileInput.value) fileInput.value.click()
+}
+
+const onFileChange = (e) => {
+  const f = e.target.files && e.target.files[0]
+  if (f) {
+    selectedFile.value = f
+    // 仅显示文件名（浏览器不允许获取本地完整路径）
+    form.role = f.name
+  }
+}
+
+const clearSelectedFile = () => {
+  selectedFile.value = null
+  form.role = ''
+  if (fileInput.value) fileInput.value.value = ''
+}
 </script>
 
 <style scoped>
-.register-page { 
-  height: 100vh; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  /* background: linear-gradient(180deg, #f6f8fc 0%, #eef2f8 100%); */
-  position: relative;
-  overflow: hidden;
-}
-.particles-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-#particles-js {
-  width: 100%;
-  height: 100%;
-}
-
-.register-card { width: 460px; padding: 8px 10px; 
-  position: relative;
-  z-index: 2;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.brand-text .title { font-size: 18px; font-weight: 700; color: #2b3a4b; }
-.brand-text .subtitle { color: #8a97a8; font-size: 12px; }
-.register-form { margin-top: 8px; }
-.row { display: flex; align-items: center; }
+.row { display: flex; align-items: center;
+  }
 .row.between { justify-content: space-between; }
 .submit-btn { width: 100%; }
 .clickable { cursor: pointer; }
-.strength { color: #606a78; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.tips { margin-top: 6px; }
+.submit-btn { 
+  width: 100%;
+  margin: 15px 0 0 0;
+  }
 </style> 
