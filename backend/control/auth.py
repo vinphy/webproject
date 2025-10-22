@@ -2,73 +2,31 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body, Request, Up
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-from jose import jwt, JWTError
-from passlib.context import CryptContext
-import hashlib
-import re
 from typing import Optional
 
-from util.db import Base, engine, get_db
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship
+from util.db import get_db
+from models import auth_model
+from service import auth_service
 
-# Models
-class Role(Base):
-    __tablename__ = "roles"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), unique=True, index=True, nullable=False)
-    description = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+# Local aliases to simplify references in this controller
+Role = auth_model.Role
+Permission = auth_model.Permission
+RolePermission = auth_model.RolePermission
+User = auth_model.User
 
-class Permission(Base):
-    __tablename__ = "permissions"
-    id = Column(Integer, primary_key=True, index=True)
-    code = Column(String(100), unique=True, index=True, nullable=False)
-    name = Column(String(100), nullable=False)
-    description = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
-class RolePermission(Base):
-    __tablename__ = "role_permissions"
-    id = Column(Integer, primary_key=True, index=True)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
-    permission_id = Column(Integer, ForeignKey("permissions.id"), nullable=False)
-    __table_args__ = (UniqueConstraint('role_id', 'permission_id', name='uq_role_permission'),)
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    email = Column(String(120), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    is_active = Column(Boolean, default=True)
-    role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
-    role = relationship("Role")
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-# Create tables via init
-from util.db import init_db
-init_db(Base)
-
-# Security
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-SECRET_KEY = "CHANGE_ME_TO_ENV_SECRET"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 12
-
-# Schemas
+# Schemas (kept here for API contracts)
 class UserCreate(BaseModel):
     username: str
     email: str
     password: str
     role: Optional[str] = None
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class UserOut(BaseModel):
     id: int
@@ -79,9 +37,11 @@ class UserOut(BaseModel):
     class Config:
         orm_mode = True
 
+
 class RoleCreate(BaseModel):
     name: str
     description: Optional[str] = None
+
 
 class UserCreateAdmin(BaseModel):
     username: str
@@ -89,102 +49,37 @@ class UserCreateAdmin(BaseModel):
     password: str
     role: Optional[str] = None
 
+
+class RoleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
 class PermissionCreate(BaseModel):
     code: str
     name: str
     description: Optional[str] = None
 
-class RoleAssignPermissions(BaseModel):
-    permissions: list[int] = []
-
-class RoleUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
 
 class PermissionUpdate(BaseModel):
     code: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
 
+
+class RoleAssignPermissions(BaseModel):
+    permissions: list[int] = []
+
+
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     role: Optional[str] = None
 
-# Helpers
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # 兼容：当历史数据未加密（无bcrypt前缀）时，按明文比较
-    try:
-        if not hashed_password:
-            return False
-        # bcrypt hashes start with $2a/$2b/$2y
-        if hashed_password.startswith("$2"):
-            return pwd_context.verify(plain_password, hashed_password)
-        # legacy: hex-encoded sha256 (长度 64) -> compare digest
-        if re.fullmatch(r"[0-9a-fA-F]{64}", hashed_password):
-            return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
-        # try passlib generic verify for other schemes
-        try:
-            return pwd_context.verify(plain_password, hashed_password)
-        except Exception:
-            # as a last resort, plain comparison (legacy plaintext storage)
-            return str(plain_password) == str(hashed_password)
-    except Exception:
-        return False
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-# CRUD helpers
-
-def get_user_by_username(db: Session, username: str) -> Optional[User]:
-    return db.query(User).filter(User.username == username).first()
-
-def get_user_by_email(db: Session, email: str) -> Optional[User]:
-    return db.query(User).filter(User.email == email).first()
-
-def get_user_by_username_or_email(db: Session, identifier: str) -> Optional[User]:
-    return db.query(User).filter((User.username == identifier) | (User.email == identifier)).first()
-
-def get_role_by_name(db: Session, name: str) -> Optional[Role]:
-    return db.query(Role).filter(Role.name == name).first()
-
-def ensure_default_admin(db: Session):
-    """Ensure there is a default admin role and user. Idempotent.
-
-    Creates an 'admin' role and an 'admin' user with password '123456' when missing.
-    If the admin user exists, reset its password to the default hash and ensure role is assigned.
-    """
-    admin_role = get_role_by_name(db, "admin")
-    if admin_role is None:
-        admin_role = Role(name="admin", description="Administrator")
-        db.add(admin_role)
-        db.flush()
-    user = get_user_by_username(db, "admin")
-    if user is None:
-        user = User(
-            username="admin",
-            email="admin@example.com",
-            hashed_password=get_password_hash("123456"),
-            role=admin_role,
-        )
-        db.add(user)
-    else:
-        # 不要重置已存在管理员的密码以避免意外覆盖
-        if not user.role_id:
-            user.role = admin_role
-    db.commit()
-
-
-# Router
 router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
 
 @router.post("/register", response_model=UserOut)
 async def register(
@@ -196,200 +91,147 @@ async def register(
     role: str | None = Form(None),
     role_file: UploadFile | None = File(None),
 ):
-    """
-    Support both JSON body and multipart/form-data (with optional file upload named 'role_file').
-    If request is multipart and a file is provided, attempt to extract role text from the file (first line) or use filename.
-    """
-    # detect content type
+    """Thin controller: parse request (JSON or multipart), extract role/file, then delegate to auth_service.register_user"""
     ctype = request.headers.get("content-type", "")
     if ctype.startswith("multipart/form-data"):
-        # values are provided via Form params
         if not username or not email or not password:
             raise HTTPException(status_code=400, detail="缺少注册字段: username/email/password")
-        # if a file provided, try to read and decode safely
-        if role_file:
+        # handle optional uploaded file
+        if role_file and not role:
             try:
                 content = await role_file.read()
-                # try utf-8 then latin1 as fallback
                 try:
                     text = content.decode("utf-8")
                 except Exception:
                     text = content.decode("latin1", errors="ignore")
                 extracted = text.strip().splitlines()[0] if text.strip() else None
                 if extracted:
-                    # prefer extracted content if role not provided
-                    if not role:
-                        role = extracted[:200]
+                    role = extracted[:200]
                 else:
-                    # fallback to filename
-                    if not role and role_file.filename:
-                        role = role_file.filename
-            except Exception as e:
-                print(f"[REGISTER] failed to read role_file: {e}")
+                    role = role_file.filename
+            except Exception:
+                # ignore file errors at controller level; service will validate
+                role = role or None
     else:
-        # assume JSON
         body = await request.json()
-        try:
-            u = UserCreate(**body)
-        except Exception as e:
-            # propagate as validation error
-            raise
+        u = UserCreate(**body)
         username = u.username
         email = u.email
         password = u.password
         role = u.role
 
-    # now proceed with registration logic
-    if get_user_by_username(db, username) or get_user_by_email(db, email):
-        raise HTTPException(status_code=400, detail="用户名或邮箱已存在")
-    role_obj = None
-    if role:
-        role_obj = get_role_by_name(db, role)
-        if role_obj is None:
-            role_obj = Role(name=role)
-            db.add(role_obj)
-            db.flush()
-    new_user = User(
-        username=username,
-        email=email,
-        hashed_password=get_password_hash(password),
-        role=role_obj,
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return UserOut(id=new_user.id, username=new_user.username, email=new_user.email, role=new_user.role.name if new_user.role else None)
+    try:
+        user = auth_service.register_user(db, username=username, email=email, password=password, role=role)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return UserOut(id=user.id, username=user.username, email=user.email, role=user.role.name if user.role else None)
+
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    print("[LOGIN] username:", form_data.username)
-    print("[LOGIN] password:", form_data.password)
-    user = get_user_by_username_or_email(db, form_data.username)
-    print("[LOGIN] user_found:", bool(user))
-    if user:
-        print("[LOGIN] stored_hash_prefix:", (user.hashed_password or '')[:10])
-    ok = bool(user) and verify_password(form_data.password, user.hashed_password)
-    print("[LOGIN] verify_ok:", ok)
-    if not ok:
-        # 自愈：若为 admin 且提供的密码应为当前密码，则修复其哈希
-        if user and user.username == "admin":
-            try:
-                user.hashed_password = get_password_hash(form_data.password)
-                db.commit()
-                print("[LOGIN] admin hash reset applied")
-                ok = verify_password(form_data.password, user.hashed_password)
-                print("[LOGIN] verify_after_reset:", ok)
-            except Exception as e:
-                print("[LOGIN] admin hash reset failed:", e)
-        if not ok:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
-    access_token = create_access_token({"sub": str(user.id), "username": user.username, "role": user.role.name if user.role else None})
-    return {"access_token": access_token, "token_type": "bearer"}
+    user_info, token = auth_service.login_user(db, form_data.username, form_data.password)
+    if not user_info:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
+    return {"access_token": token, "token_type": "bearer"}
 
-# Dependency to get current user
 
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
+def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    from jose import jwt, JWTError
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="凭证无效",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = db.query(User).get(int(user_id))
+    user = auth_model.get_user_by_id(db, int(user_id))
     if user is None:
         raise credentials_exception
     return user
 
+
 @router.get("/me", response_model=UserOut)
-def read_users_me(current_user: User = Depends(get_current_user)):
+def read_users_me(current_user: auth_model.User = Depends(get_current_user)):
     return UserOut(id=current_user.id, username=current_user.username, email=current_user.email, role=current_user.role.name if current_user.role else None)
 
-# Role-based guard example
-@router.get("/admin-only")
-def admin_only(current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
-        raise HTTPException(status_code=403, detail="需要管理员权限")
-    return {"message": "admin ok"}
 
 @router.get("/users")
-def list_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_users(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    rows = db.query(User).all()
+    rows = auth_model.list_users(db)
     return [
         {"id": u.id, "username": u.username, "email": u.email, "role": u.role.name if u.role else None}
         for u in rows
     ]
 
+
 @router.post("/users")
-def create_user_admin(payload: UserCreateAdmin, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_user_admin(payload: UserCreateAdmin, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    if get_user_by_username(db, payload.username) or get_user_by_email(db, payload.email):
+    if auth_model.get_user_by_username(db, payload.username) or auth_model.get_user_by_email(db, payload.email):
         raise HTTPException(status_code=400, detail="用户名或邮箱已存在")
-    role = get_role_by_name(db, payload.role) if payload.role else None
-    new_user = User(
-        username=payload.username,
-        email=payload.email,
-        hashed_password=get_password_hash(payload.password),
-        role=role,
-    )
-    db.add(new_user)
+    role = auth_model.get_role_by_name(db, payload.role) if payload.role else None
+    new_user = auth_model.create_user(db, username=payload.username, email=payload.email, hashed_password=auth_service.get_password_hash(payload.password), role_obj=role)
     db.commit()
     db.refresh(new_user)
     return {"id": new_user.id}
 
+
 @router.put("/users/{user_id}/role")
-def update_user_role(user_id: int, body: dict = Body(...), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_user_role(user_id: int, body: dict = Body(...), db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    user = db.query(User).get(user_id)
+    user = auth_model.get_user_by_id(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     role_name = body.get("role")
-    role = get_role_by_name(db, role_name) if role_name else None
+    role = auth_model.get_role_by_name(db, role_name) if role_name else None
     user.role = role
     db.commit()
     return {"ok": True}
 
+
 @router.get("/roles")
-def list_roles(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def list_roles(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    rows = db.query(Role).all()
+    rows = auth_model.list_roles(db)
     return [
         {"id": r.id, "name": r.name, "description": r.description}
         for r in rows
     ]
 
+
 @router.post("/roles")
-def create_role(role: RoleCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_role(role: RoleCreate, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    exists = get_role_by_name(db, role.name)
+    exists = auth_model.get_role_by_name(db, role.name)
     if exists:
         raise HTTPException(status_code=400, detail="角色已存在")
-    new_role = Role(name=role.name, description=role.description)
-    db.add(new_role)
+    new_role = auth_model.create_role(db, role.name, role.description)
     db.commit()
     db.refresh(new_role)
     return {"id": new_role.id}
 
+
 @router.put("/roles/{role_id}")
-def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
         raise HTTPException(status_code=403, detail="需要管理员权限")
-    role = db.query(Role).get(role_id)
+    role = db.query(auth_model.Role).get(role_id)
     if not role:
         raise HTTPException(status_code=404, detail="角色不存在")
     if payload.name:
-        conflict = db.query(Role).filter(Role.name == payload.name, Role.id != role_id).first()
+        conflict = db.query(auth_model.Role).filter(auth_model.Role.name == payload.name, auth_model.Role.id != role_id).first()
         if conflict:
             raise HTTPException(status_code=400, detail="角色名已存在")
         role.name = payload.name
@@ -489,14 +331,14 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     if payload.email:
-        conflict = get_user_by_email(db, payload.email)
+        conflict = auth_model.get_user_by_email(db, payload.email)
         if conflict and conflict.id != user_id:
             raise HTTPException(status_code=400, detail="邮箱已被使用")
         user.email = payload.email
     if payload.password:
-        user.hashed_password = get_password_hash(payload.password)
+        user.hashed_password = auth_service.get_password_hash(payload.password)
     if payload.role is not None:
-        role = get_role_by_name(db, payload.role) if payload.role else None
+        role = auth_model.get_role_by_name(db, payload.role) if payload.role else None
         user.role = role
     db.commit()
     return {"ok": True}
