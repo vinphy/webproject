@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request, UploadFile, File, Form
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from passlib.context import CryptContext
+import hashlib
+import re
 from typing import Optional
 
 from util.db import Base, engine, get_db
@@ -114,9 +116,20 @@ class UserUpdate(BaseModel):
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     # 兼容：当历史数据未加密（无bcrypt前缀）时，按明文比较
     try:
-        if not hashed_password or not hashed_password.startswith("$2"):
+        if not hashed_password:
+            return False
+        # bcrypt hashes start with $2a/$2b/$2y
+        if hashed_password.startswith("$2"):
+            return pwd_context.verify(plain_password, hashed_password)
+        # legacy: hex-encoded sha256 (长度 64) -> compare digest
+        if re.fullmatch(r"[0-9a-fA-F]{64}", hashed_password):
+            return hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password
+        # try passlib generic verify for other schemes
+        try:
+            return pwd_context.verify(plain_password, hashed_password)
+        except Exception:
+            # as a last resort, plain comparison (legacy plaintext storage)
             return str(plain_password) == str(hashed_password)
-        return pwd_context.verify(plain_password, hashed_password)
     except Exception:
         return False
 
@@ -137,10 +150,18 @@ def get_user_by_username(db: Session, username: str) -> Optional[User]:
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
+def get_user_by_username_or_email(db: Session, identifier: str) -> Optional[User]:
+    return db.query(User).filter((User.username == identifier) | (User.email == identifier)).first()
+
 def get_role_by_name(db: Session, name: str) -> Optional[Role]:
     return db.query(Role).filter(Role.name == name).first()
 
 def ensure_default_admin(db: Session):
+    """Ensure there is a default admin role and user. Idempotent.
+
+    Creates an 'admin' role and an 'admin' user with password '123456' when missing.
+    If the admin user exists, reset its password to the default hash and ensure role is assigned.
+    """
     admin_role = get_role_by_name(db, "admin")
     if admin_role is None:
         admin_role = Role(name="admin", description="Administrator")
@@ -156,10 +177,9 @@ def ensure_default_admin(db: Session):
         )
         db.add(user)
     else:
-        # 同步管理员密码与角色为 admin
-        user.hashed_password = get_password_hash("123456")
+        # 不要重置已存在管理员的密码以避免意外覆盖
         if not user.role_id:
-            user.role_id = admin_role.id
+            user.role = admin_role
     db.commit()
 
 
@@ -167,21 +187,73 @@ def ensure_default_admin(db: Session):
 router = APIRouter()
 
 @router.post("/register", response_model=UserOut)
-def register(user: UserCreate, db: Session = Depends(get_db)):
-    if get_user_by_username(db, user.username) or get_user_by_email(db, user.email):
+async def register(
+    request: Request,
+    db: Session = Depends(get_db),
+    username: str | None = Form(None),
+    email: str | None = Form(None),
+    password: str | None = Form(None),
+    role: str | None = Form(None),
+    role_file: UploadFile | None = File(None),
+):
+    """
+    Support both JSON body and multipart/form-data (with optional file upload named 'role_file').
+    If request is multipart and a file is provided, attempt to extract role text from the file (first line) or use filename.
+    """
+    # detect content type
+    ctype = request.headers.get("content-type", "")
+    if ctype.startswith("multipart/form-data"):
+        # values are provided via Form params
+        if not username or not email or not password:
+            raise HTTPException(status_code=400, detail="缺少注册字段: username/email/password")
+        # if a file provided, try to read and decode safely
+        if role_file:
+            try:
+                content = await role_file.read()
+                # try utf-8 then latin1 as fallback
+                try:
+                    text = content.decode("utf-8")
+                except Exception:
+                    text = content.decode("latin1", errors="ignore")
+                extracted = text.strip().splitlines()[0] if text.strip() else None
+                if extracted:
+                    # prefer extracted content if role not provided
+                    if not role:
+                        role = extracted[:200]
+                else:
+                    # fallback to filename
+                    if not role and role_file.filename:
+                        role = role_file.filename
+            except Exception as e:
+                print(f"[REGISTER] failed to read role_file: {e}")
+    else:
+        # assume JSON
+        body = await request.json()
+        try:
+            u = UserCreate(**body)
+        except Exception as e:
+            # propagate as validation error
+            raise
+        username = u.username
+        email = u.email
+        password = u.password
+        role = u.role
+
+    # now proceed with registration logic
+    if get_user_by_username(db, username) or get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="用户名或邮箱已存在")
-    role = None
-    if user.role:
-        role = get_role_by_name(db, user.role)
-        if role is None:
-            role = Role(name=user.role)
-            db.add(role)
+    role_obj = None
+    if role:
+        role_obj = get_role_by_name(db, role)
+        if role_obj is None:
+            role_obj = Role(name=role)
+            db.add(role_obj)
             db.flush()
     new_user = User(
-        username=user.username,
-        email=user.email,
-        hashed_password=get_password_hash(user.password),
-        role=role,
+        username=username,
+        email=email,
+        hashed_password=get_password_hash(password),
+        role=role_obj,
     )
     db.add(new_user)
     db.commit()
@@ -192,7 +264,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     print("[LOGIN] username:", form_data.username)
     print("[LOGIN] password:", form_data.password)
-    user = get_user_by_username(db, form_data.username)
+    user = get_user_by_username_or_email(db, form_data.username)
     print("[LOGIN] user_found:", bool(user))
     if user:
         print("[LOGIN] stored_hash_prefix:", (user.hashed_password or '')[:10])
