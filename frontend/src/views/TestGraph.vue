@@ -19,7 +19,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
 const props = defineProps({
   nodes: { type: Array, default: () => [] },
   connections: { type: Array, default: () => [] }

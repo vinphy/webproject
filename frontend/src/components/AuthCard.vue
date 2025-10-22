@@ -21,7 +21,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
 import logo from '../assets/logo.svg'
 
 const props = defineProps({
