@@ -5,7 +5,8 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from util.db import get_db
-from service import log_service
+from service import log_service, auth_service
+from control.auth import get_current_user
 
 router = APIRouter()
 
@@ -38,7 +39,11 @@ def list_logs(
     startDate: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
     endDate: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
 ):
+    # 权限检查：需要 logs:view 权限或 admin
+    if not auth_service.user_has_permission(db, current_user, 'logs:view') and not (current_user.role and current_user.role.name == 'admin'):
+        raise HTTPException(status_code=403, detail='需要 logs:view 权限')
     try:
         res = log_service.list_logs(db, page=page, size=size, type=type or None, keyword=keyword or None, startDate=startDate, endDate=endDate)
         return res
@@ -49,7 +54,10 @@ def list_logs(
 
 
 @router.get("/{log_id}", response_model=LogOut)
-def get_log(log_id: int, db: Session = Depends(get_db)):
+def get_log(log_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    # require logs:view
+    if not auth_service.user_has_permission(db, current_user, 'logs:view') and not (current_user.role and current_user.role.name == 'admin'):
+        raise HTTPException(status_code=403, detail='需要 logs:view 权限')
     item = log_service.get_log(db, log_id)
     if not item:
         raise HTTPException(status_code=404, detail="日志不存在")
@@ -57,7 +65,10 @@ def get_log(log_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/seed")
-def seed_logs(db: Session = Depends(get_db)):
+def seed_logs(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    # Only admin or auth:manage can seed demo logs
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
+        raise HTTPException(status_code=403, detail='需要 auth:manage 权限')
     # Use service to create demo logs
     samples = [
         { 'type': '操作日志', 'source': '项目管理', 'user': 'admin', 'message': '创建项目：智能测试平台', 'level': 'INFO' },

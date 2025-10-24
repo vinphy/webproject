@@ -74,9 +74,13 @@
           
           
           
-          <el-menu-item index="8" v-if="isAdmin" @click="handleMenuClick('users')">
+          <el-menu-item index="8" v-if="can('users')" @click="handleMenuClick('users')">
             <el-icon><User /></el-icon>
             <span>用户管理</span>
+          </el-menu-item>
+          <el-menu-item index="9" v-if="can('permission')" @click="handleMenuClick('permission')">
+            <el-icon><Setting /></el-icon>
+            <span>权限管理</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -102,9 +106,9 @@
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item v-if="user" @click="router.push('/permission')">权限管理</el-dropdown-item>
-                  <el-dropdown-item v-if="user" @click="router.push('/dashboard')">个人信息</el-dropdown-item>
-                  <el-dropdown-item v-if="user" @click="router.push('/dashboard')">修改密码</el-dropdown-item>
+                  <el-dropdown-item v-if="user && can('permission')" @click="router.push('/permission')">权限管理</el-dropdown-item>
+                  <el-dropdown-item v-if="user" @click="router.push('/home')">个人信息</el-dropdown-item>
+                  <el-dropdown-item v-if="user" @click="router.push('/home')">修改密码</el-dropdown-item>
                   <el-dropdown-item divided v-if="user" @click="onLogout">退出登录</el-dropdown-item>
                   <el-dropdown-item v-else @click="router.push('/login')">登录</el-dropdown-item>
                   <el-dropdown-item v-else @click="router.push('/register')">注册</el-dropdown-item>
@@ -123,10 +127,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Monitor, User, Goods, List, Setting, Fold, Expand, DataAnalysis, Folder, Plus } from '@element-plus/icons-vue'
 import { getCurrentUser, clearToken, clearCurrentUser, userRef, api } from './utils/auth'
+import { hasPermission, initPermissions } from './utils/permission'
 
 const router = useRouter()
 const isCollapse = ref(false)
@@ -136,11 +141,31 @@ const user = computed(() => userRef.value)
 const isAdmin = computed(() => (user.value?.role || '') === 'admin')
 
 const can = (key) => {
-  // 简单基于角色的控制：admin全部可见，普通用户隐藏权限管理
+  // 权限优先：admin 全部可见；否则按 permission code 判断，回退到白名单
   if (isAdmin.value) return true
+  const map = {
+    permission: 'auth:manage',
+    users: 'user:manage',
+    projects: 'project:view',
+    modules: 'module:view',
+    logs: 'logs:view',
+    test: 'test:run',
+    er: 'er:view'
+  }
+  const perm = map[key]
+  if (perm) {
+    try { if (hasPermission(perm)) return true } catch (e) {}
+  }
   const allow = ['dashboard', 'modules', 'logs', 'test', 'bit', 'er', 'projects']
   return allow.includes(key)
 }
+
+onMounted(async () => {
+  try {
+    const u = getCurrentUser()
+    if (u) await initPermissions()
+  } catch (e) {}
+})
 
 const handleMenuClick = (route) => {
   router.push(`/${route}`)

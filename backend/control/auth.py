@@ -197,7 +197,8 @@ def logout(db: Session = Depends(get_db), current_user: auth_model.User = Depend
 
 @router.get("/users")
 def list_users(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    # require auth:manage permission or admin role
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     rows = auth_model.list_users(db)
     return [
@@ -208,7 +209,7 @@ def list_users(db: Session = Depends(get_db), current_user: auth_model.User = De
 
 @router.post("/users")
 def create_user_admin(payload: UserCreateAdmin, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     if auth_model.get_user_by_username(db, payload.username) or auth_model.get_user_by_email(db, payload.email):
         raise HTTPException(status_code=400, detail="用户名或邮箱已存在")
@@ -221,7 +222,7 @@ def create_user_admin(payload: UserCreateAdmin, db: Session = Depends(get_db), c
 # 为用户指派角色
 @router.put("/users/{user_id}/role")
 def update_user_role(user_id: int, body: dict = Body(...), db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     user = auth_model.get_user_by_id(db, user_id)
     if not user:
@@ -235,7 +236,7 @@ def update_user_role(user_id: int, body: dict = Body(...), db: Session = Depends
 # 角色列表
 @router.get("/roles")
 def list_roles(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     rows = auth_model.list_roles(db)
     return [
@@ -246,7 +247,7 @@ def list_roles(db: Session = Depends(get_db), current_user: auth_model.User = De
 # 创建角色
 @router.post("/roles")
 def create_role(role: RoleCreate, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     exists = auth_model.get_role_by_name(db, role.name)
     if exists:
@@ -259,7 +260,7 @@ def create_role(role: RoleCreate, db: Session = Depends(get_db), current_user: a
 
 @router.put("/roles/{role_id}")
 def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     role = db.query(auth_model.Role).get(role_id)
     if not role:
@@ -276,7 +277,7 @@ def update_role(role_id: int, payload: RoleUpdate, db: Session = Depends(get_db)
 
 @router.delete("/roles/{role_id}")
 def delete_role(role_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     role = db.query(Role).get(role_id)
     if not role:
@@ -291,7 +292,7 @@ def delete_role(role_id: int, db: Session = Depends(get_db), current_user: User 
 # 权限列表
 @router.get("/permissions")
 def list_permissions(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     rows = db.query(Permission).all()
     return [{"id": p.id, "code": p.code, "name": p.name, "description": p.description} for p in rows]
@@ -299,7 +300,7 @@ def list_permissions(db: Session = Depends(get_db), current_user: User = Depends
 # 创建权限
 @router.post("/permissions")
 def create_permission(payload: PermissionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     exists = db.query(Permission).filter(Permission.code == payload.code).first()
     if exists:
@@ -312,7 +313,7 @@ def create_permission(payload: PermissionCreate, db: Session = Depends(get_db), 
 
 @router.put("/permissions/{perm_id}")
 def update_permission(perm_id: int, payload: PermissionUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     p = db.query(Permission).get(perm_id)
     if not p:
@@ -331,7 +332,7 @@ def update_permission(perm_id: int, payload: PermissionUpdate, db: Session = Dep
 
 @router.delete("/permissions/{perm_id}")
 def delete_permission(perm_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     p = db.query(Permission).get(perm_id)
     if not p:
@@ -343,7 +344,7 @@ def delete_permission(perm_id: int, db: Session = Depends(get_db), current_user:
 # 读取角色权限
 @router.get("/roles/{role_id}/permissions")
 def role_permissions(role_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     joins = db.query(RolePermission, Permission).join(Permission, RolePermission.permission_id == Permission.id).filter(RolePermission.role_id == role_id).all()
     return [{"id": p.id, "code": p.code, "name": p.name} for _, p in joins]
@@ -351,7 +352,7 @@ def role_permissions(role_id: int, db: Session = Depends(get_db), current_user: 
 # 分配角色权限
 @router.post("/roles/{role_id}/permissions")
 def assign_permissions(role_id: int, payload: RoleAssignPermissions, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     # delete old
     db.query(RolePermission).filter(RolePermission.role_id == role_id).delete()
@@ -363,7 +364,7 @@ def assign_permissions(role_id: int, payload: RoleAssignPermissions, db: Session
 
 @router.put("/users/{user_id}")
 def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     user = db.query(User).get(user_id)
     if not user:
@@ -383,7 +384,7 @@ def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db)
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if not current_user.role or current_user.role.name != "admin":
+    if not auth_service.user_has_permission(db, current_user, 'auth:manage') and not (current_user.role and current_user.role.name == 'admin'):
         raise HTTPException(status_code=403, detail="需要管理员权限")
     user = db.query(User).get(user_id)
     if not user:

@@ -54,13 +54,13 @@ const routes = [
     path: '/users',
     name: 'UserManagement',
     component: () => import('../views/UserManagement.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
+    meta: { requiresAuth: true, permissions: ['auth:manage'] }
   },
   {
     path: '/permission',
     name: 'Permission',
     component: () => import('../views/Permission.vue'),
-    meta: { requiresAuth: true, roles: ['admin'] }
+    meta: { requiresAuth: true, permissions: ['auth:manage'] }
   },
   {
     path: '/projects',
@@ -95,21 +95,43 @@ const routes = [
 ]
 
 import { getCurrentUser } from '../utils/auth'
+import { initPermissions, hasPermission, permissionsRef } from '../utils/permission'
+
 
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const user = getCurrentUser()
   if (to.meta && to.meta.requiresAuth && !user) {
     return next({ path: '/login', query: { redirect: to.fullPath } })
   }
+
+  // If route defines permissions, check them. We allow admin role as fallback.
+  if (to.meta && to.meta.permissions && to.meta.permissions.length > 0) {
+    // ensure permissions loaded
+    try {
+      if (user && permissionsRef && Array.isArray(permissionsRef.value) && permissionsRef.value.length === 0) {
+        await initPermissions()
+      }
+    } catch (e) {
+      // ignore
+    }
+    const isAdmin = user && user.role === 'admin'
+    if (!isAdmin) {
+      // require at least one of the permissions
+      const ok = to.meta.permissions.some(p => hasPermission(p))
+      if (!ok) return next('/home')
+    }
+  }
+
+  // legacy role-based guard (kept for backward compatibility)
   if (to.meta && to.meta.roles && user && to.meta.roles.length > 0) {
     const role = user.role || 'user'
     if (!to.meta.roles.includes(role)) {
-      return next('/dashboard')
+      return next('/home')
     }
   }
   next()
