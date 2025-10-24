@@ -83,12 +83,12 @@
 
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import { userRef } from '../utils/auth'
+import { userRef, api } from '../utils/auth'
 import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
 import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
 import { useRouter } from 'vue-router'
 
-const user = computed(() => userRef.value)
+const user = ref(null)
 const router = useRouter()
 
 // 导航到项目管理页面
@@ -147,6 +147,21 @@ onMounted(() => {
 
   const onResize = () => { lineChart.resize(); barChart.resize() }
   window.addEventListener('resize', onResize)
+
+  // fetch profile from backend
+  ;(async () => {
+    try {
+      const { data } = await api.get('/api/home/profile')
+      if (data) {
+        user.value = { username: data.name, email: data.email, role: data.role }
+        createdCount.value = data.createdProjectsCount || 0
+        // projects can be used inside HomeProjectItem via props or store; keep simple for now
+      }
+    } catch (e) {
+      // fallback to existing userRef
+      user.value = userRef.value
+    }
+  })()
 })
 </script>
 
