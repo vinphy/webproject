@@ -7,6 +7,7 @@ from util.db import get_db
 from control.auth import get_current_user
 from service import project_service
 from models import auth_model
+from service import log_service
 
 router = APIRouter()
 
@@ -29,6 +30,11 @@ class ProjectCreatePayload(BaseModel):
 def create_project(payload: ProjectCreatePayload, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     try:
         p = project_service.create_project(db, current_user.id, payload.dict())
+        # record operation log
+        try:
+            log_service.create_log(db, type='操作日志', source='项目管理', user=current_user.username if current_user else None, message=f"创建项目：{p.name}", level='INFO')
+        except Exception:
+            pass
         return { 'id': p.id, 'name': p.name }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

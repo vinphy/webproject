@@ -3,25 +3,12 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, Integer, String, DateTime, Text, desc, and_
 
-from util.db import Base, get_db, init_db
+from util.db import get_db
+from service import log_service
 
 router = APIRouter()
 
-# SQLAlchemy Model
-class Log(Base):
-    __tablename__ = "logs"
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    type = Column(String(20), index=True, nullable=False)  # 操作日志/运行日志/异常日志/正常日志
-    source = Column(String(100), nullable=True)
-    user = Column(String(100), nullable=True)
-    message = Column(Text, nullable=True)
-    level = Column(String(20), nullable=True)  # 可选：INFO/WARN/ERROR
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-
-# Ensure table exists
-init_db(Base)
 
 # Pydantic Schemas
 class LogOut(BaseModel):
@@ -35,6 +22,7 @@ class LogOut(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class LogListOut(BaseModel):
     items: List[LogOut]
@@ -52,38 +40,8 @@ def list_logs(
     db: Session = Depends(get_db),
 ):
     try:
-        q = db.query(Log)
-        if type:
-            q = q.filter(Log.type == type)
-        if keyword:
-            like = f"%{keyword}%"
-            q = q.filter(
-                (Log.message.ilike(like)) | (Log.source.ilike(like)) | (Log.user.ilike(like))
-            )
-        if startDate:
-            try:
-                start_dt = datetime.strptime(startDate + " 00:00:00", "%Y-%m-%d %H:%M:%S")
-                q = q.filter(Log.created_at >= start_dt)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="startDate 格式应为 YYYY-MM-DD")
-        if endDate:
-            try:
-                end_dt = datetime.strptime(endDate + " 23:59:59", "%Y-%m-%d %H:%M:%S")
-                q = q.filter(Log.created_at <= end_dt)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="endDate 格式应为 YYYY-MM-DD")
-
-        total = q.count()
-        items = (
-            q.order_by(desc(Log.created_at))
-            .offset((page - 1) * size)
-            .limit(size)
-            .all()
-        )
-        print('--------打印日志结果-----')
-
-        print(items)
-        return {"items": items, "total": total}
+        res = log_service.list_logs(db, page=page, size=size, type=type or None, keyword=keyword or None, startDate=startDate, endDate=endDate)
+        return res
     except HTTPException:
         raise
     except Exception as e:
@@ -92,24 +50,22 @@ def list_logs(
 
 @router.get("/{log_id}", response_model=LogOut)
 def get_log(log_id: int, db: Session = Depends(get_db)):
-    item = db.query(Log).filter(Log.id == log_id).first()
+    item = log_service.get_log(db, log_id)
     if not item:
         raise HTTPException(status_code=404, detail="日志不存在")
     return item
 
 
-# 可选：初始化一些示例数据
 @router.post("/seed")
 def seed_logs(db: Session = Depends(get_db)):
-    now = datetime.utcnow()
-    demo = [
-        Log(type="操作日志", source="项目管理", user="admin", message="创建项目：智能测试平台", level="INFO", created_at=now),
-        Log(type="运行日志", source="任务调度", user="system", message="开始执行漏洞扫描任务#42", level="INFO", created_at=now),
-        Log(type="异常日志", source="接口服务", user="system", message="请求超时：/api/run/start 504", level="ERROR", created_at=now),
-        Log(type="正常日志", source="监控服务", user="system", message="CPU使用率 35%，内存 62%", level="INFO", created_at=now),
-        Log(type="操作日志", source="用例管理", user="tester", message="更新测试用例：登录功能-正向", level="INFO", created_at=now),
+    # Use service to create demo logs
+    samples = [
+        { 'type': '操作日志', 'source': '项目管理', 'user': 'admin', 'message': '创建项目：智能测试平台', 'level': 'INFO' },
+        { 'type': '运行日志', 'source': '任务调度', 'user': 'system', 'message': '开始执行漏洞扫描任务#42', 'level': 'INFO' },
+        { 'type': '异常日志', 'source': '接口服务', 'user': 'system', 'message': '请求超时：/api/run/start 504', 'level': 'ERROR' },
+        { 'type': '正常日志', 'source': '监控服务', 'user': 'system', 'message': 'CPU使用率 35%，内存 62%', 'level': 'INFO' },
+        { 'type': '操作日志', 'source': '用例管理', 'user': 'tester', 'message': '更新测试用例：登录功能-正向', 'level': 'INFO' }
     ]
-    for d in demo:
-        db.add(d)
-    db.commit()
-    return {"status": "success", "inserted": len(demo)} 
+    for s in samples:
+        log_service.create_log(db, type=s['type'], source=s.get('source'), user=s.get('user'), message=s.get('message'), level=s.get('level'))
+    return { 'status': 'success', 'inserted': len(samples) }

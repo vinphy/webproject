@@ -38,12 +38,12 @@ const routes = [
     component: () => import('../views/QueryBuilderDemo.vue'),
     meta: { requiresAuth: true }
   },
-  {
-    path: '/bitTest',
-    name: 'BitTest',
-    component: () => import('../views/BitTest.vue'),
-    meta: { requiresAuth: true }
-  },
+  // {
+  //   path: '/bitTest',
+  //   name: 'BitTest',
+  //   component: () => import('../views/BitTest.vue'),
+  //   meta: { requiresAuth: true }
+  // },
   {
     path: '/sqlErDiagram',
     name: 'SqlErDiagram',

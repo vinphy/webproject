@@ -7,6 +7,7 @@ from typing import Optional
 from util.db import get_db
 from models import auth_model
 from service import auth_service
+from service import log_service
 
 # Local aliases to simplify references in this controller
 Role = auth_model.Role
@@ -132,7 +133,15 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user_info, token = auth_service.login_user(db, form_data.username, form_data.password)
     if not user_info:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
+    # record login log
+    try:
+        log_service.create_log(db, type='操作日志', source='认证', user=user_info.get('username'), message=f"用户登录：{user_info.get('username')}", level='INFO')
+    except Exception:
+        pass
     return {"access_token": token, "token_type": "bearer"}
+
+
+# logout route implemented after get_current_user definition to avoid forward reference issues
 
 
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
@@ -159,6 +168,19 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: auth_model.User = Depends(get_current_user)):
     return UserOut(id=current_user.id, username=current_user.username, email=current_user.email, role=current_user.role.name if current_user.role else None)
+
+
+# Now define logout properly (after get_current_user is defined)
+@router.post('/logout')
+def logout(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+    # record logout
+    try:
+        print("退出*****")
+        uname = current_user.username if current_user else 'unknown'
+        log_service.create_log(db, type='操作日志', source='认证', user=uname, message=f"用户退出：{uname}", level='INFO')
+    except Exception:
+        pass
+    return { 'ok': True }
 
 
 @router.get("/users")

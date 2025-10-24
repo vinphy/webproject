@@ -63,10 +63,10 @@
             <el-icon><Goods /></el-icon>
             <span>测试</span>
           </el-menu-item>
-          <el-menu-item index="5" v-if="can('bit')" @click="handleMenuClick('bitTest')">
+          <!-- <el-menu-item index="5" v-if="can('bit')" @click="handleMenuClick('bitTest')">
             <el-icon><Goods /></el-icon>
             <span>符合性测试</span>
-          </el-menu-item>
+          </el-menu-item> -->
           <el-menu-item index="6" v-if="can('er')" @click="handleMenuClick('sqlErDiagram')">
             <el-icon><DataAnalysis /></el-icon>
             <span>SQL ER图</span>
@@ -126,7 +126,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Monitor, User, Goods, List, Setting, Fold, Expand, DataAnalysis, Folder, Plus } from '@element-plus/icons-vue'
-import { getCurrentUser, clearToken, clearCurrentUser, userRef } from './utils/auth'
+import { getCurrentUser, clearToken, clearCurrentUser, userRef, api } from './utils/auth'
 
 const router = useRouter()
 const isCollapse = ref(false)
@@ -165,7 +165,14 @@ const toggleSidebar = () => {
   isCollapse.value = !isCollapse.value
 }
 
-const onLogout = () => {
+const onLogout = async () => {
+  try {
+    // call backend logout to record server-side log; token will be attached by interceptor
+    await api.post('/api/auth/logout')
+  } catch (e) {
+    // ignore errors but still proceed to clear local state
+    console.warn('logout api failed', e)
+  }
   clearToken();
   clearCurrentUser();
   router.replace('/login')

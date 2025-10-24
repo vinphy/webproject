@@ -21,6 +21,9 @@
     ├── requirements.txt  # Python依赖
     └── main.py      # 入口文件
 ```
+model 只负责 ORM 和 DB 操作；
+service 负责把 ORM 对象转为简单 dict（方便 API 层返回 JSON）并复用 model；
+control 仅负责接收请求/校验/权限并调用 service。
 
 ## 功能特性
 
