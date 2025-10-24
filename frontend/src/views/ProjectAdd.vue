@@ -425,6 +425,7 @@
 import { ref, reactive, onMounted, onUnmounted, onActivated, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { api } from '../utils/auth'
 import { Plus, ArrowLeft, Check } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -432,6 +433,9 @@ const route = useRoute()
 const currentStep = ref(1)
 const formRef = ref()
 const paramsFormRef = ref()
+// 标记表单是否已经在流转过程中被验证过（避免重复触发 validate 导致不必要的阻塞）
+const baseValidated = ref(false)
+const paramsValidated = ref(false)
 const submitting = ref(false)
 const didSubmit = ref(false)  // 标记是否刚刚提交成功
 const hasLoadedDraft = ref(false)   // 标记是否已加载/重置过（避免重复 load）
@@ -606,10 +610,12 @@ const nextStep = async () => {
   if (currentStep.value === 1) {
     if (!formRef.value) return
     const valid = await formRef.value.validate().catch(() => false)
+    if (valid) baseValidated.value = true
     if (!valid) return
   } else if (currentStep.value === 3) {
     if (!paramsFormRef.value) return
     const valid = await paramsFormRef.value.validate().catch(() => false)
+    if (valid) paramsValidated.value = true
     if (!valid) return
   }
   currentStep.value = Math.min(4, currentStep.value + 1)
@@ -626,43 +632,46 @@ const editStep = (step) => {
 const submitProject = async () => {
   submitting.value = true
   try {
-    await new Promise(r => setTimeout(r, 2000))
-
-    const existingProjects = JSON.parse(localStorage.getItem('projects') || '[]')
-    const nextId = existingProjects.length
-      ? Math.max(...existingProjects.map(p => Number(p.id) || 0)) + 1
-      : 1
-
-    const deepClone = (o) => JSON.parse(JSON.stringify(o))
-
-    const projectData = {
-      id: nextId,
-      name: form.projectName,
-      description: form.projectDesc,
-      status: '待开始',
-      progress: 0,
-      createTime: new Date().toLocaleString('zh-CN'),
-      config: deepClone({
-        ...form,
-        projectParams,
-        step2Selections
-      })
+    // 如果用户在步骤切换时已通过校验，则不必重复 validate（避免恢复草稿或直接路由导致的误报）
+    const validBase = baseValidated.value ? true : await formRef.value?.validate().catch(() => false)
+    const validParams = paramsValidated.value ? true : await paramsFormRef.value?.validate().catch(() => false)
+    if (!validBase || !validParams) {
+      ElMessage.error('请完整填写表单后再提交')
+      submitting.value = false
+      return
     }
 
-    // 去重：若已存在相同 id（极少见），则替换，否则插入
-    const idx = existingProjects.findIndex(p => p.id === projectData.id)
-    if (idx > -1) existingProjects.splice(idx, 1, projectData)
-    else existingProjects.unshift(projectData)
+    const payload = {
+      projectCode: form.projectCode || null,
+      projectName: form.projectName,
+      projectType: form.projectType || null,
+      testLeader: form.testLeader || null,
+      startDate: form.startDate || null,
+      endDate: form.endDate || null,
+      projectDesc: form.projectDesc || null,
+      teamMembers: form.teamMembers ? form.teamMembers.map(m => (m && (m.name || m)) ) : [],
+      selectedTestCaseIds: form.selectedTestCaseIds || [],
+      projectParams: projectParams,
+      step2Selections: step2Selections
+    }
 
-    localStorage.setItem('projects', JSON.stringify(existingProjects))
+    const { data } = await api.post('/api/projects', payload)
 
-    clearDraft()
-    resetFormData() // 重置回第1步，方便再次创建新项目
-    didSubmit.value = true  // 标记为已提交
-    ElMessage.success('项目创建成功！')
+    if (data && data.id) {
+      clearDraft()
+      resetFormData()
+      didSubmit.value = true
+      ElMessage.success('项目创建成功！')
+      router.push('/projects')
+      return
+    }
+
+    // 若后端未返回 id，也视为成功但给予提示
+    ElMessage.success('项目已创建（服务器未返回 id）')
     router.push('/projects')
   } catch (error) {
-    ElMessage.error('项目创建失败，请重试')
+    const msg = error?.response?.data?.detail || error?.message || '项目创建失败，请重试'
+    ElMessage.error(msg)
   } finally {
     submitting.value = false
   }
