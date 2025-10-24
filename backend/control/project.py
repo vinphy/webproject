@@ -32,3 +32,15 @@ def create_project(payload: ProjectCreatePayload, db: Session = Depends(get_db),
         return { 'id': p.id, 'name': p.name }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get('/', summary='List projects')
+def list_projects(page: int = 1, size: int = 20, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+    """Return paginated list of projects for current user."""
+    try:
+        offset = max(0, (page - 1) * size)
+        res = project_service.list_projects(db, owner_id=None, limit=size, offset=offset)
+        # res is { items, total }
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

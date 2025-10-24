@@ -99,6 +99,7 @@
 import { ref, computed, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { api } from '../utils/auth'
 import { Plus, Search } from '@element-plus/icons-vue'
   
 const router = useRouter()
@@ -112,24 +113,23 @@ const selectedRows = ref([])
 
 const projects = ref([])
 
-const loadProjects = () => {
+const loadProjects = async () => {
+  loading.value = true
   try {
-    const saved = localStorage.getItem('projects')
-    if (saved && saved !== 'null' && saved !== 'undefined') {
-      const parsed = JSON.parse(saved)
-      projects.value = Array.isArray(parsed) ? parsed : []
-    } else {
-      // 初始化默认数据（仅首次）
-      projects.value = [
-        { id: 1, name: '智能测试平台', description: '基于AI的自动化测试平台，支持多种测试类型和报告生成', status: '进行中', progress: 75, createTime: '2024-01-15 10:30:00' },
-        { id: 2, name: '数据管理系统', description: '企业级数据管理解决方案，包含数据采集、存储、分析功能', status: '已完成', progress: 100, createTime: '2024-01-10 14:20:00' },
-        { id: 3, name: '移动端应用', description: '跨平台移动应用开发项目，支持iOS和Android', status: '待开始', progress: 0, createTime: '2024-01-20 09:15:00' }
-      ]
-      localStorage.setItem('projects', JSON.stringify(projects.value))
-    }
-    total.value = projects.value.length
+    const params = { page: currentPage.value, size: pageSize.value }
+    const resp = await api.get('/api/projects', { params })
+    const data = resp.data || resp
+    projects.value = Array.isArray(data.items) ? data.items : []
+    total.value = data.total || projects.value.length
   } catch (e) {
-    ElMessage.error('加载项目数据失败')
+    ElMessage.error('加载项目数据失败，已回退到本地缓存')
+    try {
+      const saved = localStorage.getItem('projects')
+      projects.value = saved ? JSON.parse(saved) : []
+      total.value = projects.value.length
+    } catch {}
+  } finally {
+    loading.value = false
   }
 }
 
@@ -186,9 +186,10 @@ const getExecFlags = (row) => {
   
   const handleSizeChange = (val) => {
     pageSize.value = val
-  currentPage.value = 1
+    currentPage.value = 1
+    loadProjects()
   }
-const handleCurrentChange = (val) => { currentPage.value = val }
+  const handleCurrentChange = (val) => { currentPage.value = val; loadProjects() }
   
 const onRowDblClick = (row) => {
   router.push(`/project-detail/${row.id}`)

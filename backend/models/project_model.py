@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, func
 from sqlalchemy.orm import relationship, Session
 
 from util.db import Base, init_db
@@ -42,3 +42,10 @@ def list_projects(db: Session, owner_id: Optional[int] = None, limit: int = 50, 
     if owner_id:
         q = q.filter(Project.owner_id == owner_id)
     return q.offset(offset).limit(limit).all()
+
+
+def count_projects(db: Session, owner_id: Optional[int] = None):
+    q = db.query(func.count(Project.id))
+    if owner_id:
+        q = q.filter(Project.owner_id == owner_id)
+    return q.scalar() or 0

@@ -1,6 +1,7 @@
 from typing import Dict, Any
 from sqlalchemy.orm import Session
 from models import project_model
+import json
 
 
 def create_project(db: Session, owner_id: int, payload: Dict[str, Any]):
@@ -30,3 +31,33 @@ def create_project(db: Session, owner_id: int, payload: Dict[str, Any]):
     db.commit()
     db.refresh(p)
     return p
+
+
+def list_projects(db: Session, owner_id: int = None, limit: int = 50, offset: int = 0):
+    """Return dict with items (parsed) and accurate total count."""
+    rows = project_model.list_projects(db, owner_id=owner_id, limit=limit, offset=offset)
+    results = []
+    for r in rows:
+        item = {
+            'id': r.id,
+            'project_code': r.project_code,
+            'name': r.name,
+            'description': r.description,
+            'project_type': r.project_type,
+            'owner_id': r.owner_id,
+            'status': r.status,
+            'progress': float(r.progress) if r.progress is not None else 0,
+            'created_at': r.created_at.isoformat() if r.created_at else None,
+            'updated_at': r.updated_at.isoformat() if r.updated_at else None,
+            # compatibility with frontend which expects createTime
+            'createTime': r.created_at.strftime('%Y-%m-%d %H:%M:%S') if r.created_at else None,
+            'config': {}
+        }
+        try:
+            item['config'] = json.loads(r.config) if r.config else {}
+        except Exception:
+            item['config'] = {}
+        results.append(item)
+
+    total = project_model.count_projects(db, owner_id=owner_id)
+    return { 'items': results, 'total': int(total) }
