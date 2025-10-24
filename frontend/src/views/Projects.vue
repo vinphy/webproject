@@ -2,7 +2,7 @@
   <div class="projects-container">
     <div class="page-header">
       <h2>项目列表</h2>
-      <el-button type="primary" @click="router.push('/project-add')">
+      <el-button v-if="canCreate" type="primary" @click="router.push('/project-add')">
         <el-icon><Plus /></el-icon>
         新增项目
       </el-button>
@@ -101,6 +101,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../utils/auth'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { userRef, getCurrentUser } from '../utils/auth'
+import { hasPermission, initPermissions, permissionsRef } from '../utils/permission'
   
 const router = useRouter()
 const loading = ref(false)
@@ -197,6 +199,24 @@ const onRowDblClick = (row) => {
   
 onMounted(() => { loadProjects() })
 onActivated(() => { loadProjects() })
+// Ensure permissions initialized (in case user refreshed page)
+onMounted(async () => {
+  try {
+    const user = userRef.value || getCurrentUser()
+    if (user && permissionsRef && Array.isArray(permissionsRef.value) && permissionsRef.value.length === 0) {
+      await initPermissions()
+    }
+  } catch (e) {
+    // ignore
+  }
+})
+
+const canCreate = computed(() => {
+  const user = userRef.value || getCurrentUser()
+  const byRole = user && (user.role === 'admin' || user.role === 'project_manager')
+  const byPerm = hasPermission('project:create')
+  return !!(byRole || byPerm)
+})
   </script>
   
   <style scoped>

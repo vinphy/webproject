@@ -170,6 +170,18 @@ def read_users_me(current_user: auth_model.User = Depends(get_current_user)):
     return UserOut(id=current_user.id, username=current_user.username, email=current_user.email, role=current_user.role.name if current_user.role else None)
 
 
+@router.get('/me/permissions')
+def read_my_permissions(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+    """Return list of permission codes for current user. Empty list if none."""
+    try:
+        if not current_user or not getattr(current_user, 'role_id', None):
+            return []
+        joins = db.query(Permission).join(RolePermission, RolePermission.permission_id == Permission.id).filter(RolePermission.role_id == current_user.role_id).all()
+        return [p.code for p in joins]
+    except Exception:
+        return []
+
+
 # Now define logout properly (after get_current_user is defined)
 @router.post('/logout')
 def logout(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
@@ -206,7 +218,7 @@ def create_user_admin(payload: UserCreateAdmin, db: Session = Depends(get_db), c
     db.refresh(new_user)
     return {"id": new_user.id}
 
-
+# 为用户指派角色
 @router.put("/users/{user_id}/role")
 def update_user_role(user_id: int, body: dict = Body(...), db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
@@ -220,7 +232,7 @@ def update_user_role(user_id: int, body: dict = Body(...), db: Session = Depends
     db.commit()
     return {"ok": True}
 
-
+# 角色列表
 @router.get("/roles")
 def list_roles(db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
@@ -231,7 +243,7 @@ def list_roles(db: Session = Depends(get_db), current_user: auth_model.User = De
         for r in rows
     ]
 
-
+# 创建角色
 @router.post("/roles")
 def create_role(role: RoleCreate, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
@@ -276,6 +288,7 @@ def delete_role(role_id: int, db: Session = Depends(get_db), current_user: User 
     db.commit()
     return {"ok": True}
 
+# 权限列表
 @router.get("/permissions")
 def list_permissions(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
@@ -283,6 +296,7 @@ def list_permissions(db: Session = Depends(get_db), current_user: User = Depends
     rows = db.query(Permission).all()
     return [{"id": p.id, "code": p.code, "name": p.name, "description": p.description} for p in rows]
 
+# 创建权限
 @router.post("/permissions")
 def create_permission(payload: PermissionCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
@@ -326,6 +340,7 @@ def delete_permission(perm_id: int, db: Session = Depends(get_db), current_user:
     db.commit()
     return {"ok": True}
 
+# 读取角色权限
 @router.get("/roles/{role_id}/permissions")
 def role_permissions(role_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":
@@ -333,6 +348,7 @@ def role_permissions(role_id: int, db: Session = Depends(get_db), current_user: 
     joins = db.query(RolePermission, Permission).join(Permission, RolePermission.permission_id == Permission.id).filter(RolePermission.role_id == role_id).all()
     return [{"id": p.id, "code": p.code, "name": p.name} for _, p in joins]
 
+# 分配角色权限
 @router.post("/roles/{role_id}/permissions")
 def assign_permissions(role_id: int, payload: RoleAssignPermissions, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not current_user.role or current_user.role.name != "admin":

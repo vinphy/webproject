@@ -94,3 +94,20 @@ def get_user_by_token_payload(db: Session, payload: dict):
     if not sub:
         return None
     return get_user_by_id(db, int(sub))
+
+
+def get_permissions_for_user(db: Session, user) -> list:
+    """Return list of permission codes for the given user (based on user's single role).
+
+    If user has no role, returns empty list.
+    """
+    try:
+        from models import auth_model
+        if not user or not getattr(user, 'role_id', None):
+            return []
+        rows = db.query(auth_model.Permission).join(
+            auth_model.RolePermission, auth_model.RolePermission.permission_id == auth_model.Permission.id
+        ).filter(auth_model.RolePermission.role_id == user.role_id).all()
+        return [r.code for r in rows if getattr(r, 'code', None)]
+    except Exception:
+        return []

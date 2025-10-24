@@ -44,6 +44,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, View, Hide } from '@element-plus/icons-vue'
 import { api, setToken, setCurrentUser } from '../utils/auth'
+import { initPermissions } from '../utils/permission'
 import AuthCard from '../components/AuthCard.vue'
 
 const router = useRouter()
@@ -94,6 +95,8 @@ const onSubmit = async () => {
     // 拉取用户信息并缓存
     const me = await api.get('/api/auth/me')
     setCurrentUser(me.data)
+  // 初始化权限到前端缓存，供菜单/按钮显示判断
+  try { await initPermissions() } catch (e) { /* ignore */ }
     // 记住我：保存最近用户名
     if (remember.value) localStorage.setItem('last_username', form.username)
     // 跳转首页
