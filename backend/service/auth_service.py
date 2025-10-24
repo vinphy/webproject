@@ -111,3 +111,33 @@ def get_permissions_for_user(db: Session, user) -> list:
         return [r.code for r in rows if getattr(r, 'code', None)]
     except Exception:
         return []
+
+
+def user_has_permission(db: Session, user, code: str) -> bool:
+    """Return True if user has the given permission code."""
+    try:
+        if not user or not code:
+            return False
+        perms = get_permissions_for_user(db, user)
+        return code in perms
+    except Exception:
+        return False
+
+
+def ensure_admin_has_all_permissions(db: Session):
+    """Assign all existing permissions to the admin role (idempotent)."""
+    try:
+        from models import auth_model
+        admin = get_role_by_name(db, 'admin')
+        if not admin:
+            return
+        all_perms = db.query(auth_model.Permission).all()
+        existing = db.query(auth_model.RolePermission.permission_id).filter(auth_model.RolePermission.role_id == admin.id).all()
+        existing_ids = {p[0] for p in existing}
+        for p in all_perms:
+            if p.id not in existing_ids:
+                db.add(auth_model.RolePermission(role_id=admin.id, permission_id=p.id))
+        db.commit()
+    except Exception:
+        db.rollback()
+        return

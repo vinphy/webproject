@@ -8,6 +8,7 @@ from control.auth import get_current_user
 from service import project_service
 from models import auth_model
 from service import log_service
+from service import auth_service
 
 router = APIRouter()
 
@@ -28,6 +29,9 @@ class ProjectCreatePayload(BaseModel):
 
 @router.post('/', summary='Create project')
 def create_project(payload: ProjectCreatePayload, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+    # 权限检查：需要 'project:create' 权限或角色判断
+    if not auth_service.user_has_permission(db, current_user, 'project:create') and not (current_user and getattr(current_user, 'role', None) and current_user.role.name in ('admin', 'project_manager')):
+        raise HTTPException(status_code=403, detail='需要 project:create 权限')
     try:
         p = project_service.create_project(db, current_user.id, payload.dict())
         # record operation log

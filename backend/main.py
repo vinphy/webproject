@@ -45,6 +45,12 @@ def on_startup():
         # 获取数据库会话并执行确保默认管理员存在的操作
         with next(get_db()) as db:
             ensure_default_admin(db)
+            # 确保 admin 角色拥有所有权限（如果已有权限定义）
+            try:
+                from service.auth_service import ensure_admin_has_all_permissions
+                ensure_admin_has_all_permissions(db)
+            except Exception:
+                pass
     except Exception as e:
         print(f"[STARTUP] ensure_default_admin failed: {e}")
 
