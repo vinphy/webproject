@@ -356,9 +356,20 @@ def assign_permissions(role_id: int, payload: RoleAssignPermissions, db: Session
         raise HTTPException(status_code=403, detail="需要管理员权限")
     # delete old
     db.query(RolePermission).filter(RolePermission.role_id == role_id).delete()
-    # insert new
+    # insert new - support receiving permission ids or permission codes (strings)
     for pid in payload.permissions:
-        db.add(RolePermission(role_id=role_id, permission_id=pid))
+        try:
+            if isinstance(pid, str):
+                perm = db.query(Permission).filter(Permission.code == pid).first()
+                if not perm:
+                    continue
+                perm_id = perm.id
+            else:
+                perm_id = int(pid)
+            db.add(RolePermission(role_id=role_id, permission_id=perm_id))
+        except Exception:
+            # skip invalid entries
+            continue
     db.commit()
     return {"ok": True}
 

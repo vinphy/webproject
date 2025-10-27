@@ -74,14 +74,20 @@
           
           
           
-          <el-menu-item index="8" v-if="can('users')" @click="handleMenuClick('users')">
-            <el-icon><User /></el-icon>
-            <span>用户管理</span>
-          </el-menu-item>
-          <el-menu-item index="9" v-if="can('permission')" @click="handleMenuClick('permission')">
-            <el-icon><Setting /></el-icon>
-            <span>权限管理</span>
-          </el-menu-item>
+          <el-sub-menu index="8" v-if="can('users') || can('permission')">
+            <template #title>
+              <el-icon><User /></el-icon>
+              <span>用户管理</span>
+            </template>
+            <el-menu-item index="8-1" v-if="can('users')" @click="handleMenuClick('users')">
+              <el-icon><List /></el-icon>
+              <span>用户信息管理</span>
+            </el-menu-item>
+            <el-menu-item index="8-2" v-if="can('permission')" @click="handleMenuClick('permission')">
+              <el-icon><Setting /></el-icon>
+              <span>权限管理</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
 

@@ -218,5 +218,13 @@ onActivated(() => { loadCases() })
 .cases-table :deep(.col-id .cell) {
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	color: #303133;
+	font-size: 14px;
+}
+/* 移除双数行的蓝色字体样式继承 */
+.cases-table :deep(.el-table__row:nth-child(even) .el-table__cell) {
+  font-weight: normal;
+  color: #606266 !important;
 }
 </style> 

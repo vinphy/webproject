@@ -299,10 +299,10 @@ onMounted(() => {
 }
 
 .table-wrap.single .el-table .el-table__row:nth-child(even) .el-table__cell {
-  font-weight: bold;
-  color: #409EFF;
+  font-weight: 600;
+  color: #303133;
   text-align: center;
-  font-size: 16px !important;
+  font-size: 15px !important;
 }
 
 .chart-wrap.single:nth-child(2) {

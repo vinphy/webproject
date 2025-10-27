@@ -188,5 +188,9 @@ onActivated(() => loadLogs())
 .logs-table :deep(.el-table__body .cell) { display: block; text-align: left; padding: 0; }
 .logs-table :deep(.el-table__header .cell) { font-size: 14px; font-weight: 600; }
 .logs-table :deep(.el-table__body .cell) { font-size: 12px; line-height: 20px; }
-.logs-table :deep(.col-id .cell) { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.logs-table :deep(.col-id .cell) { white-space: nowrap; font-variant-numeric: tabular-nums; 
+  font-weight: 600;
+  color: #303133;
+  font-size: 14px;
+}
 </style> 
