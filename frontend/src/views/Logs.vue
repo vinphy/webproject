@@ -183,14 +183,48 @@ onActivated(() => loadLogs())
 
 /* 与系统其他表格保持一致的左对齐与内边距 */
 .logs-table :deep(.el-table__header .el-table__cell),
-.logs-table :deep(.el-table__body .el-table__cell) { padding: 8px 12px; text-align: left; }
+.logs-table :deep(.el-table__body .el-table__cell) { 
+  padding: 8px 12px; 
+  text-align: left; 
+}
+
 .logs-table :deep(.el-table__header .cell),
-.logs-table :deep(.el-table__body .cell) { display: block; text-align: left; padding: 0; }
-.logs-table :deep(.el-table__header .cell) { font-size: 14px; font-weight: 600; }
-.logs-table :deep(.el-table__body .cell) { font-size: 12px; line-height: 20px; }
-.logs-table :deep(.col-id .cell) { white-space: nowrap; font-variant-numeric: tabular-nums; 
+.logs-table :deep(.el-table__body .cell) { 
+  display: block; 
+  text-align: left; 
+  padding: 0; 
+}
+
+.logs-table :deep(.el-table__header .cell) { 
+  font-size: 14px; 
+  font-weight: 600; 
+  color: #303133;
+}
+
+.logs-table :deep(.el-table__body .cell) { 
+  font-size: 12px; 
+  line-height: 20px; 
+  color: #606266;
+  font-weight: 400;
+}
+
+.logs-table :deep(.col-id .cell) { 
+  white-space: nowrap; 
+  font-variant-numeric: tabular-nums; 
   font-weight: 600;
   color: #303133;
   font-size: 14px;
+}
+
+/* 统一表格行样式，确保颜色一致 */
+.logs-table :deep(.el-table .el-table__row:nth-child(odd) .el-table__cell) {
+  color: #606266 !important;
+  background-color: #f5f7fa !important;
+  font-weight: 400 !important;
+}
+
+.logs-table :deep(.el-table .el-table__row:nth-child(even) .el-table__cell) {
+  color: #606266 !important;
+  font-weight: 400 !important;
 }
 </style> 

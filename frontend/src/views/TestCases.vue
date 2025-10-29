@@ -215,16 +215,22 @@ onActivated(() => { loadCases() })
 .cases-table :deep(.el-table__body .cell) { font-size: 12px; line-height: 20px; }
 
 /* ID 列固定不换行，等宽数字 */
-.cases-table :deep(.col-id .cell) {
+/* .cases-table :deep(.col-id .cell) {
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
 	font-weight: 600;
 	color: #303133;
 	font-size: 14px;
-}
-/* 移除双数行的蓝色字体样式继承 */
-.cases-table :deep(.el-table__row:nth-child(even) .el-table__cell) {
-  font-weight: normal;
+} */
+/* 统一表格行样式，确保颜色一致 */
+.cases-table :deep(.el-table .el-table__row:nth-child(odd) .el-table__cell) {
   color: #606266 !important;
+  background-color: #f5f7fa !important;
+  font-weight: 600 !important;
+}
+
+.cases-table :deep(.el-table .el-table__row:nth-child(even) .el-table__cell) {
+  color: #606266 !important;
+  font-weight: 600 !important;
 }
 </style> 

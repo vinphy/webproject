@@ -88,6 +88,7 @@ import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@ele
 import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
 import { useRouter } from 'vue-router'
 
+
 const user = ref(null)
 const router = useRouter()
 
@@ -256,38 +257,33 @@ onMounted(() => {
   flex: 1;
   width: 100%;
   height: 100%;
-  border: none !important;
+  border: none !important; 
   font-size: 14px;
 }
 
 .table-wrap.single .el-table .el-table__inner-wrapper {
-  height: 100%;
+  height: 100% !important;
   border: none !important;
 }
 
 .table-wrap.single .el-table .el-table__header-wrapper {
-  height: 0 !important;
-  display: none !important;
+  height: auto !important;  /* 修复：从0改为auto */
+  display: block !important;  /* 修复：从none改为block */
 }
 
 .table-wrap.single .el-table .el-table__body-wrapper {
-  height: 100% !important;
-  overflow: hidden;
-}
-
-.table-wrap.single .el-table .el-table__body {
-  border: none !important;
+  height: calc(100% - 40px) !important;  /* 减去表头高度 */
+  overflow: auto;
 }
 
 .table-wrap.single .el-table .el-table__cell {
   border: none !important;
   padding: 8px 4px !important;
   margin: 0 !important;
-  height: calc(100% / 8) !important;
-  line-height: 1.2 !important;
+  height: auto !important;  /* 修复：从固定高度改为auto */
+  line-height: 1.5 !important;
   font-size: 13px !important;
 }
-
 
 /* 表格行样式 */
 .table-wrap.single .el-table .el-table__row:nth-child(odd) .el-table__cell {
@@ -299,16 +295,16 @@ onMounted(() => {
 }
 
 .table-wrap.single .el-table .el-table__row:nth-child(even) .el-table__cell {
-  font-weight: 600;
-  color: #303133;
+  font-weight: bold;
+  color: #409EFF;
   text-align: center;
-  font-size: 15px !important;
+  font-size: 16px !important;
 }
 
 .chart-wrap.single:nth-child(2) {
   flex: 0 0 38%;
 }
-
+ 
 .chart-wrap.single:nth-child(3) {
   flex: 0 0 55%;
 }
@@ -471,9 +467,8 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 表格列样式 */
-.el-table .el-table__row:nth-child(odd) .el-table__cell {
-  font-weight: 600;
+/* 移除全局表格样式，避免影响其他页面 */
+/* .el-table .el-table__row:nth-child(odd) .el-table__cell {
   color: #303133;
   background-color: #f5f7fa;
   text-align: center;
@@ -484,7 +479,7 @@ onMounted(() => {
   color: #409EFF;
   text-align: center;
   font-size: 16px;
-}
+} */
 
 /* 卡片标题样式优化 */
 .panel .el-card__header {

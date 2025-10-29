@@ -404,20 +404,30 @@ watch(selectedRoleId, (v) => { if (v) loadRolePermissions(v) })
   text-align: left;
 }
 
-/* 覆盖全局表格奇偶行样式，解决对齐和颜色问题 */
+/* 统一表格样式，与系统其他表格保持一致 */
+:deep(.el-table__header .cell) {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+:deep(.el-table__body .cell) {
+  font-size: 12px;
+  line-height: 20px;
+  color: #606266;
+  font-weight: 400;
+}
+
+/* 覆盖全局表格奇偶行样式，确保颜色统一 */
 :deep(.el-table .el-table__row:nth-child(odd) .el-table__cell) {
-  text-align: left !important;
-  color: #303133 !important;
+  color: #606266 !important;
   background-color: #f5f7fa !important;
   font-weight: 400 !important;
-  font-size: 12px !important;
 }
 
 :deep(.el-table .el-table__row:nth-child(even) .el-table__cell) {
-  text-align: left !important;
-  color: #303133 !important;
+  color: #606266 !important;
   font-weight: 400 !important;
-  font-size: 12px !important;
 }
 
 /* 修复多选列复选框对齐 */

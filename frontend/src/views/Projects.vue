@@ -261,7 +261,7 @@ const canCreate = computed(() => {
 .projects-table :deep(.el-table__body .el-table__cell) {
   padding: 8px 12px;          /* 一致的左右内边距 */
   text-align: left;           /* 强制左对齐 */
-  }
+}
   
 /* 禁止 cell 内部被无意设置为 flex 导致的两端对齐等问题 */
 .projects-table :deep(.el-table__header .cell),
@@ -275,18 +275,33 @@ const canCreate = computed(() => {
 .projects-table :deep(.el-table__header .cell) {
   font-size: 14px;
   font-weight: 600;
+  color: #303133;
   }
   
 /* 表体略小于表头，统一左对齐由列属性保证 */
+/* 表体内容统一字体样式 */
 .projects-table :deep(.el-table__body .cell) {
-    font-size: 12px;
+  font-size: 12px;
   line-height: 20px;
-  }
+  color: #606266;
+  font-weight: 400;
+}
   
 /* ID 列固定不换行，等宽数字方便比对 */
 .projects-table :deep(.col-id .cell) {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   }
+  /* 覆盖全局表格奇偶行样式，确保颜色统一 */
+.projects-table :deep(.el-table .el-table__row:nth-child(odd) .el-table__cell) {
+  color: #606266 !important;
+  background-color: #f5f7fa !important;
+  font-weight: 400 !important;
+}
+
+.projects-table :deep(.el-table .el-table__row:nth-child(even) .el-table__cell) {
+  color: #606266 !important;
+  font-weight: 400 !important;
+}
   </style>
   
