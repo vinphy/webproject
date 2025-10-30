@@ -87,10 +87,49 @@ import { userRef, api } from '../utils/auth'
 import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
 import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
 import { useRouter } from 'vue-router'
-
+// import * as echarts from 'echarts'
 
 const user = ref(null)
 const router = useRouter()
+
+// 项目统计数据
+const projectStats = ref({
+  total: 0,
+  completed: 0,
+  inProgress: 0,
+  pending: 0
+})
+
+// 更新statsRows数据，使用从后端获取的真实数据
+const statsRows = computed(() => [
+  { name: '项目总数', type: 'title' },
+  { name: projectStats.value.total.toString(), type: 'value' },
+  { name: '已完成', type: 'title' },
+  { name: projectStats.value.completed.toString(), type: 'value' },
+  { name: '进行中', type: 'title' },
+  { name: projectStats.value.inProgress.toString(), type: 'value' },
+  { name: '待开始', type: 'title' },
+  { name: projectStats.value.pending.toString(), type: 'value' }
+])
+
+// 获取项目统计数据
+const fetchProjectStats = async () => {
+  try {
+    const { data } = await api.get('/api/home/project-stats')
+    if (data) {
+      projectStats.value = data
+    }
+  } catch (error) {
+    console.error('获取项目统计数据失败:', error)
+    // 使用默认数据
+    projectStats.value = {
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      pending: 0
+    }
+  }
+}
 
 // 导航到项目管理页面
 const navigateToProjects = () => {
@@ -105,17 +144,6 @@ const navigateToTestResults = () => {
   router.push('/test-results')
 }
 
-const statsRows = ref([
-  { name: '项目总数', type: 'title' },
-  { name: '120', type: 'value' },
-  { name: '已完成', type: 'title' },
-  { name: '75', type: 'value' },
-  { name: '进行中', type: 'title' },
-  { name: '30', type: 'value' },
-  { name: '待开始', type: 'title' },
-  { name: '15', type: 'value' }
-])
-
 const monthlyNewProjects = [12, 18, 22, 17, 25, 30, 28, 26, 24, 20, 18, 16]
 
 const createdCount = ref(12)
@@ -126,6 +154,9 @@ const barChartRef = ref(null)
 const currentProject = ref({ name: 'XX系统测试', owner: '张三', progress: '65%' })
 
 onMounted(() => {
+  // 获取项目统计数据
+  fetchProjectStats()
+
   const lineChart = echarts.init(lineChartRef.value)
   const barChart = echarts.init(barChartRef.value)
   const xAxis = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
@@ -257,12 +288,11 @@ onMounted(() => {
   flex: 1;
   width: 100%;
   height: 100%;
-  border: none !important; 
-  font-size: 14px;
+  border: none !important;
 }
 
 .table-wrap.single .el-table .el-table__inner-wrapper {
-  height: 100% !important;
+  height: 100% !important;  /* 修复：从0改为100% */
   border: none !important;
 }
 
@@ -278,7 +308,7 @@ onMounted(() => {
 
 .table-wrap.single .el-table .el-table__cell {
   border: none !important;
-  padding: 8px 4px !important;
+  padding: 6px 4px !important;
   margin: 0 !important;
   height: auto !important;  /* 修复：从固定高度改为auto */
   line-height: 1.5 !important;
@@ -522,4 +552,4 @@ onMounted(() => {
   width: 1px;
   background: var(--el-card-border-color, #EBEEF5);
 }
-</style> 
+</style>

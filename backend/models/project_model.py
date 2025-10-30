@@ -1,9 +1,12 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, func
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, func, Enum
 from sqlalchemy.orm import relationship, Session
 
 from util.db import Base, init_db
+
+from sqlalchemy.ext.declarative import declarative_base
+import enum
 
 
 class Project(Base):
@@ -49,3 +52,49 @@ def count_projects(db: Session, owner_id: Optional[int] = None):
     if owner_id:
         q = q.filter(Project.owner_id == owner_id)
     return q.scalar() or 0
+
+
+# 新增项目统计相关函数
+def get_project_stats(db: Session, owner_id: Optional[int] = None):
+    """获取项目统计信息"""
+    # 项目总数
+    total_count = count_projects(db, owner_id)
+    
+    # 按状态统计
+    status_stats = {}
+    if owner_id:
+        status_query = db.query(Project.status, func.count(Project.id)).filter(Project.owner_id == owner_id).group_by(Project.status).all()
+    else:
+        status_query = db.query(Project.status, func.count(Project.id)).group_by(Project.status).all()
+    
+    for status, count in status_query:
+        status_stats[status] = count
+    
+    # 按进度统计
+    progress_stats = {
+        'not_started': db.query(func.count(Project.id)).filter(Project.progress == 0).scalar() or 0,
+        'in_progress': db.query(func.count(Project.id)).filter(Project.progress > 0, Project.progress < 100).scalar() or 0,
+        'completed': db.query(func.count(Project.id)).filter(Project.progress == 100).scalar() or 0
+    }
+    
+    # 最近创建的项目数量（最近7天）
+    seven_days_ago = datetime.utcnow() - datetime.timedelta(days=7)
+    recent_count = db.query(func.count(Project.id)).filter(Project.created_at >= seven_days_ago)
+    if owner_id:
+        recent_count = recent_count.filter(Project.owner_id == owner_id)
+    recent_count = recent_count.scalar() or 0
+    
+    return {
+        'total': total_count,
+        'status_stats': status_stats,
+        'progress_stats': progress_stats,
+        'recent_count': recent_count
+    }
+
+
+def get_recent_projects(db: Session, owner_id: Optional[int] = None, limit: int = 5):
+    """获取最近的项目列表"""
+    q = db.query(Project).order_by(Project.created_at.desc())
+    if owner_id:
+        q = q.filter(Project.owner_id == owner_id)
+    return q.limit(limit).all()
