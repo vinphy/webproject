@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from util.db import get_db
 from service import home_service
 from control.auth import get_current_user
 from models import auth_model
+from service.home_service import get_monthly_project_stats
 
 router = APIRouter()
 
@@ -26,3 +27,17 @@ def get_project_stats(current_user: auth_model.User = Depends(get_current_user),
         return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取项目统计数据失败: {str(e)}")
+
+
+@router.get("/monthly-stats", response_model=dict)
+async def get_monthly_project_stats_api(
+    current_user: auth_model.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    months: int = Query(12, description="统计月份数", ge=1, le=24)
+):
+    """获取项目月度统计数据接口"""
+    try:
+        result = get_monthly_project_stats(db, current_user.id, months)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取月度统计数据失败: {str(e)}")

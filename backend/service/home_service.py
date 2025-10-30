@@ -51,3 +51,32 @@ def get_project_stats(db: Session, user_id: int) -> Dict:
             },
             'recent_count': 0
         }
+
+
+def get_monthly_project_stats(db: Session, user_id: int, months: int = 12) -> Dict:
+    """获取项目月度统计数据"""
+    try:
+        from models.home_model import get_monthly_project_stats as get_monthly_stats_model
+        stats = get_monthly_stats_model(db, user_id, months)
+        
+        # 添加调试信息
+        print(f"用户 {user_id} 的月度统计数据: {stats}")
+        
+        return {
+            'success': True,
+            'data': stats,
+            'total_months': len(stats),
+            'user_id': user_id
+        }
+    except Exception as e:
+        # 添加错误调试信息
+        print(f"获取月度统计数据失败 - 用户 {user_id}: {str(e)}")
+        
+        # 如果获取失败，返回默认数据（全部为0）
+        return {
+            'success': False,
+            'error': str(e),
+            'data': [],
+            'total_months': 0,
+            'user_id': user_id
+        }

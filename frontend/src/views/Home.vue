@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { userRef, api } from '../utils/auth'
 import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
 import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
@@ -99,6 +99,9 @@ const projectStats = ref({
   inProgress: 0,
   pending: 0
 })
+
+// 月度统计数据
+const monthlyStats = ref([])
 
 // 更新statsRows数据，使用从后端获取的真实数据
 const statsRows = computed(() => [
@@ -131,66 +134,200 @@ const fetchProjectStats = async () => {
   }
 }
 
-// 导航到项目管理页面
-const navigateToProjects = () => {
-  router.push('/projects')
-}
-// 导航到测试用例页面
-const navigateToTestCases = () => {
-  router.push('/test-cases')
-}
-// 导航到测试结果页面
-const navigateToTestResults = () => {
-  router.push('/test-results')
+// 获取月度统计数据
+const fetchMonthlyStats = async () => {
+  try {
+    const { data } = await api.get('/api/home/monthly-stats', {
+      params: { months: 12 }
+    })
+    
+    if (data && data.success) {
+      monthlyStats.value = data.data
+      updateCharts()
+    } else {
+      console.error('获取月度统计数据失败:', data?.error)
+      // 使用默认数据
+      monthlyStats.value = generateDefaultMonthlyData()
+      updateCharts()
+    }
+  } catch (error) {
+    console.error('获取月度统计数据失败:', error)
+    // 使用默认数据
+    monthlyStats.value = generateDefaultMonthlyData()
+    updateCharts()
+  }
 }
 
-const monthlyNewProjects = [12, 18, 22, 17, 25, 30, 28, 26, 24, 20, 18, 16]
+// 生成默认月度数据（用于错误处理）
+const generateDefaultMonthlyData = () => {
+  const currentDate = new Date()
+  const data = []
+  
+  // 生成最近12个月的默认数据，全部为0
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+    data.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      count: 0,  // 全部设为0，而不是随机数
+      label: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
+    })
+  }
+  
+  return data
+}
 
-const createdCount = ref(12)
+// 更新图表数据
+const updateCharts = () => {
+  if (!lineChart.value || !barChart.value || monthlyStats.value.length === 0) return
+  
+  // 正确排序：按时间顺序从早到晚
+  const sortedStats = [...monthlyStats.value].sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year
+    return a.month - b.month
+  })
+  
+  const xAxisData = sortedStats.map(item => {
+    // 显示为"01月"格式，而不是"2024-01"
+    return `${item.month.toString().padStart(2, '0')}月`
+  })
+  const seriesData = sortedStats.map(item => item.count)
+  
+  console.log('月度统计数据:', sortedStats) // 调试信息
+  
+  // 更新折线图
+  lineChart.value.setOption({
+    xAxis: { 
+      data: xAxisData,
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    series: [{ data: seriesData }]
+  })
+  
+  // 更新柱状图
+  barChart.value.setOption({
+    xAxis: { 
+      data: xAxisData,
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    series: [{ data: seriesData }]
+  })
+}
 
+// 图表实例
+const lineChart = ref(null)
+const barChart = ref(null)
 const lineChartRef = ref(null)
 const barChartRef = ref(null)
 
-const currentProject = ref({ name: 'XX系统测试', owner: '张三', progress: '65%' })
+// 初始化图表
+const initCharts = () => {
+  if (!lineChartRef.value || !barChartRef.value) return
+  
+  lineChart.value = echarts.init(lineChartRef.value)
+  barChart.value = echarts.init(barChartRef.value)
+  
+  // 使用空数据初始化，等待真实数据
+  const emptyXAxis = Array.from({length: 12}, (_, i) => `${(i + 1).toString().padStart(2, '0')}月`)
+  const emptyData = Array(12).fill(0)
+  
+  // 折线图配置
+  lineChart.value.setOption({
+    tooltip: { 
+      trigger: 'axis',
+      formatter: '{b}<br/>{a}: {c}个'
+    },
+    grid: { left: 30, right: 10, top: 20, bottom: 20 },
+    xAxis: { 
+      type: 'category', 
+      data: emptyXAxis,
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: { type: 'value' },
+    series: [{ 
+      name: '新建项目', 
+      type: 'line', 
+      smooth: true, 
+      data: emptyData,
+      itemStyle: {
+        color: '#409EFF'
+      },
+      lineStyle: {
+        color: '#409EFF'
+      }
+    }]
+  })
+  
+  // 柱状图配置
+  barChart.value.setOption({
+    tooltip: { 
+      trigger: 'axis',
+      formatter: '{b}<br/>{a}: {c}个'
+    },
+    grid: { left: 30, right: 10, top: 20, bottom: 20 },
+    xAxis: { 
+      type: 'category', 
+      data: emptyXAxis,
+      axisLabel: {
+        rotate: 45
+      }
+    },
+    yAxis: { type: 'value' },
+    series: [{ 
+      name: '新建项目', 
+      type: 'bar', 
+      data: emptyData,
+      itemStyle: {
+        color: '#67C23A'
+      }
+    }]
+  })
+  
+  // 监听窗口大小变化
+  const onResize = () => { 
+    lineChart.value?.resize()
+    barChart.value?.resize()
+  }
+  window.addEventListener('resize', onResize)
+}
+
+// 监听月度数据变化，自动更新图表
+watch(monthlyStats, () => {
+  updateCharts()
+}, { deep: true })
+
+// 导航函数
+const navigateToProjects = () => router.push('/projects')
+const navigateToTestCases = () => router.push('/test-cases')
+const navigateToTestResults = () => router.push('/test-results')
+
+const createdCount = ref(12)
 
 onMounted(() => {
+  // 初始化图表
+  initCharts()
+  
   // 获取项目统计数据
   fetchProjectStats()
+  
+  // 获取月度统计数据
+  fetchMonthlyStats()
 
-  const lineChart = echarts.init(lineChartRef.value)
-  const barChart = echarts.init(barChartRef.value)
-  const xAxis = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
-
-  lineChart.setOption({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 30, right: 10, top: 10, bottom: 20 },
-    xAxis: { type: 'category', data: xAxis },
-    yAxis: { type: 'value' },
-    series: [{ name: '新建项目', type: 'line', smooth: true, data: monthlyNewProjects }]
-  })
-
-  barChart.setOption({
-    tooltip: { trigger: 'axis' },
-    grid: { left: 30, right: 10, top: 10, bottom: 20 },
-    xAxis: { type: 'category', data: xAxis },
-    yAxis: { type: 'value' },
-    series: [{ name: '新建项目', type: 'bar', data: monthlyNewProjects }]
-  })
-
-  const onResize = () => { lineChart.resize(); barChart.resize() }
-  window.addEventListener('resize', onResize)
-
-  // fetch profile from backend
+  // 获取用户信息
   ;(async () => {
     try {
       const { data } = await api.get('/api/home/profile')
       if (data) {
         user.value = { username: data.name, email: data.email, role: data.role }
         createdCount.value = data.createdProjectsCount || 0
-        // projects can be used inside HomeProjectItem via props or store; keep simple for now
       }
     } catch (e) {
-      // fallback to existing userRef
       user.value = userRef.value
     }
   })()

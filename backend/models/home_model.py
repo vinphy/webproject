@@ -81,3 +81,72 @@ def get_project_stats(db: Session, user_id: int) -> Dict:
         'progress_stats': progress_stats,
         'recent_count': recent_count
     }
+
+
+def get_monthly_project_stats(db: Session, user_id: int, months: int = 12) -> List[Dict]:
+    """获取用户项目月度统计数据"""
+    from sqlalchemy import extract
+    
+    # 计算起始日期（当前日期往前推months个月）
+    end_date = datetime.datetime.utcnow()
+    start_date = end_date - datetime.timedelta(days=months*30)  # 近似计算
+    
+    # 按月统计项目创建数量
+    monthly_stats = db.query(
+        extract('year', Project.created_at).label('year'),
+        extract('month', Project.created_at).label('month'),
+        func.count(Project.id).label('count')
+    ).filter(
+        Project.owner_id == user_id,
+        Project.created_at >= start_date
+    ).group_by(
+        extract('year', Project.created_at),
+        extract('month', Project.created_at)
+    ).order_by(
+        extract('year', Project.created_at).desc(),
+        extract('month', Project.created_at).desc()
+    ).all()
+    
+    # 格式化返回数据
+    result = []
+    for stat in monthly_stats:
+        result.append({
+            'year': int(stat.year),
+            'month': int(stat.month),
+            'count': stat.count,
+            'label': f"{int(stat.year)}-{int(stat.month):02d}"
+        })
+    
+    # 确保返回最近months个月的数据，即使某个月没有项目也返回0
+    current_year = end_date.year
+    current_month = end_date.month
+    
+    # 生成完整的月份列表（按时间顺序从早到晚）
+    complete_stats = []
+    for i in range(months-1, -1, -1):  # 从最早月份开始
+        # 计算月份
+        target_month = current_month - i
+        target_year = current_year
+        
+        if target_month <= 0:
+            target_month += 12
+            target_year -= 1
+        
+        # 查找对应的统计数据
+        found = False
+        for stat in result:
+            if stat['year'] == target_year and stat['month'] == target_month:
+                complete_stats.append(stat)
+                found = True
+                break
+        
+        # 如果没有找到，添加0计数
+        if not found:
+            complete_stats.append({
+                'year': target_year,
+                'month': target_month,
+                'count': 0,
+                'label': f"{target_year}-{target_month:02d}"
+            })
+    
+    return complete_stats
