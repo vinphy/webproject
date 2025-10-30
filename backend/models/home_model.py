@@ -84,12 +84,23 @@ def get_project_stats(db: Session, user_id: int) -> Dict:
 
 
 def get_monthly_project_stats(db: Session, user_id: int, months: int = 12) -> List[Dict]:
-    """获取用户项目月度统计数据"""
+    """获取用户项目月度统计数据 - 优化版本：统计当前月份往前倒推12个月"""
     from sqlalchemy import extract
     
-    # 计算起始日期（当前日期往前推months个月）
-    end_date = datetime.datetime.utcnow()
-    start_date = end_date - datetime.timedelta(days=months*30)  # 近似计算
+    # 获取当前日期
+    current_date = datetime.datetime.utcnow()
+    current_year = current_date.year
+    current_month = current_date.month
+    
+    # 计算起始日期（当前月份往前推months个月）
+    # 更精确的日期计算，避免近似误差
+    start_date = current_date.replace(day=1)  # 当前月的第一天
+    for _ in range(months):
+        # 往前推一个月
+        if start_date.month == 1:
+            start_date = start_date.replace(year=start_date.year-1, month=12)
+        else:
+            start_date = start_date.replace(month=start_date.month-1)
     
     # 按月统计项目创建数量
     monthly_stats = db.query(
@@ -117,36 +128,41 @@ def get_monthly_project_stats(db: Session, user_id: int, months: int = 12) -> Li
             'label': f"{int(stat.year)}-{int(stat.month):02d}"
         })
     
-    # 确保返回最近months个月的数据，即使某个月没有项目也返回0
-    current_year = end_date.year
-    current_month = end_date.month
-    
-    # 生成完整的月份列表（按时间顺序从早到晚）
+    # 生成完整的月份列表（从最早月份到当前月份）
     complete_stats = []
-    for i in range(months-1, -1, -1):  # 从最早月份开始
-        # 计算月份
-        target_month = current_month - i
-        target_year = current_year
-        
-        if target_month <= 0:
-            target_month += 12
-            target_year -= 1
+    
+    # 生成月份列表：从起始月份到当前月份
+    temp_date = start_date.replace(day=1)
+    while temp_date <= current_date.replace(day=1):
+        target_year = temp_date.year
+        target_month = temp_date.month
         
         # 查找对应的统计数据
-        found = False
+        found_stat = None
         for stat in result:
             if stat['year'] == target_year and stat['month'] == target_month:
-                complete_stats.append(stat)
-                found = True
+                found_stat = stat
                 break
         
-        # 如果没有找到，添加0计数
-        if not found:
+        if found_stat:
+            complete_stats.append(found_stat)
+        else:
+            # 如果没有找到，添加0计数
             complete_stats.append({
                 'year': target_year,
                 'month': target_month,
                 'count': 0,
                 'label': f"{target_year}-{target_month:02d}"
             })
+        
+        # 移动到下一个月
+        if temp_date.month == 12:
+            temp_date = temp_date.replace(year=temp_date.year+1, month=1)
+        else:
+            temp_date = temp_date.replace(month=temp_date.month+1)
+    
+    # 确保只返回最近的months个月数据（如果生成的月份超过months，取最后months个）
+    if len(complete_stats) > months:
+        complete_stats = complete_stats[-months:]
     
     return complete_stats

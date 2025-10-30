@@ -158,49 +158,84 @@ const fetchMonthlyStats = async () => {
   }
 }
 
-// 生成默认月度数据（用于错误处理）
+// 生成默认月度数据（用于错误处理）- 修复版本
 const generateDefaultMonthlyData = () => {
   const currentDate = new Date()
   const data = []
   
-  // 生成最近12个月的默认数据，全部为0
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
+  // 生成当前月份往前倒推12个月的数据
+  for (let i = 0; i < 12; i++) {
+    // 计算目标月份：从当前月份往前倒推
+    const targetMonth = currentDate.getMonth() - i
+    const targetYear = currentDate.getFullYear()
+    
+    let month = targetMonth
+    let year = targetYear
+    
+    // 处理跨年情况
+    if (month < 0) {
+      month += 12
+      year -= 1
+    }
+    
+    // 月份从0开始，需要+1
+    const actualMonth = month + 1
+    
     data.push({
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      count: 0,  // 全部设为0，而不是随机数
-      label: `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
+      year: year,
+      month: actualMonth,
+      count: 0,
+      label: `${year}-${actualMonth.toString().padStart(2, '0')}`
     })
   }
   
-  return data
+  // 按时间顺序从早到晚排序
+  return data.sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year
+    return a.month - b.month
+  })
 }
 
-// 更新图表数据
+// 更新图表数据 - 优化版本
 const updateCharts = () => {
   if (!lineChart.value || !barChart.value || monthlyStats.value.length === 0) return
   
-  // 正确排序：按时间顺序从早到晚
+  // 确保数据按时间顺序从早到晚排列
   const sortedStats = [...monthlyStats.value].sort((a, b) => {
     if (a.year !== b.year) return a.year - b.year
     return a.month - b.month
   })
   
+  // 优化横坐标显示：只显示月份数字，如"01"、"02"等
   const xAxisData = sortedStats.map(item => {
-    // 显示为"01月"格式，而不是"2024-01"
-    return `${item.month.toString().padStart(2, '0')}月`
+    // 只显示月份数字，如"01"、"02"等
+    return `${item.month.toString().padStart(2, '0')}`
   })
+  
   const seriesData = sortedStats.map(item => item.count)
   
   console.log('月度统计数据:', sortedStats) // 调试信息
+  console.log('横坐标数据:', xAxisData) // 调试信息
   
   // 更新折线图
   lineChart.value.setOption({
+    tooltip: { 
+      trigger: 'axis',
+      formatter: function(params) {
+        // 在tooltip中显示完整的年月信息
+        const dataIndex = params[0].dataIndex
+        const stat = sortedStats[dataIndex]
+        return `${stat.year}年${stat.month}月<br/>新建项目: ${params[0].data}个`
+      }
+    },
     xAxis: { 
       data: xAxisData,
       axisLabel: {
-        rotate: 45
+        rotate: 45,
+        formatter: function(value) {
+          // 直接显示月份数字，如"01"、"02"等
+          return value
+        }
       }
     },
     series: [{ data: seriesData }]
@@ -211,7 +246,11 @@ const updateCharts = () => {
     xAxis: { 
       data: xAxisData,
       axisLabel: {
-        rotate: 45
+        rotate: 45,
+        formatter: function(value) {
+          // 直接显示月份数字，如"01"、"02"等
+          return value
+        }
       }
     },
     series: [{ data: seriesData }]
@@ -232,7 +271,7 @@ const initCharts = () => {
   barChart.value = echarts.init(barChartRef.value)
   
   // 使用空数据初始化，等待真实数据
-  const emptyXAxis = Array.from({length: 12}, (_, i) => `${(i + 1).toString().padStart(2, '0')}月`)
+  const emptyXAxis = Array.from({length: 12}, (_, i) => `${(i + 1).toString().padStart(2, '0')}`)
   const emptyData = Array(12).fill(0)
   
   // 折线图配置
@@ -246,7 +285,11 @@ const initCharts = () => {
       type: 'category', 
       data: emptyXAxis,
       axisLabel: {
-        rotate: 45
+        rotate: 45,
+        formatter: function(value) {
+          // 直接显示月份数字
+          return value
+        }
       }
     },
     yAxis: { type: 'value' },
@@ -275,7 +318,11 @@ const initCharts = () => {
       type: 'category', 
       data: emptyXAxis,
       axisLabel: {
-        rotate: 45
+        rotate: 45,
+        formatter: function(value) {
+          // 直接显示月份数字
+          return value
+        }
       }
     },
     yAxis: { type: 'value' },
