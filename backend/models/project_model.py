@@ -98,3 +98,25 @@ def get_recent_projects(db: Session, owner_id: Optional[int] = None, limit: int 
     if owner_id:
         q = q.filter(Project.owner_id == owner_id)
     return q.limit(limit).all()
+
+
+def get_project_detail(db: Session, project_id: int):
+    """获取项目详细信息，包含关联的用户信息"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        return None
+    
+    # 返回项目详情，包含关联的用户信息
+    return {
+        'id': project.id,
+        'project_code': project.project_code,
+        'name': project.name,
+        'description': project.description,
+        'project_type': project.project_type,
+        'status': project.status,
+        'progress': project.progress,
+        'created_at': project.created_at,
+        'updated_at': project.updated_at,
+        'owner_name': project.owner.username if project.owner else None,
+        'owner_id': project.owner_id
+    }

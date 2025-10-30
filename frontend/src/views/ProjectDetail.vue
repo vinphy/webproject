@@ -82,7 +82,7 @@
         <div class="left-lower">
           <el-card class="stats-card">
             <template #header>
-              <span class="section-title">测试用例</span>
+<span class="section-title">测试用例</span>
             </template>
             <div class="cases-scroller" ref="casesScrollerRef">
               <div class="case-item" v-for="item in allCases" :key="item.id">
@@ -217,6 +217,7 @@ import { ref, onMounted, onBeforeUnmount, computed ,nextTick} from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Back, VideoPlay, Delete } from '@element-plus/icons-vue'
+import { getProjectDetail } from '@/api/project'  // 导入API函数
 
 const router = useRouter()
 const route = useRoute()
@@ -253,23 +254,56 @@ const allCases = ref([
   { id: 10, name: '报告模板-多语言', status: '待开始', progress: 0 },
 ])
 
-// 模拟项目数据
+// 项目数据（从API获取）
 const project = ref({
-  id: 1,
-  name: '智能测试平台',
-  description: '基于AI的自动化测试平台，支持多种测试类型和报告生成。',
-  status: '进行中',
-  type: '自动化测试',
-  priority: '高',
-  manager: '张三',
-  createTime: '2024-01-15 10:30:00',
-  expectedEndTime: '2024-03-15 18:00:00',
-  progress: 75,
-  tags: ['Web应用', 'AI', '自动化'],
+  id: 0,
+  name: '',
+  description: '',
+  status: '待开始',
+  type: '',
+  priority: '中',
+  manager: '',
+  createTime: '',
+  expectedEndTime: '',
+  progress: 0,
+  tags: [],
 })
 
 // 模拟任务数据（下半部分按需显示）
 const tasks = ref([])
+
+// 获取项目详情
+const fetchProjectDetail = async () => {
+  loading.value = true
+  try {
+    const projectId = route.params.id || 1  // 从路由参数获取项目ID
+    const response = await getProjectDetail(projectId)
+    
+    if (response.success && response.data) {
+      const projectData = response.data
+      project.value = {
+        id: projectData.id,
+        name: projectData.name,
+        description: projectData.description || '',
+        status: projectData.status || '待开始',
+        type: projectData.project_type || '',
+        priority: '中',  // 需要从数据库获取或默认值
+        manager: projectData.owner_name || '',
+        createTime: projectData.created_at ? new Date(projectData.created_at).toLocaleString() : '',
+        expectedEndTime: '',  // 需要从数据库获取
+        progress: projectData.progress || 0,
+        tags: [],  // 需要从数据库获取
+      }
+    } else {
+      ElMessage.error(response.message || '获取项目详情失败')
+    }
+  } catch (error) {
+    console.error('获取项目详情失败:', error)
+    ElMessage.error('获取项目详情失败，请检查网络连接')
+  } finally {
+    loading.value = false
+  }
+}
 
 const getStatusType = (s) => ({ '进行中': 'warning', '已完成': 'success', '待开始': 'info' }[s] || 'info')
 const getPriorityType = (p) => ({ '低': 'info', '中': 'warning', '高': 'danger', '紧急': 'danger' }[p] || 'info')
@@ -343,6 +377,9 @@ const staticImages = [
 ]
 
 onMounted(() => {
+  // 获取项目详情数据
+  fetchProjectDetail()
+  
   // 1) 日志先启动，确保无论图表是否出错都能看到日志
   const samples = ['拉取代码...OK','安装依赖...OK','启动容器 runner-01...OK','分发批次 #13...OK','执行 login_case...OK (320ms)','执行 add_role...OK (640ms)','执行 sql_scan...WARN','生成报告...OK','归档制品...OK']
   let i = 0
@@ -547,7 +584,7 @@ onBeforeUnmount(() => {
 }
 .tags-container { 
   display: flex; 
-  gap: 6px; 
+  gap: 6px;
   flex-wrap: wrap; 
 }
 .tag-item { 
@@ -646,7 +683,7 @@ onBeforeUnmount(() => {
   align-items: center; 
   gap: 12px; 
   padding: 8px 10px; 
-  border-bottom: 1px dashed #e5e7eb; 
+  border-bottom: 1px dashed #e5e7eb;
 }
 .case-name { 
   color: #303133; 

@@ -54,3 +54,18 @@ def list_projects(page: int = 1, size: int = 20, db: Session = Depends(get_db), 
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get('/{project_id}', summary='Get project detail')
+def get_project_detail(project_id: int, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+    """获取项目详细信息"""
+    try:
+        result = project_service.get_project_detail(db, project_id)
+        if not result['success']:
+            raise HTTPException(status_code=404, detail=result['message'])
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'获取项目详情失败: {str(e)}')

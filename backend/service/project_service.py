@@ -61,3 +61,27 @@ def list_projects(db: Session, owner_id: int = None, limit: int = 50, offset: in
 
     total = project_model.count_projects(db, owner_id=owner_id)
     return { 'items': results, 'total': int(total) }
+
+
+def get_project_detail(db: Session, project_id: int):
+    """获取项目详情服务函数"""
+    try:
+        project_detail = project_model.get_project_detail(db, project_id)
+        if not project_detail:
+            return {
+                'success': False,
+                'message': '项目不存在',
+                'data': None
+            }
+        
+        return {
+            'success': True,
+            'message': '获取项目详情成功',
+            'data': project_detail
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'获取项目详情失败: {str(e)}',
+            'data': None
+        }
