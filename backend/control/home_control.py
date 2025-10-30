@@ -41,3 +41,16 @@ async def get_monthly_project_stats_api(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取月度统计数据失败: {str(e)}")
+
+@router.get("/current-testing-projects", response_model=dict)
+async def get_current_testing_projects_api(
+    current_user: auth_model.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    limit: int = Query(10, description="项目数量限制", ge=1, le=50)
+):
+    """获取当前正在测试的项目数据接口"""
+    try:
+        result = home_service.get_current_testing_projects(db, current_user.id, limit)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取当前测试项目数据失败: {str(e)}")

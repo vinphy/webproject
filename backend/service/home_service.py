@@ -80,3 +80,32 @@ def get_monthly_project_stats(db: Session, user_id: int, months: int = 12) -> Di
             'total_months': 0,
             'user_id': user_id
         }
+
+
+def get_current_testing_projects(db: Session, user_id: int, limit: int = 10) -> Dict:
+    """获取当前正在测试的项目数据服务函数"""
+    try:
+        from models.home_model import get_current_testing_projects as get_testing_projects_model
+        projects = get_testing_projects_model(db, user_id, limit)
+        
+        # 添加调试信息
+        print(f"用户 {user_id} 的当前测试项目数据: {len(projects)} 个项目")
+        
+        return {
+            'success': True,
+            'data': projects,
+            'total': len(projects),
+            'user_id': user_id
+        }
+    except Exception as e:
+        # 添加错误调试信息
+        print(f"获取当前测试项目数据失败 - 用户 {user_id}: {str(e)}")
+        
+        # 如果获取失败，返回空数据
+        return {
+            'success': False,
+            'error': str(e),
+            'data': [],
+            'total': 0,
+            'user_id': user_id
+        }

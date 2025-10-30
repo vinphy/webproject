@@ -166,3 +166,35 @@ def get_monthly_project_stats(db: Session, user_id: int, months: int = 12) -> Li
         complete_stats = complete_stats[-months:]
     
     return complete_stats
+
+
+def get_current_testing_projects(db: Session, user_id: int, limit: int = 10) -> List[Dict]:
+    """获取当前正在测试的项目数据"""
+    # 查询用户的所有项目，按项目编号升序排列，限制数量
+    projects = db.query(Project).filter(
+        Project.owner_id == user_id
+    ).order_by(Project.id.asc()).limit(limit).all()
+    
+    results = []
+    for project in projects:
+        # 将状态映射为前端需要的格式
+        status_mapping = {
+            '已完成': 'completed',
+            '进行中': 'in-progress', 
+            '测试中': 'in-progress',
+            '待开始': 'not-started',
+            '暂停': 'not-started'
+        }
+        
+        frontend_status = status_mapping.get(project.status, 'not-started')
+        
+        results.append({
+            'id': project.id,
+            'projectCode': project.project_code or f"PROJ-{project.id:06d}",
+            'progress': float(project.progress) if project.progress is not None else 0.0,
+            'status': frontend_status,
+            'name': project.name,
+            'created_at': project.created_at.isoformat() if project.created_at else None
+        })
+    
+    return results

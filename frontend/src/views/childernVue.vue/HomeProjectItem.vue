@@ -33,45 +33,83 @@
           </tr>
         </tbody>
       </table>
+      <div v-if="loading" class="loading-container">
+        <el-icon class="loading-icon"><Loading /></el-icon>
+        <span>正在加载项目数据...</span>
+      </div>
+      <div v-else-if="projectsData.length === 0" class="empty-container">
+        <el-icon><DocumentRemove /></el-icon>
+        <span>暂无项目数据</span>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, onMounted } from 'vue'
+import { api } from '../../utils/auth'
+import { Loading, DocumentRemove } from '@element-plus/icons-vue'
+
 export default {
-  name: 'TestView',
-  data() {
-    return {
-      projectsData: [
-        { id: 1, projectCode: "PROJ-2023-001", progress: 100, status: "completed" },
-        { id: 2, projectCode: "PROJ-2023-002", progress: 75, status: "in-progress" },
-        { id: 3, projectCode: "PROJ-2023-003", progress: 30, status: "in-progress" },
-        { id: 4, projectCode: "PROJ-2023-004", progress: 0, status: "not-started" },
-        { id: 5, projectCode: "PROJ-2023-005", progress: 100, status: "completed" },
-        { id: 6, projectCode: "PROJ-2023-006", progress: 45, status: "in-progress" },
-        { id: 7, projectCode: "PROJ-2023-007", progress: 90, status: "in-progress" },
-        { id: 8, projectCode: "PROJ-2023-008", progress: 10, status: "in-progress" },
-        { id: 9, projectCode: "PROJ-2023-009", progress: 0, status: "not-started" },
-        { id: 10, projectCode: "PROJ-2023-010", progress: 100, status: "completed" }
-      ]
+  name: 'HomeProjectItem',
+  setup() {
+    const projectsData = ref([])
+    const loading = ref(true)
+
+    // 获取当前测试项目数据
+    const fetchCurrentTestingProjects = async () => {
+      try {
+        loading.value = true
+        const { data } = await api.get('/api/home/current-testing-projects?limit=10')
+        
+        if (data && data.success) {
+          projectsData.value = data.data
+          console.log('成功获取项目数据:', data.data.length, '个项目')
+        } else {
+          console.error('获取项目数据失败:', data?.error)
+          projectsData.value = [] // 失败时设置为空数组
+        }
+      } catch (error) {
+        console.error('获取当前测试项目数据失败:', error)
+        projectsData.value = [] // 异常时设置为空数组
+      } finally {
+        loading.value = false
+      }
     }
-  },
-  methods: {
-    getProgressColor(progress, status) {
+
+    // 进度条颜色映射
+    const getProgressColor = (progress, status) => {
       if (status === "completed") return "#2ecc71";
       if (status === "not-started") return "#f39c12";
       if (progress < 30) return "#e74c3c";
       if (progress < 70) return "#f39c12";
       return "#2ecc71";
-    },
-    getStatusText(status) {
+    }
+
+    // 状态文本映射
+    const getStatusText = (status) => {
       const statusMap = {
         "completed": "已完成",
-        "in-progress": "进行中",
+        "in-progress": "进行中", 
         "not-started": "未开始"
       };
       return statusMap[status] || status;
     }
+
+    onMounted(() => {
+      fetchCurrentTestingProjects()
+    })
+
+    return {
+      projectsData,
+      loading,
+      getProgressColor,
+      getStatusText
+    }
+  },
+  components: {
+    Loading,
+    DocumentRemove
   }
 }
 </script>
@@ -89,6 +127,8 @@ export default {
   overflow-x: auto;
   overflow-y: auto;
   max-height: 500px;
+  position: relative;
+  min-height: 200px;
 }
 
 table {
@@ -209,6 +249,33 @@ tr:nth-child(even) {
 tr:hover {
   background-color: #f1f7ff;
   transition: background-color 0.2s;
+}
+
+/* 加载和空状态样式 */
+.loading-container, .empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.loading-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-container .el-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: #999;
 }
 
 /* 响应式设计 */
