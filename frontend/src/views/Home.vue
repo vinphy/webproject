@@ -219,19 +219,10 @@ const updateCharts = () => {
   
   // 更新折线图
   lineChart.value.setOption({
-    tooltip: { 
-      trigger: 'axis',
-      formatter: function(params) {
-        // 在tooltip中显示完整的年月信息
-        const dataIndex = params[0].dataIndex
-        const stat = sortedStats[dataIndex]
-        return `${stat.year}年${stat.month}月<br/>新建项目: ${params[0].data}个`
-      }
-    },
     xAxis: { 
       data: xAxisData,
       axisLabel: {
-        rotate: 45,
+        rotate: 0, // 取消旋转，正常显示
         formatter: function(value) {
           // 直接显示月份数字，如"01"、"02"等
           return value
@@ -276,10 +267,6 @@ const initCharts = () => {
   
   // 折线图配置
   lineChart.value.setOption({
-    tooltip: { 
-      trigger: 'axis',
-      formatter: '{b}<br/>{a}: {c}个'
-    },
     grid: { left: 30, right: 10, top: 20, bottom: 20 },
     xAxis: { 
       type: 'category', 
@@ -309,10 +296,6 @@ const initCharts = () => {
   
   // 柱状图配置
   barChart.value.setOption({
-    tooltip: { 
-      trigger: 'axis',
-      formatter: '{b}<br/>{a}: {c}个'
-    },
     grid: { left: 30, right: 10, top: 20, bottom: 20 },
     xAxis: { 
       type: 'category', 
