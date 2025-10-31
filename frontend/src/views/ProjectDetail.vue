@@ -59,11 +59,18 @@
             <div class="charts-vertical">
               <div class="top-row">
                 <div class="water-left">
-                  <div class="chart-title">资源占用（水位）</div>
+                  <!-- 修改水位图的HTML结构 -->
                   <div class="water-wrapper">
                     <div class="water-circle">
-                      <div class="wave" :style="waterWaveStyle"></div>
+                      <div class="water-container">
+                        <div class="water-fill" :style="{ height: waterLevel + '%' }">
+                          <div class="wave wave-1"></div>
+                          <div class="wave wave-2"></div>
+                          <div class="wave wave-3"></div>
+                        </div>
+                      </div>
                       <div class="water-text">{{ waterLevel }}%</div>
+                      <div class="water-indicator"></div>
                     </div>
                   </div>
                 </div>
@@ -234,8 +241,11 @@ const gpuLineRef = ref(null)
 let cpuChart = null
 let gpuChart = null
 
+// 修改JavaScript逻辑部分
 // 水位图（CSS 实现）数据
 const waterLevel = ref(62)
+// 移除原有的waterWaveStyle计算属性
+
 const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
 
 // 动态日志
@@ -379,7 +389,7 @@ const appendLog = (txt) => {
 // 五秒后展示静态图片
 const showImages = ref(false)
 const staticImages = [
-  new URL('/src/assets/gnuradio.png', import.meta.url).href,
+new URL('/src/assets/gnuradio.png', import.meta.url).href,
   new URL('/src/assets/gnuradio.png', import.meta.url).href,
   new URL('/src/assets/gnuradio.png', import.meta.url).href,
   new URL('/src/assets/gnuradio.png', import.meta.url).href,
@@ -504,7 +514,7 @@ onBeforeUnmount(() => {
   flex-direction: column; 
   height: 100%;
 }
-.left-upper .el-card :deep(.el-card__body), .left-lower .el-card :deep(.el-card__body), .right-section .el-card :deep(.el-card__body) { 
+.left-upper .el-card :deep(.el-card__body), .left-lower .el-card :deep(.el-card__body), .right-section .el-card :deep(.el-card__body) {
   display: flex; 
   flex-direction: column; 
   min-height: 0; 
@@ -556,7 +566,7 @@ onBeforeUnmount(() => {
   border: 1px solid #ebeef5;
 }
 
-.header-actions { 
+.header-actions {
   display: flex; 
   gap: 12px; 
 }
@@ -644,6 +654,7 @@ onBeforeUnmount(() => {
 }
 
 /* CSS 水位图 */
+/* 修改水位图的CSS样式 */
 .water-wrapper { 
   display: flex; 
   justify-content: left; 
@@ -651,23 +662,54 @@ onBeforeUnmount(() => {
 }
 .water-circle { 
   position: relative; 
-  width: 100px; 
-  height: 100px; 
+  width: 120px; 
+  height: 120px; 
   border-radius: 50%; 
-  background: radial-gradient(closest-side, #e8f3ff 92%, transparent 93% 100%), conic-gradient(#3ba0ff 0%, #3ba0ff 0%); 
+  background: radial-gradient(closest-side, #f8fbff 85%, #e8f3ff 86% 92%, transparent 93% 100%); 
+  border: 2px solid #cfe3ff; 
+  box-shadow: 0 4px 12px rgba(59, 160, 255, 0.15); 
   overflow: hidden; 
-  border: 1px solid #cfe3ff; 
 }
-.wave { 
-  position: absolute; 
-  left: 50%; 
-  bottom: 0; 
-  width: 200%; 
-  height: 200%; 
-  background: rgba(59,160,255,0.4); 
-  transform: translate(-50%, -60%); 
-  border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; 
-  animation: waveMove 4s linear infinite; 
+.water-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.water-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to top, #3ba0ff, #64b5ff);
+  transition: height 0.8s ease-in-out;
+}
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: -100%;
+  width: 300%;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 45% 50% 40% 55%;
+  animation: waveMove 6s linear infinite;
+}
+.wave-1 {
+  animation-delay: 0s;
+  opacity: 0.6;
+  height: 35px;
+}
+.wave-2 {
+  animation-delay: 2s;
+  opacity: 0.4;
+  height: 30px;
+}
+.wave-3 {
+  animation-delay: 4s;
+  opacity: 0.2;
+  height: 25px;
 }
 .water-text { 
   position: absolute; 
@@ -676,11 +718,25 @@ onBeforeUnmount(() => {
   transform: translate(-50%, -50%); 
   font-weight: 700; 
   color: #3b6db3; 
-  font-size: 16px; 
+  font-size: 18px; 
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+  z-index: 10;
+}
+.water-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  border: 2px dashed rgba(59, 160, 255, 0.3);
+  pointer-events: none;
 }
 @keyframes waveMove { 
-  0% { transform: translate(-50%, -60%) rotate(0deg); } 
-  100% { transform: translate(-50%, -60%) rotate(360deg); } 
+  0% { transform: translateX(0) rotate(0deg); } 
+  50% { transform: translateX(33.33%) rotate(180deg); } 
+  100% { transform: translateX(66.66%) rotate(360deg); } 
 }
 
 /* 左下：测试用例滚动列表 */

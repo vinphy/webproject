@@ -37,4 +37,69 @@ const fetchProjectDetail = async () => {
     loading.value = false
   }
 }
-// ... existing code ...
+              <div class="top-row">
+                <div class="water-left">
+                  <div class="chart-title">资源占用（水位）</div>
+                  <div class="water-wrapper">
+                    <div class="water-circle">
+                      <!-- 多层水波效果 -->
+                      <div class="water-background"></div>
+                      <div class="wave wave-1" :style="waveStyle1"></div>
+                      <div class="wave wave-2" :style="waveStyle2"></div>
+                      <div class="wave wave-3" :style="waveStyle3"></div>
+                      <div class="water-text">{{ waterLevel }}%</div>
+                      <!-- 水位指示器 -->
+                      <div class="water-indicator" :style="indicatorStyle"></div>
+                    </div>
+                    <!-- 水位图例 -->
+                    <div class="water-legend">
+                      <div class="legend-item">
+                        <span class="legend-color" style="background: #3ba0ff;"></span>
+                        <span class="legend-text">当前水位</span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-color" style="background: #ff6b6b;"></span>
+                        <span class="legend-text">警戒水位</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="gpu-right">
+                  <div class="chart-title">GPU 使用率</div>
+                  <div ref="gpuLineRef" class="chart-gpu-line"></div>
+                </div>
+              </div>
+              <div class="bottom-row">
+                <div class="execution-item">
+                  <div class="execution-item-title">执行项</div>
+                  <div class="execution-item-content">
+                    <div class="execution-item-content-title">执行项</div>
+                    <div class="execution-item-content-content">
+                      <div class="execution-item-content-content-title">执行项</div>
+                      <div class="execution-item-content-content-content">
+                        <div class="execution-item-content-content-content-title">执行项</div>
+                        <div class="execution-item-content-content-content-content">
+                          <div class="execution-item-content-content-content-content-title">执行项</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="bottom-row">
+                <div class="execution-item">
+                  <div class="execution-item-title">执行项</div>
+                  <div class="execution-item-content">
+                    <div class="execution-item-content-title">执行项</div>
+                    <div class="execution-item-content-content">
+                      <div class="execution-item-content-content-title">执行项</div>
+                      <div class="execution-item-content-content-content">
+                        <div class="execution-item-content-content-content-title">执行项</div>
+                        <div class="execution-item-content-content-content-content">
+                          <div class="execution-item-content-content-content-content-title">执行项</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
