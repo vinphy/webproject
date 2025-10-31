@@ -101,13 +101,13 @@ def get_recent_projects(db: Session, owner_id: Optional[int] = None, limit: int 
 
 
 def get_project_detail(db: Session, project_id: int):
-    """获取项目详细信息，包含关联的用户信息"""
+    """获取项目详细信息，包含关联的用户信息和config数据"""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         return None
     
-    # 返回项目详情，包含关联的用户信息
-    return {
+    # 基础项目信息
+    project_detail = {
         'id': project.id,
         'project_code': project.project_code,
         'name': project.name,
@@ -118,5 +118,8 @@ def get_project_detail(db: Session, project_id: int):
         'created_at': project.created_at,
         'updated_at': project.updated_at,
         'owner_name': project.owner.username if project.owner else None,
-        'owner_id': project.owner_id
+        'owner_id': project.owner_id,
+        'config': project.config  # 添加config字段
     }
+    
+    return project_detail

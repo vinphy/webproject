@@ -74,6 +74,25 @@ def get_project_detail(db: Session, project_id: int):
                 'data': None
             }
         
+        # 获取项目完整信息，包括config
+        project = project_model.get_project_by_id(db, project_id)
+        if project and project.config:
+            try:
+                config_data = json.loads(project.config)
+                # 解析config中的form数据
+                form_data = config_data.get('form', {})
+                project_detail.update({
+                    'test_leader': form_data.get('testLeader'),
+                    'start_date': form_data.get('startDate'),
+                    'end_date': form_data.get('endDate'),
+                    'priority': form_data.get('priority', '中'),  # 默认优先级为中
+                    'execution_items': config_data.get('step2Selections', {}).get('selectedItems', [])  # 执行项
+                })
+                print('项目详情')
+                # print(project_detail)
+            except Exception as e:
+                print(f"解析config失败: {e}")
+        
         return {
             'success': True,
             'message': '获取项目详情成功',

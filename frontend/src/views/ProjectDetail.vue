@@ -17,25 +17,26 @@
             <!-- 项目详细信息 -->
             <div class="project-info">
               <div class="info-grid">
-                <div class="info-item">
-                  <span class="info-label">项目ID：</span>
-                  <span class="info-value">{{ project.id }}</span>
-                </div>
+                
                 <div class="info-item">
                   <span class="info-label">项目名称：</span>
                   <span class="info-value">{{ project.name }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">项目类型：</span>
+                  <span class="info-value">{{ project.type   }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">测试类型：</span>
                   <span class="info-value">{{ project.type }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">测试负责人：</span>
+                  <span class="info-value">{{ project.manager }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">优先级：</span>
                   <el-tag :type="getPriorityType(project.priority)" size="small">{{ project.priority }}</el-tag>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">负责人：</span>
-                  <span class="info-value">{{ project.manager }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">创建时间：</span>
@@ -45,10 +46,10 @@
                   <span class="info-label">项目描述：</span>
                   <span class="info-value">{{ project.description }}</span>
                 </div>
-                <div class="info-item full-width">
-                  <span class="info-label">项目标签：</span>
-                  <div class="tags-container">
-                    <el-tag v-for="tag in project.tags" :key="tag" size="small" class="tag-item">{{ tag }}</el-tag>
+                <div class="info-item full-width" v-if="project.executionItems && project.executionItems.length > 0">
+                  <span class="info-label">执行项：</span>
+                  <div class="execution-items-container">
+                    <el-tag v-for="item in project.executionItems" :key="item" size="small" class="execution-item">{{ item }}</el-tag>
                   </div>
                 </div>
               </div>
@@ -82,7 +83,7 @@
         <div class="left-lower">
           <el-card class="stats-card">
             <template #header>
-<span class="section-title">测试用例</span>
+              <span class="section-title">测试用例</span>
             </template>
             <div class="cases-scroller" ref="casesScrollerRef">
               <div class="case-item" v-for="item in allCases" :key="item.id">
@@ -278,21 +279,26 @@ const fetchProjectDetail = async () => {
   try {
     const projectId = route.params.id || 1  // 从路由参数获取项目ID
     const response = await getProjectDetail(projectId)
-    
-    if (response.success && response.data) {
-      const projectData = response.data
+    console.log('API响应:', response.data)  // 调试用
+    console.log('success字段:', response.data.success)  // 调试用
+
+    if (response.data.success && response.data.data) {
+      const projectData = response.data.data
+      console.log(projectData)
+
+      // 解析项目数据
       project.value = {
         id: projectData.id,
         name: projectData.name,
         description: projectData.description || '',
         status: projectData.status || '待开始',
         type: projectData.project_type || '',
-        priority: '中',  // 需要从数据库获取或默认值
-        manager: projectData.owner_name || '',
+        priority: projectData.priority || '中',
+        manager: projectData.test_leader || projectData.owner_name || '',
         createTime: projectData.created_at ? new Date(projectData.created_at).toLocaleString() : '',
-        expectedEndTime: '',  // 需要从数据库获取
+        expectedEndTime: projectData.end_date || '',
         progress: projectData.progress || 0,
-        tags: [],  // 需要从数据库获取
+        executionItems: projectData.execution_items || []  // 执行项
       }
     } else {
       ElMessage.error(response.message || '获取项目详情失败')
@@ -585,10 +591,14 @@ onBeforeUnmount(() => {
 .tags-container { 
   display: flex; 
   gap: 6px;
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
+  margin-top: 8px;
 }
 .tag-item { 
-  margin: 0; 
+  margin: 0;
+  background-color: #f0f9ff;
+  border-color: #91d5ff;
+  color: #1890ff;
 }
 
 /* 左上：水位+GPU 同行，CPU 在下；确保滚动容器生效 */

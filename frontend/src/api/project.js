@@ -3,7 +3,7 @@ import { api } from '@/utils/auth'
 // 获取项目详情
 export function getProjectDetail(projectId) {
   return api({
-    url: `/api/project/${projectId}`,
+    url: `/api/projects/${projectId}`,
     method: 'get'
   })
 }
@@ -11,7 +11,7 @@ export function getProjectDetail(projectId) {
 // 获取项目列表
 export function getProjectList(params) {
   return api({
-    url: '/api/project/',
+    url: '/api/projects/',
     method: 'get',
     params
   })
@@ -20,7 +20,7 @@ export function getProjectList(params) {
 // 创建项目
 export function createProject(data) {
   return api({
-    url: '/api/project/',
+    url: '/api/projects/',
     method: 'post',
     data
   })
