@@ -65,8 +65,9 @@
                     <div ref="liquidChartRef" class="liquid-chart"></div>
                   </div>
                 </div>
+                <!-- 在现有的GPU图表容器中添加标题 -->
                 <div class="gpu-right">
-                  <div class="chart-title">GPU 使用率</div>
+                  <div class="chart-title">GPU使用率监控</div>
                   <div ref="gpuLineRef" class="chart-gpu-line"></div>
                 </div>
               </div>
@@ -242,15 +243,36 @@ let liquidChart = null // 水球图实例
 const waterLevel = ref(0)
 // const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
 
+// 获取GPU历史数据
+const fetchGpuHistory = async () => {
+  try {
+    const response = await fetch('/api/resources/gpu/history')
+    if (response.ok) {  
+      const data = await response.json()
+      console.log('GPU历史数据响应:', data.data)  // 调试用
+      if (data.success && data.data) {
+         
+        // 确保最新时间的数据在最后面
+        return data.data.map(item => item.gpu_usage || 0)
+      }
+    }
+  } catch (error) {
+    console.error('获取GPU历史数据失败:', error)
+  }
+  return null
+}
+
 // 获取资源状态数据
 const fetchResourceStatus = async () => {
   try {
     const response = await fetch('/api/resources/cpu')
     if (response.ok) {
+      
       const data = await response.json()
+      console.log("=====",data.data)
       if (data.success && data.data) {
+        
         // 使用后台返回的CPU使用率作为水位值（转换为0-1的小数）
-        console.log('获取的资源状态数据:', data.data.cpu_usage)  // 调试用
         const cpuUsage = data.data.cpu_usage || 0
         waterLevel.value = cpuUsage / 100
         
@@ -523,9 +545,83 @@ onMounted(() => {
   try {
     if (gpuLineRef.value && typeof echarts !== 'undefined') {
       const gpu = echarts.init(gpuLineRef.value); gpuChart = gpu
+      
+      // 初始化为空数组，等待后台数据
+      let gpuSeries = []
       const xData = Array.from({ length: 30 }, (_, k) => k + 1)
-      let gpuSeries = Array.from({ length: 30 }, () => Math.round(10 + Math.random() * 60))
-      gpu.setOption({ animation: true, tooltip: { trigger: 'axis' }, grid: { left: 30, right: 10, top: 10, bottom: 20 }, xAxis: { type: 'category', data: xData, axisLabel: { show: false } }, yAxis: { type: 'value', min: 0, max: 100 }, series: [{ type: 'line', smooth: true, data: gpuSeries, areaStyle: { opacity: 0.2 }, name: 'GPU%', lineStyle: { color: '#9b59b6' }, itemStyle: { color: '#9b59b6' } }] })
+      
+      // 初始图表配置
+      gpu.setOption({ 
+        animation: true, 
+        tooltip: { 
+          trigger: 'axis',
+          formatter: function(params) {
+            const data = params[0]
+            return `GPU使用率: ${data.value}%<br/>时间点: ${data.dataIndex + 1}`
+          }
+        }, 
+        grid: { left: 30, right: 10, top: 10, bottom: 20 }, 
+        xAxis: { 
+          type: 'category', 
+          data: xData, 
+          axisLabel: { show: false } 
+        }, 
+        yAxis: { 
+          type: 'value', 
+          min: 0, 
+          max: 100,
+          axisLabel: {
+            formatter: '{value}%'
+          }
+        }, 
+        series: [{ 
+          type: 'line', 
+          smooth: true, 
+          data: gpuSeries, 
+          areaStyle: { 
+            opacity: 0.2,
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(155, 89, 182, 0.3)' },
+              { offset: 1, color: 'rgba(155, 89, 182, 0.1)' }
+            ])
+          }, 
+          name: 'GPU使用率', 
+          lineStyle: { 
+            color: '#9b59b6',
+            width: 2
+          }, 
+          itemStyle: { 
+            color: '#9b59b6' 
+          },
+          symbol: 'circle',
+          symbolSize: 4,
+          emphasis: {
+            itemStyle: {
+              color: '#8e44ad',
+              borderColor: '#fff',
+              borderWidth: 2
+            }
+          }
+        }] 
+      })
+      
+      // 初始加载GPU历史数据
+      setTimeout(async () => {
+        const historyData = await fetchGpuHistory()
+        if (historyData && historyData.length > 0) {
+          // 确保只显示最新的30条数据
+          gpuSeries = historyData.slice(-30)
+          gpu.setOption({ 
+            series: [{ data: gpuSeries }]
+          })
+        } else {
+          // 如果没有历史数据，使用模拟数据初始化
+          gpuSeries = Array.from({ length: 30 }, () => Math.round(10 + Math.random() * 60))
+          gpu.setOption({ 
+            series: [{ data: gpuSeries }]
+          })
+        }
+      }, 500)
       
       // 修改GPU定时器：从后台获取真实数据
       gpuTimer = setInterval(async () => {
@@ -533,15 +629,30 @@ onMounted(() => {
         if (resourceData) {
           // 使用后台返回的GPU使用率
           const gpuUsage = resourceData.gpu_usage || 25
-          gpuSeries.shift()
+          
+          // 如果数据长度超过30，移除最旧的数据
+          if (gpuSeries.length >= 30) {
+            gpuSeries.shift()
+          }
+          
+          // 添加最新数据到末尾（确保最新时间在最后）
           gpuSeries.push(gpuUsage)
-          gpu.setOption({ series: [{ data: gpuSeries }] })
+          
+          // 更新图表
+          gpu.setOption({ 
+            series: [{ data: gpuSeries }]
+          })
         } else {
           // 如果后台获取失败，使用模拟数据
-          gpuSeries.shift()
-          const n = Math.max(0, Math.min(100, gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20)))
+          if (gpuSeries.length >= 30) {
+            gpuSeries.shift()
+          }
+          const n = Math.max(0, Math.min(100, gpuSeries.length > 0 ? 
+            (gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20)) : 25))
           gpuSeries.push(n)
-          gpu.setOption({ series: [{ data: gpuSeries }] })
+          gpu.setOption({ 
+            series: [{ data: gpuSeries }]
+          })
         }
       }, 3000) // 每3秒更新一次
     }
