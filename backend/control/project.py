@@ -61,7 +61,7 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db), current_u
     """获取项目详细信息"""
     try:
         result = project_service.get_project_detail(db, project_id)
-        print(result)
+        # print(result)
         if not result['success']:
             raise HTTPException(status_code=404, detail=result['message'])
         

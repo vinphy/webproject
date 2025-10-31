@@ -86,9 +86,11 @@ def get_project_detail(db: Session, project_id: int):
                     'start_date': form_data.get('startDate'),
                     'end_date': form_data.get('endDate'),
                     'priority': form_data.get('priority', '中'),  # 默认优先级为中
-                    'execution_items': config_data.get('step2Selections', {}).get('selectedItems', [])  # 执行项
+                    'execution_items': config_data.get('step2Selections', {}).get('selectedItems', []) , # 执行项
+                    'step2Selections': config_data.get('step2Selections', {})   #vuln漏洞扫描； fuzz模糊测试；cases测试用例
                 })
-                print('项目详情')
+                # print('项目详情')
+                # print(config_data.get('step2Selections', {}))
                 # print(project_detail)
             except Exception as e:
                 print(f"解析config失败: {e}")

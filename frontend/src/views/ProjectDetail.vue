@@ -17,7 +17,10 @@
             <!-- 项目详细信息 -->
             <div class="project-info">
               <div class="info-grid">
-                
+                <div class="info-item">
+                  <span class="info-label">项目ID：</span>
+                  <span class="info-value">{{ project.id }}</span>
+                </div>
                 <div class="info-item">
                   <span class="info-label">项目名称：</span>
                   <span class="info-value">{{ project.name }}</span>
@@ -25,10 +28,6 @@
                 <div class="info-item">
                   <span class="info-label">项目类型：</span>
                   <span class="info-value">{{ project.type   }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">测试类型：</span>
-                  <span class="info-value">{{ project.type }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">测试负责人：</span>
@@ -46,10 +45,12 @@
                   <span class="info-label">项目描述：</span>
                   <span class="info-value">{{ project.description }}</span>
                 </div>
-                <div class="info-item full-width" v-if="project.executionItems && project.executionItems.length > 0">
+                <div class="info-item full-width" v-if="project.step2Selections && Object.keys(project.step2Selections).length > 0">
                   <span class="info-label">执行项：</span>
                   <div class="execution-items-container">
-                    <el-tag v-for="item in project.executionItems" :key="item" size="small" class="execution-item">{{ item }}</el-tag>
+                    <el-tag v-if="project.step2Selections.vuln"  size="small" class="execution-item">漏洞扫描</el-tag>
+                    <el-tag v-if="project.step2Selections.fuzz"  size="small" class="execution-item">模糊测试</el-tag>
+                    <el-tag v-if="project.step2Selections.cases"  size="small" class="execution-item">测试用例</el-tag>
                   </div>
                 </div>
               </div>
@@ -268,6 +269,7 @@ const project = ref({
   expectedEndTime: '',
   progress: 0,
   tags: [],
+  step2Selections:{},
 })
 
 // 模拟任务数据（下半部分按需显示）
@@ -288,7 +290,7 @@ const fetchProjectDetail = async () => {
 
       // 解析项目数据
       project.value = {
-        id: projectData.id,
+        id: projectData.project_code,
         name: projectData.name,
         description: projectData.description || '',
         status: projectData.status || '待开始',
@@ -298,7 +300,8 @@ const fetchProjectDetail = async () => {
         createTime: projectData.created_at ? new Date(projectData.created_at).toLocaleString() : '',
         expectedEndTime: projectData.end_date || '',
         progress: projectData.progress || 0,
-        executionItems: projectData.execution_items || []  // 执行项
+        executionItems: projectData.execution_items || [],  // 执行项
+        step2Selections: projectData.step2Selections || {}
       }
     } else {
       ElMessage.error(response.message || '获取项目详情失败')
