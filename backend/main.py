@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from control import auth, project, home_control, logs_control, code_file_control, sql_parser_control, bit_test_control
+from control import auth, project, home_control, logs_control, code_file_control, sql_parser_control, bit_test_control,resource_control
 
 app = FastAPI(title="项目管理系统API")
 
@@ -21,6 +21,7 @@ app.include_router(logs_control.router, prefix="/api/logs", tags=["logs"])
 app.include_router(code_file_control.router, prefix="/api/code-files", tags=["code-files"])
 app.include_router(sql_parser_control.router, prefix="/api/sql-parser", tags=["sql-parser"])
 app.include_router(bit_test_control.router, prefix="/api/bit-test", tags=["bit-test"])
+app.include_router(resource_control.router, prefix="/api/resources", tags=["resources"])    
 
 
 @app.get("/")

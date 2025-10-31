@@ -238,10 +238,34 @@ const liquidChartRef = ref(null)
 let cpuChart = null
 let gpuChart = null
 let liquidChart = null // 水球图实例
-
-// 水位图（CSS 实现）数据
-const waterLevel = ref(0.62)
+// 水位图数据 - 初始值设为0，将从后台获取真实数据
+const waterLevel = ref(0)
 // const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
+
+// 获取资源状态数据
+const fetchResourceStatus = async () => {
+  try {
+    const response = await fetch('/api/resources/cpu')
+    if (response.ok) {
+      const data = await response.json()
+      if (data.success && data.data) {
+        // 使用后台返回的CPU使用率作为水位值（转换为0-1的小数）
+        console.log('获取的资源状态数据:', data.data.cpu_usage)  // 调试用
+        const cpuUsage = data.data.cpu_usage || 0
+        waterLevel.value = cpuUsage / 100
+        
+        // 更新水球图
+        updateLiquidChart()
+        
+        return data.data
+      }
+    }
+  } catch (error) {
+    console.error('获取资源状态失败:', error)
+  }
+  return null
+}
+
 // 初始化水球图
 const initLiquidChart = () => {
   if (!liquidChartRef.value) return
@@ -475,7 +499,24 @@ onMounted(() => {
       const xData = Array.from({ length: 30 }, (_, k) => k + 1)
       let cpuSeries = Array.from({ length: 30 }, () => Math.round(20 + Math.random() * 40))
       cpu.setOption({ animation: true, tooltip: { trigger: 'axis' }, grid: { left: 30, right: 10, top: 20, bottom: 20 }, xAxis: { type: 'category', data: xData, axisLabel: { show: false } }, yAxis: { type: 'value', min: 0, max: 100 }, series: [{ type: 'line', smooth: true, data: cpuSeries, areaStyle: {}, name: 'CPU%' }] })
-      cpuTimer = setInterval(() => { cpuSeries.shift(); const n = Math.max(0, Math.min(100, cpuSeries.at(-1) + Math.round(-10 + Math.random() * 20))); cpuSeries.push(n); waterLevel.value = Math.round(n * 0.8); cpu.setOption({ series: [{ data: cpuSeries }] }) }, 1200)
+      
+      // 修改CPU定时器：从后台获取真实数据
+      cpuTimer = setInterval(async () => {
+        const resourceData = await fetchResourceStatus()
+        if (resourceData) {
+          // 使用后台返回的CPU使用率
+          const cpuUsage = resourceData.cpu_usage || 30
+          cpuSeries.shift()
+          cpuSeries.push(cpuUsage)
+          cpu.setOption({ series: [{ data: cpuSeries }] })
+        } else {
+          // 如果后台获取失败，使用模拟数据
+          cpuSeries.shift()
+          const n = Math.max(0, Math.min(100, cpuSeries.at(-1) + Math.round(-10 + Math.random() * 20)))
+          cpuSeries.push(n)
+          cpu.setOption({ series: [{ data: cpuSeries }] })
+        }
+      }, 3000) // 每3秒更新一次
     }
   } catch (e) { console.warn('CPU 图表初始化失败，已忽略：', e) }
 
@@ -485,7 +526,24 @@ onMounted(() => {
       const xData = Array.from({ length: 30 }, (_, k) => k + 1)
       let gpuSeries = Array.from({ length: 30 }, () => Math.round(10 + Math.random() * 60))
       gpu.setOption({ animation: true, tooltip: { trigger: 'axis' }, grid: { left: 30, right: 10, top: 10, bottom: 20 }, xAxis: { type: 'category', data: xData, axisLabel: { show: false } }, yAxis: { type: 'value', min: 0, max: 100 }, series: [{ type: 'line', smooth: true, data: gpuSeries, areaStyle: { opacity: 0.2 }, name: 'GPU%', lineStyle: { color: '#9b59b6' }, itemStyle: { color: '#9b59b6' } }] })
-      gpuTimer = setInterval(() => { gpuSeries.shift(); const n = Math.max(0, Math.min(100, gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20))); gpuSeries.push(n); gpu.setOption({ series: [{ data: gpuSeries }] }) }, 1300)
+      
+      // 修改GPU定时器：从后台获取真实数据
+      gpuTimer = setInterval(async () => {
+        const resourceData = await fetchResourceStatus()
+        if (resourceData) {
+          // 使用后台返回的GPU使用率
+          const gpuUsage = resourceData.gpu_usage || 25
+          gpuSeries.shift()
+          gpuSeries.push(gpuUsage)
+          gpu.setOption({ series: [{ data: gpuSeries }] })
+        } else {
+          // 如果后台获取失败，使用模拟数据
+          gpuSeries.shift()
+          const n = Math.max(0, Math.min(100, gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20)))
+          gpuSeries.push(n)
+          gpu.setOption({ series: [{ data: gpuSeries }] })
+        }
+      }, 3000) // 每3秒更新一次
     }
   } catch (e) { console.warn('GPU 图表初始化失败，已忽略：', e) }
 
@@ -498,8 +556,17 @@ onMounted(() => {
   }, 2200)
 
   // 4) 自适应
-  const onResize = () => { cpuChart && cpuChart.resize(); gpuChart && gpuChart.resize() }
+  const onResize = () => { 
+    cpuChart && cpuChart.resize(); 
+    gpuChart && gpuChart.resize(); 
+    liquidChart && liquidChart.resize() 
+  }
   window.addEventListener('resize', onResize)
+
+  // 5) 初始获取资源状态数据
+  setTimeout(() => {
+    fetchResourceStatus()
+  }, 1000)
 
   setTimeout(() => { 
     showImages.value = true 
@@ -542,7 +609,6 @@ onBeforeUnmount(() => {
   box-sizing: border-box; 
   overflow-x: hidden; 
 }
-
 /* 上半部分：左7右3布局 - 修复高度问题 */
 .upper-section { 
   height: 90vh; 

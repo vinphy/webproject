@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',  // 改为明确的IPv4地址
         changeOrigin: true
       }
     }
@@ -18,4 +18,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src')
     }
   }
-}) 
+})
