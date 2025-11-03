@@ -27,6 +27,7 @@ async def get_gpu_history(limit: int = 30):
     """获取GPU历史数据"""
     try:
         result = resource_service.get_gpu_history(limit)
+        print(result)
         # 包装成前端期望的格式
         return {
             "success": True,

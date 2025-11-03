@@ -52,10 +52,10 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
-app.include_router(project.router, prefix="/api/project", tags=["项目管理"])
+app.include_router(project.router, prefix="/api/projects", tags=["项目管理"])
 app.include_router(home_control.router, prefix="/api/home", tags=["首页"])
 app.include_router(logs_control.router, prefix="/api/logs", tags=["日志管理"])
-app.include_router(resource_control.router, prefix="/api/resources", tags=["资源监控"])  # 改为复数
+app.include_router(resource_control.router, prefix="/api/resources", tags=["资源监控"])
 app.include_router(code_file_control.router, prefix="/api/codeFile", tags=["代码文件"])
 app.include_router(sql_parser_control.router, prefix="/api/sqlParser", tags=["SQL解析"])
 app.include_router(bit_test_control.router, prefix="/api/bitTest", tags=["位测试"])

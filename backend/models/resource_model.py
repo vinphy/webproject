@@ -81,17 +81,34 @@ class ResourceModel:
         except Exception as e:
             print(f"查询资源记录失败: {e}")
             return []
-    
-    def cleanup_old_records(self, keep_days: int = 7):
-        """清理旧记录，保留指定天数内的数据"""
+
+    def cleanup_old_records(self, max_records: int = 39):
+        """清理旧记录，保证只保留指定数量的最新记录"""
         try:
-            cutoff_date = datetime.now() - timedelta(days=keep_days)
-            deleted_count = self.db.query(ResourceMonitorRecord).filter(
-                ResourceMonitorRecord.timestamp < cutoff_date
-            ).delete()
-            self.db.commit()
-            print(f"清理了 {deleted_count} 条旧资源记录")
-            return deleted_count
+            # 获取总记录数
+            total_count = self.db.query(ResourceMonitorRecord).count()
+            
+            if total_count > max_records:
+                # 计算需要删除的记录数
+                records_to_delete = total_count - max_records
+                
+                # 获取需要删除的最旧记录的ID
+                oldest_records = self.db.query(ResourceMonitorRecord.id).order_by(
+                    ResourceMonitorRecord.timestamp.asc()
+                ).limit(records_to_delete).all()
+                
+                # 删除旧记录
+                if oldest_records:
+                    oldest_ids = [record[0] for record in oldest_records]
+                    deleted_count = self.db.query(ResourceMonitorRecord).filter(
+                        ResourceMonitorRecord.id.in_(oldest_ids)
+                    ).delete(synchronize_session=False)
+                    
+                    self.db.commit()
+                    # print(f"清理了 {deleted_count} 条旧资源记录，当前保留 {max_records} 条最新记录")
+                    return deleted_count
+            
+            return 0
         except Exception as e:
             self.db.rollback()
             print(f"清理旧记录失败: {e}")
@@ -103,14 +120,25 @@ class ResourceMonitor:
         self.cpu_history = []  # 存储CPU使用率历史数据
         self.gpu_history = []  # 存储GPU使用率历史数据
         self.max_history_length = 30  # 最大历史记录数
-    
+        self.last_gpu_usage = 25.0  # 初始化GPU使用率，避免突变
+
     def generate_cpu_usage(self) -> float:
         """生成模拟的CPU使用率数据"""
         return round(random.uniform(5.0, 85.0), 2)
     
     def generate_gpu_usage(self) -> float:
-        """生成模拟的GPU使用率数据"""
-        return round(random.uniform(10.0, 95.0), 2)
+        """生成模拟的GPU使用率数据 - 平滑变化避免突变"""
+        # 基于上次使用率进行平滑变化，避免突然跳到25%
+        change = random.uniform(-15.0, 15.0)
+        new_usage = self.last_gpu_usage + change
+        
+        # 限制在合理范围内
+        new_usage = max(5.0, min(95.0, new_usage))
+        
+        # 更新上次使用率
+        self.last_gpu_usage = new_usage
+        
+        return round(new_usage, 2)
     
     def get_current_resources(self) -> Dict:
         """获取当前资源使用情况并更新历史数据"""
