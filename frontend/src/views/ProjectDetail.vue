@@ -27,15 +27,15 @@
                 </div>
                 <div class="info-item">
                   <span class="info-label">项目类型：</span>
-                  <span class="info-value">{{ project.type }}</span>
+                  <span class="info-value">{{ project.type   }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">测试负责人：</span>
+                  <span class="info-value">{{ project.manager }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">优先级：</span>
                   <el-tag :type="getPriorityType(project.priority)" size="small">{{ project.priority }}</el-tag>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">负责人：</span>
-                  <span class="info-value">{{ project.manager }}</span>
                 </div>
                 <div class="info-item">
                   <span class="info-label">创建时间：</span>
@@ -45,10 +45,12 @@
                   <span class="info-label">项目描述：</span>
                   <span class="info-value">{{ project.description }}</span>
                 </div>
-                <div class="info-item full-width">
-                  <span class="info-label">项目标签：</span>
-                  <div class="tags-container">
-                    <el-tag v-for="tag in project.tags" :key="tag" size="small" class="tag-item">{{ tag }}</el-tag>
+                <div class="info-item full-width" v-if="project.step2Selections && Object.keys(project.step2Selections).length > 0">
+                  <span class="info-label">执行项：</span>
+                  <div class="execution-items-container">
+                    <el-tag v-if="project.step2Selections.vuln"  size="small" class="execution-item">漏洞扫描</el-tag>
+                    <el-tag v-if="project.step2Selections.fuzz"  size="small" class="execution-item">模糊测试</el-tag>
+                    <el-tag v-if="project.step2Selections.cases"  size="small" class="execution-item">测试用例</el-tag>
                   </div>
                 </div>
               </div>
@@ -56,17 +58,16 @@
 
             <div class="charts-vertical">
               <div class="top-row">
+                <!-- 修改水位图的HTML结构，替换为echarts-liquidfill -->
                 <div class="water-left">
                   <div class="chart-title">资源占用（水位）</div>
                   <div class="water-wrapper">
-                    <div class="water-circle">
-                      <div class="wave" :style="waterWaveStyle"></div>
-                      <div class="water-text">{{ waterLevel }}%</div>
-                    </div>
+                    <div ref="liquidChartRef" class="liquid-chart"></div>
                   </div>
                 </div>
+                <!-- 在现有的GPU图表容器中添加标题 -->
                 <div class="gpu-right">
-                  <div class="chart-title">GPU 使用率</div>
+                  <div class="chart-title">GPU使用率监控</div>
                   <div ref="gpuLineRef" class="chart-gpu-line"></div>
                 </div>
               </div>
@@ -101,7 +102,7 @@
       
       <!-- 右上部分：运行监控（仅日志，GPU 已在左上展示） -->
       <div class="right-section">
-<el-card class="progress-card">
+        <el-card class="progress-card">
           <template #header>
             <div class="card-header">
               <span class="section-title">运行监控</span>
@@ -213,10 +214,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed ,nextTick} from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Back, VideoPlay, Delete } from '@element-plus/icons-vue'
+import { getProjectDetail } from '@/api/project'  // 导入API函数
+
+// 正确的echarts-liquidfill导入方式
+import * as echarts from "echarts"
+// 直接导入echarts-liquidfill，它会自动注册到echarts中
+import "echarts-liquidfill/src/liquidFill.js"
 
 const router = useRouter()
 const route = useRoute()
@@ -228,13 +235,125 @@ const hasTaskData = computed(() => tasks.value && tasks.value.length > 0)
 // 动态图表 refs
 const cpuLineRef = ref(null)
 const gpuLineRef = ref(null)
+const liquidChartRef = ref(null)
 let cpuChart = null
 let gpuChart = null
+let liquidChart = null // 水球图实例
+// 水位图数据 - 初始值设为0，将从后台获取真实数据
+const waterLevel = ref(0)
+// const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
 
-// 水位图（CSS 实现）数据
-const waterLevel = ref(62)
-const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
+// 获取GPU历史数据
+const fetchGpuHistory = async () => {
+  try {
+    const response = await fetch('/api/resources/gpu/history')
+    if (response.ok) {  
+      const data = await response.json()
+      console.log('GPU历史数据响应:', data.data)  // 调试用
+      if (data.success && data.data) {
+         
+        // 确保最新时间的数据在最后面
+        return data.data.map(item => item.gpu_usage || 0)
+      }
+    }
+  } catch (error) {
+    console.error('获取GPU历史数据失败:', error)
+  }
+  return null
+}
 
+// 获取资源状态数据
+const fetchResourceStatus = async () => {
+  try {
+    const response = await fetch('/api/resources/cpu')
+    if (response.ok) {
+      
+      const data = await response.json()
+      console.log("=====",data.data)
+      if (data.success && data.data) {
+        
+        // 使用后台返回的CPU使用率作为水位值（转换为0-1的小数）
+        const cpuUsage = data.data.cpu_usage || 0
+        waterLevel.value = cpuUsage / 100
+        
+        // 更新水球图
+        updateLiquidChart()
+        
+        return data.data
+      }
+    }
+  } catch (error) {
+    console.error('获取资源状态失败:', error)
+  }
+  return null
+}
+
+// 初始化水球图
+const initLiquidChart = () => {
+  if (!liquidChartRef.value) return
+  
+  liquidChart = echarts.init(liquidChartRef.value)
+  
+  const option = {
+    series: [{
+      type: 'liquidFill',
+      data: [waterLevel.value, waterLevel.value - 0.1, waterLevel.value - 0.2], // 多层水波
+      radius: '85%',
+      center: ['50%', '50%'],
+      color: ['#3ba0ff', '#64b5ff', '#90caff'], // 蓝色渐变
+      backgroundStyle: {
+        color: 'transparent',
+        borderColor: '#cfe3ff',
+        borderWidth: 2
+      },
+      outline: {
+        show: false
+      },
+      label: {
+        position: ['50%', '50%'],
+        formatter: function() {
+          return `${(waterLevel.value * 100).toFixed(0)}%`
+        },
+        fontSize: 18,
+        color: '#3b6db3',
+        fontWeight: 'bold'
+      },
+      itemStyle: {
+        opacity: 0.6,
+        shadowBlur: 10,
+        shadowColor: 'rgba(0, 0, 0, 0.3)'
+      },
+      emphasis: {
+        itemStyle: {
+          opacity: 0.9
+        }
+      },
+      waveAnimation: true,
+      animationDuration: 2000,
+      animationDurationUpdate: 1000,
+      amplitude: 6,
+      direction: 'right'
+    }]
+  }
+  
+  liquidChart.setOption(option)
+}
+
+// 更新水球图数据
+const updateLiquidChart = () => {
+  if (!liquidChart) return
+  
+  liquidChart.setOption({
+    series: [{
+      data: [waterLevel.value, waterLevel.value - 0.1, waterLevel.value - 0.2],
+      label: {
+        formatter: function() {
+          return `${(waterLevel.value * 100).toFixed(0)}%`
+        }
+      }
+    }]
+  })
+}
 // 动态日志
 const logs = ref([])
 const logsPaneRef = ref(null)
@@ -253,23 +372,63 @@ const allCases = ref([
   { id: 10, name: '报告模板-多语言', status: '待开始', progress: 0 },
 ])
 
-// 模拟项目数据
+// 项目数据（从API获取）
 const project = ref({
-  id: 1,
-  name: '智能测试平台',
-  description: '基于AI的自动化测试平台，支持多种测试类型和报告生成。',
-  status: '进行中',
-  type: '自动化测试',
-  priority: '高',
-  manager: '张三',
-  createTime: '2024-01-15 10:30:00',
-  expectedEndTime: '2024-03-15 18:00:00',
-  progress: 75,
-  tags: ['Web应用', 'AI', '自动化'],
+  id: 0,
+  name: '',
+  description: '',
+  status: '待开始',
+  type: '',
+  priority: '中',
+  manager: '',
+  createTime: '',
+  expectedEndTime: '',
+  progress: 0,
+  tags: [],
+  step2Selections:{},
 })
 
 // 模拟任务数据（下半部分按需显示）
 const tasks = ref([])
+
+// 获取项目详情
+const fetchProjectDetail = async () => {
+  loading.value = true
+  try {
+    const projectId = route.params.id || 1  // 从路由参数获取项目ID
+    const response = await getProjectDetail(projectId)
+    console.log('API响应:', response.data)  // 调试用
+    console.log('success字段:', response.data.success)  // 调试用
+
+    if (response.data.success && response.data.data) {
+      const projectData = response.data.data
+      console.log(projectData)
+
+      // 解析项目数据
+      project.value = {
+        id: projectData.project_code,
+        name: projectData.name,
+        description: projectData.description || '',
+        status: projectData.status || '待开始',
+        type: projectData.project_type || '',
+        priority: projectData.priority || '中',
+        manager: projectData.test_leader || projectData.owner_name || '',
+        createTime: projectData.created_at ? new Date(projectData.created_at).toLocaleString() : '',
+        expectedEndTime: projectData.end_date || '',
+        progress: projectData.progress || 0,
+        executionItems: projectData.execution_items || [],  // 执行项
+        step2Selections: projectData.step2Selections || {}
+      }
+    } else {
+      ElMessage.error(response.message || '获取项目详情失败')
+    }
+  } catch (error) {
+    console.error('获取项目详情失败:', error)
+    ElMessage.error('获取项目详情失败，请检查网络连接')
+  } finally {
+    loading.value = false
+  }
+}
 
 const getStatusType = (s) => ({ '进行中': 'warning', '已完成': 'success', '待开始': 'info' }[s] || 'info')
 const getPriorityType = (p) => ({ '低': 'info', '中': 'warning', '高': 'danger', '紧急': 'danger' }[p] || 'info')
@@ -360,7 +519,14 @@ const fetchGPUStatus = async () => {
   return null
 }
 
+
 onMounted(() => {
+  nextTick(() => {
+    initLiquidChart() // 初始化水球图
+  })
+  // 获取项目详情数据
+  fetchProjectDetail()
+  
   // 1) 日志先启动，确保无论图表是否出错都能看到日志
   const samples = ['拉取代码...OK','安装依赖...OK','启动容器 runner-01...OK','分发批次 #13...OK','执行 login_case...OK (320ms)','执行 add_role...OK (640ms)','执行 sql_scan...WARN','生成报告...OK','归档制品...OK']
   let i = 0
@@ -374,11 +540,28 @@ onMounted(() => {
       const xData = Array.from({ length: 30 }, (_, k) => k + 1)
       let cpuSeries = Array.from({ length: 30 }, () => Math.round(20 + Math.random() * 40))
       cpu.setOption({ animation: true, tooltip: { trigger: 'axis' }, grid: { left: 30, right: 10, top: 20, bottom: 20 }, xAxis: { type: 'category', data: xData, axisLabel: { show: false } }, yAxis: { type: 'value', min: 0, max: 100 }, series: [{ type: 'line', smooth: true, data: cpuSeries, areaStyle: {}, name: 'CPU%' }] })
-      cpuTimer = setInterval(() => { cpuSeries.shift(); const n = Math.max(0, Math.min(100, cpuSeries.at(-1) + Math.round(-10 + Math.random() * 20))); cpuSeries.push(n); waterLevel.value = Math.round(n * 0.8); cpu.setOption({ series: [{ data: cpuSeries }] }) }, 1200)
+      
+      // 修改CPU定时器：从后台获取真实数据
+      cpuTimer = setInterval(async () => {
+        const resourceData = await fetchResourceStatus()
+        if (resourceData) {
+          // 使用后台返回的CPU使用率
+          const cpuUsage = resourceData.cpu_usage || 30
+          cpuSeries.shift()
+          cpuSeries.push(cpuUsage)
+          cpu.setOption({ series: [{ data: cpuSeries }] })
+        } else {
+          // 如果后台获取失败，使用模拟数据
+          cpuSeries.shift()
+          const n = Math.max(0, Math.min(100, cpuSeries.at(-1) + Math.round(-10 + Math.random() * 20)))
+          cpuSeries.push(n)
+          cpu.setOption({ series: [{ data: cpuSeries }] })
+        }
+      }, 3000) // 每3秒更新一次
     }
   } catch (e) { console.warn('CPU 图表初始化失败，已忽略：', e) }
 
-  try {
+    try {
     if (gpuLineRef.value && typeof echarts !== 'undefined') {
       const gpu = echarts.init(gpuLineRef.value); gpuChart = gpu
       const xData = Array.from({ length: 30 }, (_, k) => k + 1)
@@ -419,8 +602,17 @@ onMounted(() => {
   }, 2200)
 
   // 4) 自适应
-  const onResize = () => { cpuChart && cpuChart.resize(); gpuChart && gpuChart.resize() }
+  const onResize = () => { 
+    cpuChart && cpuChart.resize(); 
+    gpuChart && gpuChart.resize(); 
+    liquidChart && liquidChart.resize() 
+  }
   window.addEventListener('resize', onResize)
+
+  // 5) 初始获取资源状态数据
+  setTimeout(() => {
+    fetchResourceStatus()
+  }, 1000)
 
   setTimeout(() => { 
     showImages.value = true 
@@ -440,6 +632,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (liquidChart) {
+    liquidChart.dispose()
+    liquidChart = null
+  }
   cpuTimer && clearInterval(cpuTimer)
   gpuTimer && clearInterval(gpuTimer)
   waterTimer && clearInterval(waterTimer)
@@ -459,7 +655,6 @@ onBeforeUnmount(() => {
   box-sizing: border-box; 
   overflow-x: hidden; 
 }
-
 /* 上半部分：左7右3布局 - 修复高度问题 */
 .upper-section { 
   height: 90vh; 
@@ -587,11 +782,15 @@ onBeforeUnmount(() => {
 }
 .tags-container { 
   display: flex; 
-  gap: 6px; 
-  flex-wrap: wrap; 
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
 }
 .tag-item { 
-  margin: 0; 
+  margin: 0;
+  background-color: #f0f9ff;
+  border-color: #91d5ff;
+  color: #1890ff;
 }
 
 /* 左上：水位+GPU 同行，CPU 在下；确保滚动容器生效 */
@@ -635,42 +834,14 @@ onBeforeUnmount(() => {
 
 /* CSS 水位图 */
 .water-wrapper { 
-  display: flex; 
+   display: flex; 
   justify-content: left; 
   align-items: center; 
+  height: 140px; /* 设置固定高度 */
 }
-.water-circle { 
-  position: relative; 
-  width: 100px; 
-  height: 100px; 
-  border-radius: 50%; 
-  background: radial-gradient(closest-side, #e8f3ff 92%, transparent 93% 100%), conic-gradient(#3ba0ff 0%, #3ba0ff 0%); 
-  overflow: hidden; 
-  border: 1px solid #cfe3ff; 
-}
-.wave { 
-  position: absolute; 
-  left: 50%; 
-  bottom: 0; 
-  width: 200%; 
-  height: 200%; 
-  background: rgba(59,160,255,0.4); 
-  transform: translate(-50%, -60%); 
-  border-radius: 45% 55% 40% 60% / 55% 45% 55% 45%; 
-  animation: waveMove 4s linear infinite; 
-}
-.water-text { 
-  position: absolute; 
-  top: 50%; 
-  left: 50%; 
-  transform: translate(-50%, -50%); 
-  font-weight: 700; 
-  color: #3b6db3; 
-  font-size: 16px; 
-}
-@keyframes waveMove { 
-  0% { transform: translate(-50%, -60%) rotate(0deg); } 
-  100% { transform: translate(-50%, -60%) rotate(360deg); } 
+.liquid-chart {
+  width: 120px;
+  height: 120px;
 }
 
 /* 左下：测试用例滚动列表 */
@@ -686,7 +857,7 @@ onBeforeUnmount(() => {
   align-items: center; 
   gap: 12px; 
   padding: 8px 10px; 
-  border-bottom: 1px dashed #e5e7eb; 
+  border-bottom: 1px dashed #e5e7eb;
 }
 .case-name { 
   color: #303133; 
@@ -705,7 +876,7 @@ onBeforeUnmount(() => {
   gap: 12px; 
 }
 .monitor-info { 
-  padding: 12px;
+  padding: 12px; 
   background: #f8f9fa; 
   border-radius: 6px; 
   margin-bottom: 8px; 
