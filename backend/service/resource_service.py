@@ -33,7 +33,8 @@ class ResourceService:
         while self.running:
             try:
                 self._update_resource_data()
-                time.sleep(60)  # 每分钟更新一次
+                # time.sleep(60)  # 每分钟更新一次
+                time.sleep(3)
             except Exception as e:
                 print(f"资源数据更新失败 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: {e}")
                 time.sleep(10)  # 出错后等待10秒再重试
@@ -75,12 +76,18 @@ class ResourceService:
                 'cpu_usage': 0,
             }
     
-    def get_gpu_history(self, limit: int = 30) -> List[Dict]:
+    def get_gpu_history(self) -> List[Dict]:
         """获取GPU历史数据"""
         if self.resource_model is None:
             self.resource_model = ResourceModel()
-        
-        return self.resource_model.get_recent_resource_records(limit)
+        latest_gpu = self.resource_model.get_latest_gpu_usage()
+        print("-------service gpu history-------", latest_gpu)
+        if latest_gpu:
+            return latest_gpu
+        else:
+            return {
+                'gpu_usage': 0,
+            }
 
 # 创建全局实例
 resource_service = ResourceService()

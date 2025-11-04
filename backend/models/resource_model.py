@@ -63,24 +63,21 @@ class ResourceModel:
             print(f"查询最新CPU使用率失败: {e}")
             return None
     
-    def get_recent_resource_records(self, limit: int = 30) -> List[Dict]:
-        """获取最近的资源监控记录"""
+    def get_latest_gpu_usage(self) -> Optional[Dict]:
+        """获取最新的CPU使用率数据"""
         try:
-            records = self.db.query(ResourceMonitorRecord).order_by(
+            record = self.db.query(ResourceMonitorRecord).order_by(
                 ResourceMonitorRecord.timestamp.desc()
-            ).limit(limit).all()
+            ).first()
             
-            result = []
-            for record in reversed(records):  # 按时间顺序返回
-                result.append({
-                    'cpu_usage': record.cpu_usage,
+            if record:
+                return {
                     'gpu_usage': record.gpu_usage,
-                    'timestamp': record.timestamp.isoformat()
-                })
-            return result
+                }
+            return None
         except Exception as e:
-            print(f"查询资源记录失败: {e}")
-            return []
+            print(f"查询最新GPU使用率失败: {e}")
+            return None
 
     def cleanup_old_records(self, max_records: int = 39):
         """清理旧记录，保证只保留指定数量的最新记录"""
@@ -159,16 +156,6 @@ class ResourceMonitor:
             'cpu_usage': cpu_usage,
             'gpu_usage': gpu_usage,
             'timestamp': datetime.now().isoformat()
-        }
-    
-    def get_resource_history(self, limit: int = 30) -> Dict:
-        """获取资源历史数据"""
-        cpu_history = self.cpu_history[-limit:] if len(self.cpu_history) > limit else self.cpu_history
-        gpu_history = self.gpu_history[-limit:] if len(self.gpu_history) > limit else self.gpu_history
-        
-        return {
-            'cpu_history': cpu_history,
-            'gpu_history': gpu_history
         }
 
 # 创建全局实例

@@ -22,16 +22,17 @@ async def get_cpu_status():
             "message": f"获取CPU状态失败: {str(e)}"
         }
 
-@router.get("/gpu/history")
+@router.get("/gpu")
 async def get_gpu_history(limit: int = 30):
     """获取GPU历史数据"""
     try:
-        result = resource_service.get_gpu_history(limit)
+        result = resource_service.get_gpu_history()
+        print("-------gpu history called-------")
         print(result)
         # 包装成前端期望的格式
         return {
             "success": True,
-            "data": result,
+            "data": result.get('gpu_usage', 0),
             "message": "获取GPU历史数据成功"
         }
     except Exception as e:
