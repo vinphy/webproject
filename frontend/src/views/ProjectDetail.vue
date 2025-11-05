@@ -71,10 +71,10 @@
                   <div ref="gpuLineRef" class="chart-gpu-line"></div>
                 </div>
               </div>
-              <!-- <div class="bottom-row">
-                <div class="chart-title">CPU 使用率</div>
+              <div class="bottom-row">
+                <!-- <div class="chart-title">CPU 使用率</div> -->
                 <div ref="cpuLineRef" class="chart-cpu-line full"></div>
-              </div> -->
+              </div>
             </div>
           </el-card>
         </div>
@@ -250,7 +250,7 @@ const fetchGpuHistory = async () => {
     if (response.ok) {  
       const data = await response.json()
       console.log('GPU历史数据响应:', data.data)  // 调试用
-      if (data.success && data.data) {
+if (data.success && data.data) {
          
         // 确保最新时间的数据在最后面
         return data.data.map(item => item.gpu_usage || 0)
@@ -507,7 +507,7 @@ const fetchGPUStatus = async () => {
     const response = await fetch('/api/resources/gpu')
     if (response.ok) {
       const data = await response.json()
-      console.log('GPU最新数据响应:', data.data)
+      // console.log('GPU最新数据响应:', data.data)
       if (data.success && data.data ) {
         // 修复：直接返回数组中的第一个元素，而不是访问gpu_usage属性
         return data.data || 0
@@ -535,7 +535,12 @@ onMounted(() => {
 
   // 2) 图表初始化加守护，失败不影响日志
   try {
+    console.log('开始初始化CPU图表...')
+    console.log('cpuLineRef.value:', cpuLineRef.value)
+    console.log('echarts:', typeof echarts)
+    
     if (cpuLineRef.value && typeof echarts !== 'undefined') {
+      console.log('CPU图表DOM元素和ECharts库都存在，开始初始化')
       const cpu = echarts.init(cpuLineRef.value); cpuChart = cpu
       const xData = Array.from({ length: 30 }, (_, k) => k + 1)
       let cpuSeries = Array.from({ length: 30 }, () => Math.round(20 + Math.random() * 40))
@@ -543,10 +548,12 @@ onMounted(() => {
       
       // 修改CPU定时器：从后台获取真实数据
       cpuTimer = setInterval(async () => {
+        console.log('CPU定时器执行时间:', new Date().toLocaleTimeString())
         const resourceData = await fetchResourceStatus()
         if (resourceData) {
           // 使用后台返回的CPU使用率
           const cpuUsage = resourceData.cpu_usage || 30
+          console.log('后台返回的CPU占用:', cpuUsage)
           cpuSeries.shift()
           cpuSeries.push(cpuUsage)
           cpu.setOption({ series: [{ data: cpuSeries }] })
@@ -558,8 +565,17 @@ onMounted(() => {
           cpu.setOption({ series: [{ data: cpuSeries }] })
         }
       }, 3000) // 每3秒更新一次
+      
+      console.log('CPU定时器已启动，间隔3000ms')
+    } else {
+      console.warn('CPU图表初始化条件不满足：', {
+        cpuLineRef: cpuLineRef.value,
+        echarts: typeof echarts
+      })
     }
-  } catch (e) { console.warn('CPU 图表初始化失败，已忽略：', e) }
+  } catch (e) { 
+    console.error('CPU 图表初始化失败：', e) 
+  }
 
     try {
     if (gpuLineRef.value && typeof echarts !== 'undefined') {
@@ -577,11 +593,11 @@ onMounted(() => {
         Math.min(100, gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20)) 数组最后一个值上下浮动-10到10，最大不能超过100，最小不能小于0
         */
         const n = Math.max(0, Math.min(100, gpuSeries.at(-1) + Math.round(-10 + Math.random() * 20))); 
-        console.log('模拟GPU使用率：', n);
+        // console.log('模拟GPU使用率：', n);
         
         // 使用await等待异步函数返回实际数据
         const latestGPU = await fetchGPUStatus()
-        console.log('最新GPU使用率：', latestGPU);
+        // console.log('最新GPU使用率：', latestGPU);
         
         // 优先使用真实数据，如果获取失败则使用模拟数据
         const newValue = latestGPU !== null ? latestGPU : n;
@@ -846,7 +862,7 @@ onBeforeUnmount(() => {
 
 /* 左下：测试用例滚动列表 */
 .cases-scroller { 
-  flex: 1; 
+  flex: 1;
   min-height: 0; 
   overflow-y: auto; 
   padding: 12px 16px; 

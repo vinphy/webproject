@@ -56,7 +56,8 @@ class ResourceService:
         # 每次插入后都检查并清理，保证只保留40条最新记录
         if success:
             self.resource_model.cleanup_old_records(max_records=40)
-            # print(f"资源数据已更新 - CPU: {current_data['cpu_usage']}%, GPU: {current_data['gpu_usage']}%")
+            # 取消注释，启用更新日志
+            print(f"资源数据已更新 - CPU: {current_data['cpu_usage']}%, GPU: {current_data['gpu_usage']}%")
         
         # 清理旧记录（每天清理一次）
         if datetime.now().hour == 0 and datetime.now().minute < 1:

@@ -8,6 +8,7 @@ router = APIRouter()
 async def get_cpu_status():
     """获取CPU状态"""
     try:
+        print("-------cpu status called-------")
         result = resource_service.get_cpu_status()
         # 包装成前端期望的格式
         return {
