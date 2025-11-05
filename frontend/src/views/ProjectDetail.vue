@@ -249,7 +249,7 @@ const fetchGpuHistory = async () => {
     const response = await fetch('/api/resources/gpu/history')
     if (response.ok) {  
       const data = await response.json()
-      console.log('GPU历史数据响应:', data.data)  // 调试用
+      // console.log('GPU历史数据响应:', data.data)  // 调试用
 if (data.success && data.data) {
          
         // 确保最新时间的数据在最后面
@@ -269,7 +269,7 @@ const fetchResourceStatus = async () => {
     if (response.ok) {
       
       const data = await response.json()
-      console.log("=====",data.data)
+      // console.log("=====",data.data)
       if (data.success && data.data) {
         
         // 使用后台返回的CPU使用率作为水位值（转换为0-1的小数）
@@ -397,12 +397,12 @@ const fetchProjectDetail = async () => {
   try {
     const projectId = route.params.id || 1  // 从路由参数获取项目ID
     const response = await getProjectDetail(projectId)
-    console.log('API响应:', response.data)  // 调试用
-    console.log('success字段:', response.data.success)  // 调试用
+    // console.log('API响应:', response.data)  // 调试用
+    // console.log('success字段:', response.data.success)  // 调试用
 
     if (response.data.success && response.data.data) {
       const projectData = response.data.data
-      console.log(projectData)
+      // console.log(projectData)
 
       // 解析项目数据
       project.value = {

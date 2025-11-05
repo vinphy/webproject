@@ -57,7 +57,7 @@ class ResourceService:
         if success:
             self.resource_model.cleanup_old_records(max_records=40)
             # 取消注释，启用更新日志
-            print(f"资源数据已更新 - CPU: {current_data['cpu_usage']}%, GPU: {current_data['gpu_usage']}%")
+            # print(f"资源数据已更新 - CPU: {current_data['cpu_usage']}%, GPU: {current_data['gpu_usage']}%")
         
         # 清理旧记录（每天清理一次）
         if datetime.now().hour == 0 and datetime.now().minute < 1:
@@ -82,7 +82,7 @@ class ResourceService:
         if self.resource_model is None:
             self.resource_model = ResourceModel()
         latest_gpu = self.resource_model.get_latest_gpu_usage()
-        print("-------service gpu history-------", latest_gpu)
+        # print("-------service gpu history-------", latest_gpu)
         if latest_gpu:
             return latest_gpu
         else:

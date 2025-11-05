@@ -8,7 +8,7 @@ router = APIRouter()
 async def get_cpu_status():
     """获取CPU状态"""
     try:
-        print("-------cpu status called-------")
+        # print("-------cpu status called-------")
         result = resource_service.get_cpu_status()
         # 包装成前端期望的格式
         return {
@@ -28,8 +28,8 @@ async def get_gpu_history(limit: int = 30):
     """获取GPU历史数据"""
     try:
         result = resource_service.get_gpu_history()
-        print("-------gpu history called-------")
-        print(result)
+        # print("-------gpu history called-------")
+        # print(result)
         # 包装成前端期望的格式
         return {
             "success": True,
