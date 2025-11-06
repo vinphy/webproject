@@ -27,7 +27,18 @@ def create_project(db: Session, owner_id: int, payload: Dict[str, Any]):
         'step2Selections': payload.get('step2Selections', {})
     }, ensure_ascii=False)
 
-    p = project_model.create_project(db, name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config)
+    # 自动生成日志文件名
+    log_file_name = None
+    if project_code:
+        log_file_name = f"{project_code}.log"
+    else:
+        # 使用项目名称生成安全的文件名
+        safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        safe_name = safe_name.replace(' ', '_')
+        log_file_name = f"{safe_name}.log"
+
+
+    p = project_model.create_project(db, name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config, log_file_name=log_file_name)
     db.commit()
     db.refresh(p)
     return p

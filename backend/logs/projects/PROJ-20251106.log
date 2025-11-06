@@ -1,0 +1,29 @@
+拉取代码...OK
+安装依赖...OK
+启动容器 runner-01...OK
+分发批次 #13...OK
+执行 login_case...OK (320ms)
+执行 add_role...OK (640ms)
+执行 sql_scan...WARN
+生成报告...OK
+归档制品...OK
+--2
+拉取代码...OK
+安装依赖...OK
+启动容器 runner-01...OK
+分发批次 #13...OK
+执行 login_case...OK (320ms)
+执行 add_role...OK (640ms)
+执行 sql_scan...WARN
+生成报告...OK
+归档制品...OK
+--3
+拉取代码...OK
+安装依赖...OK
+启动容器 runner-01...OK
+分发批次 #13...OK
+执行 login_case...OK (320ms)
+执行 add_role...OK (640ms)
+执行 sql_scan...WARN
+生成报告...OK
+归档制品...OK

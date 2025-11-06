@@ -21,6 +21,7 @@ class Project(Base):
     status = Column(String(32), default='待开始')
     progress = Column(Float, default=0.0)
     config = Column(Text, nullable=True)  # JSON string of config/steps
+    log_file_name = Column(String(255), nullable=True)  # 新增：日志文件名
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -29,8 +30,18 @@ class Project(Base):
 init_db(Base)
 
 
-def create_project(db: Session, name: str, description: str = '', owner_id: Optional[int] = None, project_code: Optional[str] = None, project_type: Optional[str] = None, config: Optional[str] = None):
-    p = Project(name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config)
+def create_project(db: Session, name: str, description: str = '', owner_id: Optional[int] = None, project_code: Optional[str] = None, project_type: Optional[str] = None, config: Optional[str] = None, log_file_name: Optional[str] = None):
+    """创建项目，自动生成日志文件名"""
+    # 如果未提供日志文件名，自动生成：{project_code}.log
+    if not log_file_name and project_code:
+        log_file_name = f"{project_code}.log"
+    elif not log_file_name:
+        # 如果连project_code都没有，使用项目名称生成
+        safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        safe_name = safe_name.replace(' ', '_')
+        log_file_name = f"{safe_name}.log"
+    
+    p = Project(name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config,log_file_name=log_file_name)
     db.add(p)
     db.flush()
     return p
@@ -119,7 +130,8 @@ def get_project_detail(db: Session, project_id: int):
         'updated_at': project.updated_at,
         'owner_name': project.owner.username if project.owner else None,
         'owner_id': project.owner_id,
-        'config': project.config  # 添加config字段
+        'config': project.config,  # 添加config字段
+        'log_file_name': project.log_file_name  # 新增：日志文件名
     }
     
     return project_detail

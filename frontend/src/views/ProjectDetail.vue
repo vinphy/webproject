@@ -218,7 +218,7 @@ import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Back, VideoPlay, Delete } from '@element-plus/icons-vue'
-import { getProjectDetail } from '@/api/project'  // 导入API函数
+import { getProjectDetail ,getProjectLogs} from '@/api/project'  // 导入API函数
 
 // 正确的echarts-liquidfill导入方式
 import * as echarts from "echarts"
@@ -354,9 +354,23 @@ const updateLiquidChart = () => {
     }]
   })
 }
+
+// 新增：项目日志API调用函数
+const fetchProjectLogs = async (projectId, lastPosition = 0) => {
+  try {
+    const response = await getProjectLogs(projectId, lastPosition)
+    return response.data
+  } catch (error) {
+    console.error('获取项目日志失败:', error)
+    return { success: false, data: [], message: '网络请求失败' }
+  }
+}
 // 动态日志
 const logs = ref([])
 const logsPaneRef = ref(null)
+const lastLogPosition = ref(0)  // 新增：记录上次读取的位置
+
+
 
 // 测试用例列表（显示全部，可滚动）
 const allCases = ref([
@@ -485,12 +499,39 @@ let cpuTimer = null, gpuTimer = null, waterTimer = null, casesTimer = null, logs
 // 动态日志追加：若用户未上滑则自动滚到底；若用户正在查看历史则不打断
 const isNearBottom = (el) => (el.scrollHeight - el.scrollTop - el.clientHeight) < 40
 const appendLog = (txt) => {
-  logs.value.push(`[${new Date().toLocaleTimeString()}] ${txt}`)
+  // logs.value.push(`[${new Date().toLocaleTimeString()}] ${txt}`)
+  logs.value.push(txt)
   requestAnimationFrame(() => {
     const el = logsPaneRef.value
     if (el && isNearBottom(el)) el.scrollTop = el.scrollHeight
   })
 }
+
+// 新增：从后端获取真实日志
+const fetchRealLogs = async () => {
+  const projectId = route.params.id || 1
+  const result = await fetchProjectLogs(projectId, lastLogPosition.value)
+  
+  if (result.success) {
+    // 添加新日志到列表
+    result.data.forEach(log => {
+      appendLog(log)
+    })
+    
+    // 更新读取位置
+    lastLogPosition.value = result.last_position
+    
+    // 如果有新日志，在控制台输出信息
+    if (result.data.length > 0) {
+      console.log(`新增 ${result.data.length} 条日志，下次从位置 ${lastLogPosition.value} 开始读取`)
+    }
+  } else {
+    console.error('获取日志失败:', result.message)
+    // 失败时使用模拟数据作为fallback
+    appendLog(`[${new Date().toLocaleTimeString()}] 日志服务暂时不可用: ${result.message}`)
+  }
+}
+
 
 // 五秒后展示静态图片
 const showImages = ref(false)
@@ -531,7 +572,10 @@ onMounted(() => {
   const samples = ['拉取代码...OK','安装依赖...OK','启动容器 runner-01...OK','分发批次 #13...OK','执行 login_case...OK (320ms)','执行 add_role...OK (640ms)','执行 sql_scan...WARN','生成报告...OK','归档制品...OK']
   let i = 0
   appendLog('初始化运行监控...')
-  logsTimer = setInterval(() => { appendLog(samples[i % samples.length]); i++ }, 1200)
+  // logsTimer = setInterval(() => { appendLog(samples[i % samples.length]); i++ }, 1200)
+  logsTimer=setInterval(async() => {
+    await fetchRealLogs()
+  }, 1200) // 每2秒获取一次日志
 
   // 2) 图表初始化加守护，失败不影响日志
   try {

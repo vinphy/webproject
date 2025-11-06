@@ -1,4 +1,4 @@
-import {api} from '@/utils/auth'
+import { api } from '@/utils/auth'
 
 // 获取项目详情
 export function getProjectDetail(projectId) {
@@ -51,4 +51,3 @@ export function updateProjectMonitorData(projectId, data) {
     data: data
   })
 }
-
