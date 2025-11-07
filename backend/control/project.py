@@ -189,3 +189,73 @@ def execute_project_endpoint(project_id: int, db: Session = Depends(get_db), cur
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'执行项目失败: {str(e)}')
+
+
+class BatchExecutePayload(BaseModel):
+    project_ids: List[int]
+    execute_type: str = "default"  # 预留执行类型参数
+
+@router.post('/batch-execute', summary='Batch execute projects')
+def batch_execute_projects_endpoint(
+    payload: BatchExecutePayload, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """批量执行项目（预留空接口）"""
+    try:
+        # 权限检查：需要 'project:execute' 权限或项目成员角色
+        from service import auth_service
+        if not auth_service.user_has_permission(db, current_user, 'project:execute') and not (current_user and getattr(current_user, 'role', None) and current_user.role.name in ('admin', 'project_manager', 'tester')):
+            raise HTTPException(status_code=403, detail='需要 project:execute 权限')
+        
+        # 验证项目ID列表
+        if not payload.project_ids:
+            raise HTTPException(status_code=400, detail='请选择要执行的项目')
+        
+        # 检查项目是否存在
+        valid_projects = []
+        for project_id in payload.project_ids:
+            project = project_service.get_project_by_id(db, project_id)
+            if project:
+                valid_projects.append({
+                    'id': project.id,
+                    'name': project.name,
+                    'status': project.status
+                })
+        
+        if not valid_projects:
+            raise HTTPException(status_code=404, detail='未找到有效的项目')
+        
+        print(f"批量执行项目 IDs: {payload.project_ids}，类型: {payload.execute_type}") 
+        
+        # 预留批量执行逻辑，目前只返回成功消息
+        # 实际执行逻辑可以根据项目类型和配置来实现
+        # 这里可以复用单个项目执行的逻辑，循环调用单个执行方法
+        
+        # 记录操作日志
+        try:
+            project_names = ", ".join([p['name'] for p in valid_projects])
+            log_service.create_log(
+                db, 
+                type='操作日志', 
+                source='项目管理', 
+                user=current_user.username if current_user else None, 
+                message=f"批量执行项目：{project_names}", 
+                level='INFO'
+            )
+        except Exception:
+            pass
+        
+        return {
+            'success': True,
+            'message': f'批量执行命令已发送，共 {len(valid_projects)} 个项目',
+            'data': {
+                'executed_count': len(valid_projects),
+                'projects': valid_projects,
+                'execute_type': payload.execute_type
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'批量执行项目失败: {str(e)}')

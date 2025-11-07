@@ -67,3 +67,15 @@ export function exeProject(projectId) {
     method: 'post'
   })
 }
+
+// 批量执行项目
+export function batchExecuteProjects(projectIds, executeType = "default") {
+  return api({
+    url: '/api/projects/batch-execute',
+    method: 'post',
+    data: {
+      project_ids: projectIds,
+      execute_type: executeType
+    }
+  })
+}

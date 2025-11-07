@@ -145,9 +145,9 @@ def delete_project(db: Session, project_id: int):
         }
 
 def execute_project(db: Session, project_id: int):
-    """执行项目（预留空接口）"""
+    """执行单个项目（预留空接口）"""
     try:
-        project = project_model.get_project_by_id(db, project_id)
+        project = get_project_by_id(db, project_id)
         if not project:
             return {
                 'success': False,
@@ -162,6 +162,7 @@ def execute_project(db: Session, project_id: int):
             'message': '项目执行命令已发送',
             'data': {
                 'project_id': project_id,
+                'name': project.name,
                 'status': '执行中'
             }
         }
@@ -170,3 +171,8 @@ def execute_project(db: Session, project_id: int):
             'success': False,
             'message': f'执行项目失败: {str(e)}'
         }
+
+def get_project_by_id(db: Session, project_id: int):
+    """获取项目对象（供批量执行使用）"""
+    from models.project_model import get_project_by_id as model_get_project_by_id
+    return model_get_project_by_id(db, project_id)

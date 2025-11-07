@@ -160,12 +160,49 @@ const onSelectionChange = (rows) => {
   selectedRows.value = rows
   }
   
-const executeSelected = () => {
-  const ids = selectedRows.value.map(r => r.id).join(', ')
-  if (!ids) return
-  ElMessage.success(`已触发执行：${ids}`)
+// 导入新增的API函数
+import { batchExecuteProjects } from '@/api/project'
+
+// 执行所选项目
+const executeSelected = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择要执行的项目')
+    return
   }
   
+  try {
+    const projectIds = selectedRows.value.map(r => r.id)
+    
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `确定要批量执行选中的 ${projectIds.length} 个项目吗？`,
+      '确认批量执行',
+      {
+        confirmButtonText: '确定执行',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    
+    const response = await batchExecuteProjects(projectIds)
+    
+    if (response.data.success) {
+      ElMessage.success(response.data.message)
+      // 清空选择
+      selectedRows.value = []
+      // 可以在这里添加执行后的逻辑，比如刷新状态等
+    } else {
+      ElMessage.error(response.data.message || '批量执行失败')
+    }
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消批量执行')
+    } else {
+      ElMessage.error(error.response?.data?.detail || '批量执行失败，请检查网络连接')
+    }
+  }
+}
+
 const getStatusType = (status) => {
   const types = { '进行中': 'warning', '已完成': 'success', '待开始': 'info' }
   return types[status] || 'info'
@@ -304,4 +341,3 @@ const canCreate = computed(() => {
   font-weight: 400 !important;
 }
   </style>
-  
