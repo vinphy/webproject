@@ -162,7 +162,7 @@
           <div class="card-header">
             <span class="section-title">任务管理</span>
             <div class="header-actions">
-              <el-button type="primary" @click="addTask" size="small">
+            <el-button type="primary" @click="addTask" size="small">
                 <el-icon><Plus /></el-icon>
                 添加任务
               </el-button>
@@ -204,8 +204,12 @@
           <span class="section-title">结果图片</span>
         </template>
         <div class="images-grid">
-          <div class="img-cell" v-for="(img, idx) in staticImages" :key="idx">
-            <img :src="img" alt="static" />
+          <div class="img-cell" v-for="(img, idx) in resultImages" :key="idx">
+            <img :src="getImageUrl(img)" :alt="`结果图片 ${idx + 1}`" />
+          </div>
+          <!-- 如果没有结果图片，显示提示信息 -->
+          <div v-if="resultImages.length === 0" class="no-images">
+            暂无结果图片
           </div>
         </div>
       </el-card>
@@ -242,6 +246,9 @@ let liquidChart = null // 水球图实例
 // 水位图数据 - 初始值设为0，将从后台获取真实数据
 const waterLevel = ref(0)
 // const waterWaveStyle = computed(() => ({ transform: `translate(-50%, -${waterLevel.value}%)` }))
+
+// 修改：移除静态图片数组，添加动态结果图片数组
+const resultImages = ref([])
 
 // 获取GPU历史数据
 const fetchGpuHistory = async () => {
@@ -433,6 +440,14 @@ const fetchProjectDetail = async () => {
         executionItems: projectData.execution_items || [],  // 执行项
         step2Selections: projectData.step2Selections || {}
       }
+
+      // 修改：从API获取结果图片路径
+      if (projectData.result_images && projectData.result_images.length > 0) {
+        console.log('获取到结果图片:', projectData.result_images) 
+        resultImages.value = projectData.result_images
+      } else {
+        resultImages.value = [] // 如果没有结果图片，设置为空数组
+      }
     } else {
       ElMessage.error(response.message || '获取项目详情失败')
     }
@@ -442,6 +457,23 @@ const fetchProjectDetail = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 修改：添加构建图片URL的方法
+const getImageUrl = (imagePath) => {
+  // 如果图片路径已经是完整URL，直接返回
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath
+  }
+  
+  // 如果是相对路径，使用Vite的import.meta.url构建本地路径
+  if (imagePath.startsWith('/')) {
+    // 使用Vite的方式构建本地图片路径
+    return new URL(imagePath, import.meta.url).href
+  }
+  
+  // 如果是本地路径，直接返回
+  return imagePath
 }
 
 const getStatusType = (s) => ({ '进行中': 'warning', '已完成': 'success', '待开始': 'info' }[s] || 'info')
@@ -535,12 +567,12 @@ const fetchRealLogs = async () => {
 
 // 五秒后展示静态图片
 const showImages = ref(false)
-const staticImages = [
-  new URL('/src/assets/gnuradio.png', import.meta.url).href,
-  new URL('/src/assets/gnuradio.png', import.meta.url).href,
-  new URL('/src/assets/gnuradio.png', import.meta.url).href,
-  new URL('/src/assets/gnuradio.png', import.meta.url).href,
-]
+// const staticImages = [
+//   new URL('/src/assets/gnuradio.png', import.meta.url).href,
+//   new URL('/src/assets/gnuradio.png', import.meta.url).href,
+//   new URL('/src/assets/gnuradio.png', import.meta.url).href,
+//   new URL('/src/assets/gnuradio.png', import.meta.url).href,
+// ]
 
 // 获取GPU最新数据（单个数据点）
 const fetchGPUStatus = async () => {
@@ -725,11 +757,10 @@ onBeforeUnmount(() => {
   min-height: 0; 
   flex-shrink: 0; /* 防止被压缩 */
 }
-
 /* 左侧部分：上6下4布局（当前比例） */
-.left-section { 
+.left-section {
   flex: 7; 
-  display: flex; 
+  display: flex;
   flex-direction: column; 
   gap: 0; 
   border-right: 2px solid #ebeef5; 

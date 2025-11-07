@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+import json
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, func, Enum
 from sqlalchemy.orm import relationship, Session
 
@@ -22,6 +23,7 @@ class Project(Base):
     progress = Column(Float, default=0.0)
     config = Column(Text, nullable=True)  # JSON string of config/steps
     log_file_name = Column(String(255), nullable=True)  # 新增：日志文件名
+    result_images = Column(Text, nullable=True)  # 新增：结果图片路径列表（JSON格式）
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -30,7 +32,7 @@ class Project(Base):
 init_db(Base)
 
 
-def create_project(db: Session, name: str, description: str = '', owner_id: Optional[int] = None, project_code: Optional[str] = None, project_type: Optional[str] = None, config: Optional[str] = None, log_file_name: Optional[str] = None):
+def create_project(db: Session, name: str, description: str = '', owner_id: Optional[int] = None, project_code: Optional[str] = None, project_type: Optional[str] = None, config: Optional[str] = None, log_file_name: Optional[str] = None, result_images: Optional[List[str]] = None):
     """创建项目，自动生成日志文件名"""
     # 如果未提供日志文件名，自动生成：{project_code}.log
     if not log_file_name and project_code:
@@ -41,7 +43,10 @@ def create_project(db: Session, name: str, description: str = '', owner_id: Opti
         safe_name = safe_name.replace(' ', '_')
         log_file_name = f"{safe_name}.log"
     
-    p = Project(name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config,log_file_name=log_file_name)
+    # 处理结果图片路径
+    result_images_json = json.dumps(result_images) if result_images else None
+    
+    p = Project(name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config, log_file_name=log_file_name, result_images=result_images_json)
     db.add(p)
     db.flush()
     return p
@@ -117,6 +122,14 @@ def get_project_detail(db: Session, project_id: int):
     if not project:
         return None
     
+    # 解析结果图片路径
+    result_images = []
+    if project.result_images:
+        try:
+            result_images = json.loads(project.result_images)
+        except json.JSONDecodeError:
+            result_images = []
+    
     # 基础项目信息
     project_detail = {
         'id': project.id,
@@ -131,7 +144,8 @@ def get_project_detail(db: Session, project_id: int):
         'owner_name': project.owner.username if project.owner else None,
         'owner_id': project.owner_id,
         'config': project.config,  # 添加config字段
-        'log_file_name': project.log_file_name  # 新增：日志文件名
+        'log_file_name': project.log_file_name,  # 新增：日志文件名
+        'result_images': result_images  # 新增：结果图片路径列表
     }
     
     return project_detail

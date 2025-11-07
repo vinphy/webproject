@@ -38,7 +38,7 @@ def create_project(db: Session, owner_id: int, payload: Dict[str, Any]):
         log_file_name = f"{safe_name}.log"
 
 
-    p = project_model.create_project(db, name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config, log_file_name=log_file_name)
+    p = project_model.create_project(db, name=name, description=description, owner_id=owner_id, project_code=project_code, project_type=project_type, config=config)
     db.commit()
     db.refresh(p)
     return p

@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from typing import List, Optional, Any
 from pydantic import BaseModel
-from typing import Any, Dict
+import os
 
 from util.db import get_db
-from control.auth import get_current_user
-from service import project_service
-from models import auth_model
-from service import log_service
-from service import auth_service
+from service import project_service, log_service
 from service.log_file_service import log_file_service
+from service.result_image_service import result_image_service
+from control.auth import get_current_user
+from models.auth_model import User
+from models.project_model import Project
 
 router = APIRouter()
 
@@ -29,8 +30,9 @@ class ProjectCreatePayload(BaseModel):
 
 
 @router.post('/', summary='Create project')
-def create_project(payload: ProjectCreatePayload, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+def create_project_endpoint(payload: ProjectCreatePayload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # 权限检查：需要 'project:create' 权限或角色判断
+    from service import auth_service
     if not auth_service.user_has_permission(db, current_user, 'project:create') and not (current_user and getattr(current_user, 'role', None) and current_user.role.name in ('admin', 'project_manager')):
         raise HTTPException(status_code=403, detail='需要 project:create 权限')
     try:
@@ -46,7 +48,7 @@ def create_project(payload: ProjectCreatePayload, db: Session = Depends(get_db),
 
 
 @router.get('/', summary='List projects')
-def list_projects(page: int = 1, size: int = 20, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+def list_projects_endpoint(page: int = 1, size: int = 20, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Return paginated list of projects for current user."""
     try:
         offset = max(0, (page - 1) * size)
@@ -58,7 +60,7 @@ def list_projects(page: int = 1, size: int = 20, db: Session = Depends(get_db), 
 
 
 @router.get('/{project_id}', summary='Get project detail')
-def get_project_detail(project_id: int, db: Session = Depends(get_db), current_user: auth_model.User = Depends(get_current_user)):
+def get_project_detail_endpoint(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """获取项目详细信息"""
     try:
         result = project_service.get_project_detail(db, project_id)
@@ -83,7 +85,7 @@ def get_project_logs(
     project_id: int,
     last_position : int = 0, #上次读取的位置
     db: Session = Depends(get_db),
-    current_user: auth_model.User = Depends(get_current_user)   
+    current_user: User = Depends(get_current_user)   
 ):
     """获取项目运行日志"""
     try:
@@ -95,47 +97,6 @@ def get_project_logs(
         project_data = project_result['data']
         project_name = project_data.get('name', f'project_{project_id}')
         log_file_name = project_data.get('log_file_name')  # 获取数据库中的日志文件名
-
-        #2. 构建日志文件路径（假设C程序生成到固定目录）
-        # log_dir = os.path.join(os.getcwd(), 'logs', 'projects')
-        # log_file_path = os.path.join(log_dir, f'{project_name}_{project_id}.log')
-
-        #3. 如果日志文件不存在，返回空数据
-        # if not os.path.exists(log_file_path):
-        #     return ProjectLogsResponse(
-        #         success=True, 
-        #         data=[], 
-        #         message="日志文件不存在",
-        #         last_position=0
-        #     )
-        
-        # #4. 读取日志文件
-        # logs = []
-        # current_position = 0
-        
-        # try:
-        #     with open(log_file_path, 'r', encoding='utf-8') as f:
-        #         # 如果指定了上次位置，则跳转到该位置
-        #         if last_position > 0:
-        #             f.seek(last_position)
-                
-        #         # 读取新内容
-        #         new_logs = f.readlines()
-        #         current_position = f.tell()  # 获取当前读取位置
-                
-        #         #处理日志内容
-        #         for line in new_logs:
-        #             line = line.strip()
-        #             if line:  # 跳过空行
-        #                 logs.append(line)
-                        
-        # except Exception as e:
-        #     return ProjectLogsResponse(
-        #         success=False, 
-        #         data=[], 
-        #         message=f"读取日志文件失败: {str(e)}",
-        #         last_position=last_position
-        #     )
 
         log_result = log_file_service.read_project_logs(project_id, project_name, last_position, log_file_name)
         
@@ -153,3 +114,25 @@ def get_project_logs(
             message=f"获取项目日志失败: {str(e)}",
             last_position=0
         )
+
+
+@router.get("/{project_id}/result-images")
+async def get_project_result_images(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取项目的结果图片列表"""
+    try:
+        image_paths = result_image_service.get_project_result_images(db, project_id)
+        
+        return {
+            "success": True,
+            "message": "获取结果图片成功",
+            "data": {
+                "images": image_paths,
+                "total_count": len(image_paths)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取失败: {str(e)}")
