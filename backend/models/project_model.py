@@ -149,3 +149,13 @@ def get_project_detail(db: Session, project_id: int):
     }
     
     return project_detail
+
+
+def delete_project(db: Session, project_id: int):
+    """删除项目"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if project:
+        db.delete(project)
+        db.commit()
+        return True
+    return False

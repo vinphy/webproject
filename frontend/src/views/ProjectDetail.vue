@@ -222,7 +222,7 @@ import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Back, VideoPlay, Delete } from '@element-plus/icons-vue'
-import { getProjectDetail ,getProjectLogs} from '@/api/project'  // 导入API函数
+import { getProjectDetail ,getProjectLogs, delProject, exeProject} from '@/api/project'  // 导入API函数
 
 // 正确的echarts-liquidfill导入方式
 import * as echarts from "echarts"
@@ -491,10 +491,22 @@ const getElapsedTime = () => {
 }
 
 // 执行项目
-const executeProject = () => {
-  ElMessage.success('开始执行项目...')
-  // 这里可以添加执行项目的逻辑
+const executeProject = async () => {
+  try {
+    const projectId = route.params.id
+    const response = await exeProject(projectId)
+    
+    if (response.data.success) {
+      ElMessage.success('项目执行命令已发送，请查看运行监控日志')
+      // 可以在这里添加执行后的逻辑，比如刷新状态等
+    } else {
+      ElMessage.error(response.data.message || '执行项目失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || '执行项目失败，请检查网络连接')
+  }
 }
+
 
 // 删除项目
 const deleteProject = async () => {
@@ -508,10 +520,22 @@ const deleteProject = async () => {
         type: 'warning',
       }
     )
-    ElMessage.success('项目已删除')
-    router.go(-1)
-  } catch {
-    ElMessage.info('已取消删除')
+    
+    const projectId = route.params.id
+    const response = await delProject(projectId)
+    
+    if (response.data.success) {
+      ElMessage.success('项目已删除')
+      router.go(-1) // 返回上一页
+    } else {
+      ElMessage.error(response.data.message || '删除项目失败')
+    }
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消删除')
+    } else {
+      ElMessage.error(error.response?.data?.detail || '删除项目失败，请检查网络连接')
+    }
   }
 }
 

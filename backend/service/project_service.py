@@ -117,3 +117,56 @@ def get_project_detail(db: Session, project_id: int):
             'message': f'获取项目详情失败: {str(e)}',
             'data': None
         }
+
+
+def delete_project(db: Session, project_id: int):
+    """删除项目"""
+    try:
+        project = project_model.get_project_by_id(db, project_id)
+        if not project:
+            return {
+                'success': False,
+                'message': '项目不存在'
+            }
+        
+        # 删除项目记录
+        db.delete(project)
+        db.commit()
+        
+        return {
+            'success': True,
+            'message': '项目删除成功'
+        }
+    except Exception as e:
+        db.rollback()
+        return {
+            'success': False,
+            'message': f'删除项目失败: {str(e)}'
+        }
+
+def execute_project(db: Session, project_id: int):
+    """执行项目（预留空接口）"""
+    try:
+        project = project_model.get_project_by_id(db, project_id)
+        if not project:
+            return {
+                'success': False,
+                'message': '项目不存在'
+            }
+        
+        # 这里预留执行项目的逻辑，目前只返回成功消息
+        # 实际执行逻辑可以根据项目类型和配置来实现
+        print(f"执行项目 {project_id}")
+        return {
+            'success': True,
+            'message': '项目执行命令已发送',
+            'data': {
+                'project_id': project_id,
+                'status': '执行中'
+            }
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'执行项目失败: {str(e)}'
+        }

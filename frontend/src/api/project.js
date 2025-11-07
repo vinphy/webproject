@@ -52,3 +52,18 @@ export function updateProjectMonitorData(projectId, data) {
   })
 }
 
+// 删除项目
+export function delProject(projectId) {
+  return api({
+    url: `/api/projects/${projectId}`,
+    method: 'delete'
+  })
+}
+
+// 执行项目
+export function exeProject(projectId) {
+  return api({
+    url: `/api/projects/${projectId}/execute`,
+    method: 'post'
+  })
+}

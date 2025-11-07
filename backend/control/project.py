@@ -136,3 +136,56 @@ async def get_project_result_images(
         }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取失败: {str(e)}")
+
+
+@router.delete('/{project_id}', summary='Delete project')
+def delete_project_endpoint(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """删除项目"""
+    try:
+        # 权限检查：需要 'project:delete' 权限或管理员角色
+        from service import auth_service
+        if not auth_service.user_has_permission(db, current_user, 'project:delete') and not (current_user and getattr(current_user, 'role', None) and current_user.role.name in ('admin', 'project_manager')):
+            raise HTTPException(status_code=403, detail='需要 project:delete 权限')
+        
+        result = project_service.delete_project(db, project_id)
+        
+        if not result['success']:
+            raise HTTPException(status_code=404, detail=result['message'])
+        
+        # 记录操作日志
+        try:
+            log_service.create_log(db, type='操作日志', source='项目管理', user=current_user.username if current_user else None, message=f"删除项目：ID {project_id}", level='INFO')
+        except Exception:
+            pass
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'删除项目失败: {str(e)}')
+
+@router.post('/{project_id}/execute', summary='Execute project')
+def execute_project_endpoint(project_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """执行项目"""
+    try:
+        # 权限检查：需要 'project:execute' 权限或项目成员角色
+        from service import auth_service
+        if not auth_service.user_has_permission(db, current_user, 'project:execute') and not (current_user and getattr(current_user, 'role', None) and current_user.role.name in ('admin', 'project_manager', 'tester')):
+            raise HTTPException(status_code=403, detail='需要 project:execute 权限')
+        
+        result = project_service.execute_project(db, project_id)
+        
+        if not result['success']:
+            raise HTTPException(status_code=404, detail=result['message'])
+        
+        # 记录操作日志
+        try:
+            log_service.create_log(db, type='操作日志', source='项目管理', user=current_user.username if current_user else None, message=f"执行项目：ID {project_id}", level='INFO')
+        except Exception:
+            pass
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f'执行项目失败: {str(e)}')
