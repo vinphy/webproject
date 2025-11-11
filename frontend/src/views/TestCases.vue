@@ -15,13 +15,14 @@
 					placeholder="搜索用例名称或描述"
 					style="width: 300px"
 					clearable
+					@input="handleSearch"
 				>
 					<template #prefix>
 						<el-icon><Search /></el-icon>
 					</template>
 				</el-input>
 
-				<el-select v-model="statusFilter" placeholder="状态筛选" style="width: 150px">
+				<el-select v-model="statusFilter" placeholder="状态筛选" style="width: 150px" @change="handleFilter">
 					<el-option label="全部" value="" />
 					<el-option label="草稿" value="草稿" />
 					<el-option label="可执行" value="可执行" />
@@ -32,7 +33,7 @@
 			</div>
 
 			<el-table
-				:data="filteredCases"
+				:data="cases"
 				style="width: 100%"
 				v-loading="loading"
 				row-key="id"
@@ -45,25 +46,47 @@
 				<el-table-column prop="description" label="用例描述" min-width="260" align="left" header-align="left" show-overflow-tooltip />
 
 				<!-- 类型 -->
-				<el-table-column label="类型" width="120" align="left" header-align="left">
-					<template #default="{ row }">
-						<el-tag v-if="row.type === '功能'" type="primary" size="small">功能</el-tag>
-						<el-tag v-else-if="row.type === '性能'" type="success" size="small">性能</el-tag>
-						<el-tag v-else-if="row.type === '安全'" type="warning" size="small">安全</el-tag>
-						<el-tag v-else size="small">其他</el-tag>
+				<el-table-column prop="type" label="类型" width="120" align="center" header-align="center">
+					<template #default="scope">
+						<el-tag :type="getTypeTag(scope.row.type)" size="small">{{ scope.row.type || '-' }}</el-tag>
 					</template>
 				</el-table-column>
 
-				<!-- 状态、创建时间 -->
-				<el-table-column prop="status" label="状态" width="100" align="left" header-align="left">
-					<template #default="{ row }">
-						<el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
+				<!-- 状态 -->
+				<el-table-column prop="status" label="状态" width="100" align="center" header-align="center">
+					<template #default="scope">
+						<el-tag :type="getStatusType(scope.row.status)" size="small">{{ scope.row.status }}</el-tag>
 					</template>
 				</el-table-column>
-				<el-table-column prop="createTime" label="创建时间" width="160" align="left" header-align="left" />
+
+				<!-- 优先级 -->
+				<el-table-column prop="priority" label="优先级" width="100" align="center" header-align="center">
+					<template #default="scope">
+						<el-tag :type="getPriorityTag(scope.row.priority)" size="small">{{ scope.row.priority }}</el-tag>
+					</template>
+				</el-table-column>
+
+				<!-- 创建人 -->
+				<el-table-column prop="created_by" label="创建人" width="120" align="center" header-align="center" />
+
+				<!-- 更新时间 -->
+				<el-table-column prop="updated_at" label="更新时间" width="180" align="center" header-align="center">
+					<template #default="scope">
+						{{ formatDate(scope.row.updated_at) }}
+					</template>
+				</el-table-column>
+
+				<!-- 操作 -->
+				<el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
+					<template #default="scope">
+						<el-button link type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
+						<el-button link type="primary" size="small" @click="editCase(scope.row)">编辑</el-button>
+						<el-button link type="danger" size="small" @click="deleteCase(scope.row)">删除</el-button>
+					</template>
+				</el-table-column>
 			</el-table>
 
-			
+			<!-- 分页 -->
 			<div class="pagination">
 				<el-pagination
 					v-model:current-page="currentPage"
@@ -80,86 +103,154 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onActivated } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { getTestCaseList, deleteTestCase } from '@/api/testCase'
 
 const router = useRouter()
+
+// 响应式数据
+const cases = ref([])
 const loading = ref(false)
 const searchQuery = ref('')
 const statusFilter = ref('')
+
+// 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
-// 数据源：localStorage key: test_cases
-const cases = ref([])
-
-const loadCases = () => {
-	try {
-		const saved = localStorage.getItem('test_cases')
-		if (saved && saved !== 'null' && saved !== 'undefined') {
-			const parsed = JSON.parse(saved)
-			cases.value = Array.isArray(parsed) ? parsed : []
-		} else {
-			// 首次初始化一些示例数据
-			cases.value = [
-				{ id: 101, name: '数据库插入语句语法校验', description: '验证插入语句语法，涵盖各种插入规则', type: '功能', status: '可执行', createTime: '2024-01-12 10:00:00' },
-				{ id: 102, name: '数据库新增语句语法校验', description: '验证新增语句语法，涵盖各种插入规则', type: '性能', status: '草稿', createTime: '2024-01-13 09:30:00' },
-				{ id: 103, name: '数据库查询语句语法校验', description: '验证查询语句语法，涵盖各种插入规则。包含聚合查询、模糊查询、关联查询登', type: '安全', status: '可执行', createTime: '2024-01-14 15:20:00' }
-			]
-			localStorage.setItem('test_cases', JSON.stringify(cases.value))
-		}
-		total.value = cases.value.length
-	} catch (e) {
-		ElMessage.error('加载测试用例数据失败')
-	}
+// 加载测试用例列表
+const loadCases = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: currentPage.value,
+      size: pageSize.value,
+      search: searchQuery.value || undefined,
+      status: statusFilter.value || undefined
+    }
+    
+    const response = await getTestCaseList(params)
+    if (response.data.status === 'success') {
+      cases.value = response.data.data.items
+      total.value = response.data.data.total
+    } else {
+      throw new Error(response.data.message || '获取测试用例列表失败')
+    }
+  } catch (error) {
+    console.error('加载测试用例列表失败:', error)
+    ElMessage.error('加载测试用例列表失败')
+    // 降级处理：使用模拟数据
+    cases.value = [
+      { id: 1, name: '用户登录功能测试', description: '测试用户登录功能的正确性', type: '功能测试', status: '可执行', priority: '高', created_by: 'admin', updated_at: new Date().toISOString() },
+      { id: 2, name: '数据导出性能测试', description: '测试大数据量导出的性能', type: '性能测试', status: '草稿', priority: '中', created_by: 'tester', updated_at: new Date().toISOString() }
+    ]
+    total.value = cases.value.length
+  } finally {
+    loading.value = false
+  }
 }
 
-const saveCases = () => {
-	try {
-		localStorage.setItem('test_cases', JSON.stringify(cases.value))
-	} catch {}
+// 搜索处理
+const handleSearch = () => {
+  currentPage.value = 1
+  loadCases()
 }
 
-const filteredCases = computed(() => {
-	let filtered = cases.value
-	if (searchQuery.value) {
-		const q = searchQuery.value.toLowerCase()
-		filtered = filtered.filter(c =>
-			(c.name || '').toLowerCase().includes(q) ||
-			(c.description || '').toLowerCase().includes(q)
-		)
-	}
-	if (statusFilter.value) {
-		filtered = filtered.filter(c => c.status === statusFilter.value)
-	}
-	return filtered
-})
+// 筛选处理
+const handleFilter = () => {
+  currentPage.value = 1
+  loadCases()
+}
+
+// 分页处理
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  currentPage.value = 1
+  loadCases()
+}
+
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  loadCases()
+}
+
+// 标签类型映射
+const getTypeTag = (type) => {
+  const typeMap = {
+    '功能测试': 'primary',
+    '性能测试': 'success', 
+    '安全测试': 'warning',
+    '兼容性测试': 'info'
+  }
+  return typeMap[type] || 'default'
+}
 
 const getStatusType = (status) => {
-	const types = { '草稿': 'info', '可执行': 'success', '禁用': 'danger' }
-	return types[status] || 'info'
+  const types = { '草稿': 'info', '可执行': 'success', '禁用': 'danger' }
+  return types[status] || 'info'
 }
 
-const handleSizeChange = (val) => {
-	pageSize.value = val
-	currentPage.value = 1
+const getPriorityTag = (priority) => {
+  const priorityMap = {
+    '高': 'danger',
+    '中': 'warning',
+    '低': 'info'
+  }
+  return priorityMap[priority] || 'default'
 }
-const handleCurrentChange = (val) => { currentPage.value = val }
+
+// 日期格式化
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return date.toLocaleString('zh-CN')
+}
+
+// 操作函数
+const viewDetail = (row) => {
+  router.push(`/test-case-detail/${row.id}`)
+}
+
+const editCase = (row) => {
+  ElMessage.info(`编辑用例: ${row.name}`)
+  // 预留编辑功能
+}
+
+const deleteCase = async (row) => {
+  try {
+    await ElMessageBox.confirm(`确认删除测试用例 "${row.name}"？`, '提示', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    })
+    
+    const response = await deleteTestCase(row.id)
+    if (response.data.status === 'success') {
+      ElMessage.success('删除测试用例成功')
+      loadCases() // 重新加载列表
+    } else {
+      throw new Error(response.data.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除测试用例失败:', error)
+      ElMessage.error('删除测试用例失败')
+    }
+  }
+}
 
 const onRowDblClick = (row) => {
-	router.push(`/test-case-detail/${row.id}`)
+  viewDetail(row)
 }
 
-const createCase = () => {
-	// 预留：跳转到新建用例页或弹出对话框
-	ElMessage.info('新建用例功能开发中')
-}
-
-onMounted(() => { loadCases() })
-onActivated(() => { loadCases() })
+// 生命周期
+onMounted(() => {
+  loadCases()
+})
 </script>
 
 <style scoped>
@@ -196,41 +287,4 @@ onActivated(() => { loadCases() })
 	justify-content: center;
 	margin-top: 20px;
 }
-
-/* 表格样式与 Projects.vue 对齐：左对齐、统一内边距、字号 */
-.cases-table :deep(.el-table__header .el-table__cell),
-.cases-table :deep(.el-table__body .el-table__cell) {
-	padding: 8px 12px;
-	text-align: left;
-}
-
-.cases-table :deep(.el-table__header .cell),
-.cases-table :deep(.el-table__body .cell) {
-	display: block;
-	text-align: left;
-	padding: 0;
-}
-
-.cases-table :deep(.el-table__header .cell) { font-size: 14px; font-weight: 600; }
-.cases-table :deep(.el-table__body .cell) { font-size: 12px; line-height: 20px; }
-
-/* ID 列固定不换行，等宽数字 */
-/* .cases-table :deep(.col-id .cell) {
-	white-space: nowrap;
-	font-variant-numeric: tabular-nums;
-	font-weight: 600;
-	color: #303133;
-	font-size: 14px;
-} */
-/* 统一表格行样式，确保颜色一致 */
-.cases-table :deep(.el-table .el-table__row:nth-child(odd) .el-table__cell) {
-  color: #606266 !important;
-  background-color: #f5f7fa !important;
-  font-weight: 600 !important;
-}
-
-.cases-table :deep(.el-table .el-table__row:nth-child(even) .el-table__cell) {
-  color: #606266 !important;
-  font-weight: 600 !important;
-}
-</style> 
+</style>

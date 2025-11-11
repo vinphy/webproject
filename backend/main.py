@@ -6,7 +6,7 @@ from util.db import init_db, Base
 from models import resource_model
 
 # 导入各个控制层
-from control import auth, project, home_control, logs_control, resource_control, code_file_control, sql_parser_control, bit_test_control
+from control import auth, project, home_control, logs_control, resource_control, code_file_control, sql_parser_control, bit_test_control, test_case_control
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,6 +59,7 @@ app.include_router(resource_control.router, prefix="/api/resources", tags=["资�
 app.include_router(code_file_control.router, prefix="/api/codeFile", tags=["代码文件"])
 app.include_router(sql_parser_control.router, prefix="/api/sqlParser", tags=["SQL解析"])
 app.include_router(bit_test_control.router, prefix="/api/bitTest", tags=["位测试"])
+app.include_router(test_case_control.router, prefix="/api/test-cases", tags=["测试用例"])
 
 @app.get("/")
 async def root():
