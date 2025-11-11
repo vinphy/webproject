@@ -41,9 +41,9 @@
 				@row-dblclick="onRowDblClick"
 			>
 				<!-- ID、名称、描述 -->
-				<el-table-column prop="id" label="用例ID" width="120" class-name="col-id" align="left" header-align="left" />
-				<el-table-column prop="name" label="用例名称" min-width="160" align="left" header-align="left" show-overflow-tooltip />
-				<el-table-column prop="description" label="用例描述" min-width="260" align="left" header-align="left" show-overflow-tooltip />
+				<el-table-column prop="id" label="ID" width="40" class-name="col-id" align="left" header-align="left" />
+				<el-table-column prop="name" label="用例名称" min-width="100" align="left" header-align="left" show-overflow-tooltip />
+				
 
 				<!-- 类型 -->
 				<el-table-column prop="type" label="类型" width="120" align="center" header-align="center">
@@ -76,14 +76,16 @@
 					</template>
 				</el-table-column>
 
+				<el-table-column prop="description" label="用例描述" min-width="260" align="left" header-align="left" show-overflow-tooltip />
+
 				<!-- 操作 -->
-				<el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
+				<!-- <el-table-column label="操作" width="200" align="center" header-align="center" fixed="right">
 					<template #default="scope">
 						<el-button link type="primary" size="small" @click="viewDetail(scope.row)">查看</el-button>
 						<el-button link type="primary" size="small" @click="editCase(scope.row)">编辑</el-button>
 						<el-button link type="danger" size="small" @click="deleteCase(scope.row)">删除</el-button>
 					</template>
-				</el-table-column>
+				</el-table-column> -->
 			</el-table>
 
 			<!-- 分页 -->
