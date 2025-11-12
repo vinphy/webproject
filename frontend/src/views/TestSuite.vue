@@ -139,8 +139,7 @@
         <p>请从左侧选择测试用例查看详情</p>
       </div>
     </div>
-
-    <!-- 右侧描述区 -->
+<!-- 右侧描述区 -->
     <div class="right-sidebar">
       <div class="description-section">
         <div class="section-header">
@@ -417,7 +416,7 @@ const findParent = (itemId) => {
   justify-content: space-between;
   align-items: center;
   transition: all 0.2s ease;
-  border-left: 3px solid transparent;
+  border-left: none; /* 去掉左侧竖线 */
   color: #333;
   background-color: transparent;
   position: relative;
@@ -425,14 +424,14 @@ const findParent = (itemId) => {
 
 .menu-item:hover {
   background-color: #f0f0f0;
-  border-left-color: #007bff;
+  /* 去掉悬停时的竖线效果 */
 }
 
 .menu-item.active {
-  background-color: #e3f2fd;
-  border-left-color: #007bff;
-  color: #007bff;
-  font-weight: 500;
+  background-color: transparent; /* 去掉背景色 */
+  border-left: none; /* 去掉蓝色竖线 */
+  color: #007bff; /* 字体变蓝色 */
+  font-weight: 600; /* 字体加粗 */
 }
 
 /* 层级样式 */
@@ -456,9 +455,19 @@ const findParent = (itemId) => {
   color: #888;
 }
 
+.menu-item.active.level-1,
+.menu-item.active.level-2,
+.menu-item.active.level-3 {
+  background-color: transparent; /* 确保所有层级都没有背景色 */
+  border-left: none; /* 确保所有层级都没有竖线 */
+  color: #007bff; /* 所有层级选中时字体变蓝色 */
+  font-weight: 600; /* 所有层级选中时字体加粗 */
+}
+
 .menu-text {
   line-height: 1.5;
   color: inherit;
+  font-weight: inherit; /* 继承父级的字体粗细 */
 }
 
 /* 优化箭头样式 */
@@ -489,7 +498,7 @@ const findParent = (itemId) => {
 }
 
 .menu-item.active .menu-arrow::before {
-  border-color: #007bff;
+  border-color: #007bff; /* 选中时箭头也变蓝色 */
 }
 
 .menu-item:hover .menu-arrow::before {
