@@ -22,7 +22,7 @@
           <div 
             v-for="table in tables" 
             :key="table.id"
-            class="table-card"
+class="table-card"
             :class="{ active: activeTableId === table.id }"
           >
             <!-- 表标题栏 - 添加折叠功能 -->
@@ -48,7 +48,10 @@
             <div class="fields-section" v-show="!table.collapsed">
               <div class="fields-header">
                 <span>字段列表</span>
-                <el-button size="small" type="primary" text @click="addField(table.id)" icon="Plus">添加字段</el-button>
+                <div class="field-buttons">
+                  <el-button size="small" type="primary" text @click="addField(table.id)" icon="Plus">添加字段</el-button>
+                  <el-button size="small" type="success" text @click="addIndex(table.id)" icon="Plus">添加索引</el-button>
+                </div>
               </div>
               <div class="fields-list">
                 <!-- 可编辑的字段行 -->
@@ -73,7 +76,7 @@
                       <el-option label="INT" value="INT"></el-option>
                       <el-option label="VARCHAR" value="VARCHAR"></el-option>
                       <el-option label="TEXT" value="TEXT"></el-option>
-                      <el-option label="DATE" value="DATE"></el-option>
+<el-option label="DATE" value="DATE"></el-option>
                       <el-option label="DATETIME" value="DATETIME"></el-option>
                       <el-option label="DECIMAL" value="DECIMAL"></el-option>
                       <el-option label="BOOLEAN" value="BOOLEAN"></el-option>
@@ -126,6 +129,92 @@
                       >
                         <el-icon><Close /></el-icon>
                       </el-button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 索引列表 -->
+                <div v-if="table.indices && table.indices.length > 0" class="indices-section">
+                  <div class="indices-header">
+                    <span>索引列表</span>
+                  </div>
+                  <div v-for="index in table.indices" :key="index.id" class="index-item">
+                    <div class="index-editor">
+                      <el-input 
+                        v-model="index.name" 
+                        size="small" 
+                        placeholder="索引名称"
+                        class="index-name-input"
+                      />
+                      <el-select 
+                        v-model="index.fields" 
+                        size="small" 
+                        multiple
+                        placeholder="选择字段"
+                        class="index-fields-select"
+                        :popper-append-to-body="false"
+                      >
+                        <el-option 
+                          v-for="field in table.fields" 
+                          :key="field.id"
+                          :label="field.name" 
+                          :value="field.id"
+                        ></el-option>
+                      </el-select>
+                      <el-checkbox 
+                        v-model="index.unique" 
+                        class="index-unique-checkbox"
+                        title="唯一索引"
+                      ></el-checkbox>
+                      <el-button 
+                        size="mini" 
+                        type="danger" 
+                        text 
+                        @click.stop="removeIndex(table.id, index.id)"
+                        title="删除索引"
+                        class="delete-index-btn"
+                      >
+                        <el-icon><Close /></el-icon>
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 索引添加框 -->
+                <div v-if="activeIndexTableId === table.id" class="index-add-panel">
+                  <div class="index-add-header">
+                    <span>添加索引</span>
+                    <el-button size="mini" text @click="closeIndexAddPanel" icon="Close"></el-button>
+                  </div>
+                  <div class="index-add-content">
+                    <div class="index-add-item">
+                      <label>索引名称:</label>
+                      <el-input v-model="newIndex.name" size="small" placeholder="请输入索引名称"></el-input>
+                    </div>
+                    <div class="index-add-item">
+                      <label>选择字段:</label>
+                      <el-select 
+                        v-model="newIndex.fields" 
+                        size="small" 
+                        multiple
+                        placeholder="请选择字段"
+                        class="index-add-select"
+                        :popper-append-to-body="false"
+                      >
+                        <el-option 
+                          v-for="field in table.fields" 
+                          :key="field.id"
+                          :label="field.name" 
+                          :value="field.id"
+                        ></el-option>
+                      </el-select>
+                    </div>
+                    <div class="index-add-item">
+                      <el-checkbox v-model="newIndex.unique">唯一索引</el-checkbox>
+                    </div>
+                    <div class="index-add-buttons">
+                      <el-button size="small" type="primary" @click="confirmAddIndex(table.id)">确认添加</el-button>
+                      <el-button size="small" @click="closeIndexAddPanel">取消</el-button>
                     </div>
                   </div>
                 </div>
@@ -188,7 +277,7 @@
               <div class="er-table-header">
                 {{ table.name }}
               </div>
-              <div class="er-table-fields">
+<div class="er-table-fields">
                 <div 
                   v-for="field in table.fields" 
                   :key="field.id"
@@ -234,6 +323,14 @@ const draggingTableId = ref(null)
 const dragOffset = reactive({ x: 0, y: 0 })
 const activeAdvancedField = ref(null)
 const advancedOptionsPosition = reactive({ top: 0, left: 0 })
+
+// 索引相关变量
+const activeIndexTableId = ref(null)
+const newIndex = reactive({
+  name: '',
+  fields: [],
+  unique: false
+})
 
 // 点击外部关闭高级选项
 const handleClickOutside = (event) => {
@@ -301,6 +398,7 @@ const addNewTable = () => {
         defaultValue: 'CURRENT_TIMESTAMP'
       }
     ],
+    indices: [], // 添加索引数组
     position: { x: 100 + tables.value.length * 200, y: 100 }
   }
   tables.value.push(newTable)
@@ -355,7 +453,6 @@ length: 255,
     table.fields.push(newField)
 }
 }
-
 const removeField = (tableId, fieldId) => {
   const table = tables.value.find(t => t.id === tableId)
   if (table) {
@@ -454,12 +551,12 @@ const generateSQL = () => {
         sql += `(${field.length})`
       }
       if (field.unsigned) {
-        sql += ' UNSIGNED'
+sql += ' UNSIGNED'
       }
       if (!field.nullable) {
         sql += ' NOT NULL'
       }
-      if (field.unique) {
+if (field.unique) {
         sql += ' UNIQUE'
       }
       if (field.autoIncrement) {
@@ -476,7 +573,28 @@ const generateSQL = () => {
       }
       sql += '\n'
     })
-    sql += ');\n\n'
+    
+    // 添加索引定义
+    if (table.indices && table.indices.length > 0) {
+      table.indices.forEach((index, idx) => {
+        const fieldNames = index.fields.map(fieldId => {
+          const field = table.fields.find(f => f.id === fieldId)
+          return field ? field.name : ''
+        }).filter(name => name).join(', ')
+        
+        if (fieldNames) {
+          if (idx === 0 && table.fields.length > 0) {
+            sql += ','
+          }
+          sql += `\n  ${index.unique ? 'UNIQUE ' : ''}INDEX ${index.name} (${fieldNames})`
+          if (idx < table.indices.length - 1) {
+            sql += ','
+          }
+        }
+      })
+    }
+    
+    sql += '\n);\n\n'
   })
   
   // 这里可以显示SQL或复制到剪贴板
@@ -491,6 +609,52 @@ const exportImage = () => {
 const clearAll = () => {
   tables.value = []
   activeTableId.value = null
+}
+// 索引操作方法
+const addIndex = (tableId) => {
+  activeIndexTableId.value = tableId
+  // 重置新索引数据
+  newIndex.name = `index_${Date.now().toString().slice(-4)}`
+  newIndex.fields = []
+  newIndex.unique = false
+}
+
+const confirmAddIndex = (tableId) => {
+  const table = tables.value.find(t => t.id === tableId)
+  if (table) {
+    if (newIndex.fields.length === 0) {
+      ElMessage.warning('请至少选择一个字段')
+      return
+    }
+    
+    const index = {
+      id: Date.now().toString(),
+      name: newIndex.name || `index_${table.indices.length + 1}`,
+      fields: [...newIndex.fields],
+      unique: newIndex.unique
+    }
+    table.indices.push(index)
+    closeIndexAddPanel()
+    ElMessage.success('索引添加成功')
+  }
+}
+
+const removeIndex = (tableId, indexId) => {
+  const table = tables.value.find(t => t.id === tableId)
+  if (table) {
+    const index = table.indices.findIndex(i => i.id === indexId)
+    if (index !== -1) {
+      table.indices.splice(index, 1)
+      ElMessage.success('索引删除成功')
+    }
+  }
+}
+
+const closeIndexAddPanel = () => {
+  activeIndexTableId.value = null
+  newIndex.name = ''
+  newIndex.fields = []
+  newIndex.unique = false
 }
 </script>
 
@@ -580,7 +744,6 @@ const clearAll = () => {
   cursor: pointer;
   user-select: none;
 }
-
 .table-title-area {
   display: flex;
   align-items: center;
@@ -620,7 +783,7 @@ const clearAll = () => {
 }
 
 .fields-list {
-  max-height: 300px;
+max-height: 300px;
   overflow-y: auto;
 }
 
@@ -637,7 +800,7 @@ const clearAll = () => {
   align-items: center;
   gap: 4px;
   flex: 1;
-  min-width: 0;
+min-width: 0;
   overflow: hidden;
 }
 
@@ -652,7 +815,6 @@ const clearAll = () => {
   min-width: 85px;
   flex-shrink: 0;
 }
-
 .field-options {
   display: flex;
   gap: 1px;
@@ -803,4 +965,192 @@ const clearAll = () => {
   height: 100%;
   pointer-events: none;
 }
+
+/* 字段按钮组样式 */
+.field-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 索引相关样式 */
+.indices-section {
+  margin-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 12px;
+}
+
+.indices-header {
+  font-weight: 500;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #666;
+}
+
+.index-item {
+  margin-bottom: 0px;
+  padding: 0px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.index-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.index-name-input {
+  width: 100px;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.index-fields-select {
+  flex: 1;
+  min-width: 150px;
+  max-width: 200px;
+}
+
+.index-fields-select :deep(.el-select__tags) {
+  max-width: 100%;
+  overflow: hidden;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.index-fields-select :deep(.el-tag) {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 1px 4px 1px 0;
+}
+
+.index-fields-select :deep(.el-select .el-input__inner) {
+  padding-left: 8px;
+}
+
+.index-add-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.index-add-select :deep(.el-select__tags) {
+  max-width: 100%;
+  overflow: hidden;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.index-add-select :deep(.el-tag) {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 1px 4px 1px 0;
+}
+
+.index-add-select :deep(.el-select .el-input__inner) {
+  padding-left: 8px;
+}
+
+.index-unique-checkbox {
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.index-unique-checkbox .el-checkbox__label {
+  display: inline;
+}
+
+.delete-index-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* 索引添加面板样式 */
+.index-add-panel {
+  margin-top: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
+  background: #f8f9fa;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.index-add-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.index-add-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.index-add-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.index-add-item label {
+  width: 80px;
+  font-size: 12px;
+  color: #666;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.index-add-item .el-input,
+.index-add-item .el-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.index-add-item .el-checkbox {
+  margin-left: 88px; /* 对齐到标签后面 */
+}
+
+.index-add-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* 移除下拉框的滚动条 */
+/* :deep(.el-select-dropdown) {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+:deep(.el-select-dropdown::-webkit-scrollbar) {
+  width: 6px;
+}
+
+:deep(.el-select-dropdown::-webkit-scrollbar-track) {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+:deep(.el-select-dropdown::-webkit-scrollbar-thumb) {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+:deep(.el-select-dropdown::-webkit-scrollbar-thumb:hover) {
+  background: #a8a8a8;
+} */
 </style>
