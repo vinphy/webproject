@@ -88,6 +88,20 @@
               <span>权限管理</span>
             </el-menu-item>
           </el-sub-menu>
+          <el-sub-menu index="9" v-if="can('cases') || can('cases')">
+            <template #title>
+              <el-icon><User /></el-icon>
+              <span>测试用例库</span>
+            </template>
+            <el-menu-item index="9-1" v-if="can('cases')" @click="handleMenuClick('cases')">
+              <el-icon><List /></el-icon>
+              <span>92标准测试用例库</span>
+            </el-menu-item>
+            <el-menu-item index="9-2" v-if="can('custom')" @click="handleMenuClick('custom')">
+              <el-icon><Setting /></el-icon>
+              <span>自定义测试用例库</span>
+            </el-menu-item>
+          </el-sub-menu>
         </el-menu>
       </el-aside>
 
@@ -187,7 +201,9 @@ const handleMenuClick = (route) => {
     'project-add': '新增项目',
     users: '用户管理',
     permission: '权限管理',
-    'test-cases':'测试用例列表'
+    'test-cases':'测试用例列表',
+    cases: '92标准测试用例库',
+    custom: '自定义测试用例库'
   }
   currentPage.value = pageNames[route]
 }
@@ -293,7 +309,7 @@ const onLogout = async () => {
 
 .main {
   background-color: #f0f2f5;
-  padding: 20px;
+  padding: 5px;
 }
 
 /* 自定义滚动条样式 */

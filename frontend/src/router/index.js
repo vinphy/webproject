@@ -91,6 +91,18 @@ const routes = [
     name: 'TestCaseDetail',
     component: () => import('../views/TestCaseDetail.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/cases',
+    name: 'TestSuite',
+    component: () => import('../views/TestSuite.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/custom',
+    name: 'CustomTestSuite',
+    component: () => import('../views/CustomTestSuite.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
