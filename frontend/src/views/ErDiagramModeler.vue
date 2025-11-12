@@ -2,7 +2,10 @@
   <div class="er-diagram-modeler">
     <!-- 工具栏 -->
     <div class="toolbar">
-      <el-button type="primary" @click="addNewTable" icon="Plus">新建表</el-button>
+      <el-button type="primary" @click="addNewTable">
+        <img src="@/assets/definition.png" class="table-icon" />
+        新建表
+      </el-button>
       <el-button @click="generateSQL" icon="Document">生成SQL</el-button>
       <el-button @click="exportImage" icon="Picture">导出图片</el-button>
       <el-button @click="clearAll" icon="Delete">清空</el-button>
@@ -21,34 +24,142 @@
             :key="table.id"
             class="table-card"
             :class="{ active: activeTableId === table.id }"
-            @click="setActiveTable(table.id)"
           >
-            <div class="table-header">
-              <span class="table-name">{{ table.name }}</span>
-              <div class="table-actions">
-                <el-button size="small" type="danger" text @click="removeTable(table.id)" icon="Delete"></el-button>
+            <!-- 表标题栏 - 添加折叠功能 -->
+            <div class="table-header" @click.stop="toggleTableCollapse(table.id)">
+              <div class="table-title-area">
+                <el-icon class="collapse-icon" :class="{ rotated: table.collapsed }">
+                  <ArrowRight />
+                </el-icon>
+                <el-input 
+                  v-model="table.name" 
+                  size="small" 
+                  placeholder="表名"
+                  @click.stop
+                  @input="updateTableName(table.id, $event)"
+                />
+              </div>
+              <div class="table-actions" @click.stop>
+                <el-button size="small" type="danger" text @click="removeTable(table.id)">删除</el-button>
               </div>
             </div>
-            <div class="fields-section">
+            
+            <!-- 字段区域 - 根据折叠状态显示 -->
+            <div class="fields-section" v-show="!table.collapsed">
               <div class="fields-header">
                 <span>字段列表</span>
                 <el-button size="small" type="primary" text @click="addField(table.id)" icon="Plus">添加字段</el-button>
               </div>
               <div class="fields-list">
+                <!-- 可编辑的字段行 -->
                 <div 
                   v-for="field in table.fields" 
                   :key="field.id"
-                  class="field-item"
+                  class="field-item editable-field"
                 >
-                  <div class="field-info">
-                    <span class="field-name">{{ field.name }}</span>
-                    <span class="field-type">{{ field.type }}</span>
-                    <span v-if="field.primaryKey" class="pk-badge">PK</span>
-                    <span v-if="field.foreignKey" class="fk-badge">FK</span>
+                  <div class="field-editor">
+                    <el-input 
+                      v-model="field.name" 
+                      size="small" 
+                      placeholder="字段名"
+                      class="field-name-input"
+                    />
+                    <el-select 
+                      v-model="field.type" 
+                      size="small" 
+                      placeholder="类型"
+                      class="field-type-select"
+                    >
+                      <el-option label="INT" value="INT"></el-option>
+                      <el-option label="VARCHAR" value="VARCHAR"></el-option>
+                      <el-option label="TEXT" value="TEXT"></el-option>
+                      <el-option label="DATE" value="DATE"></el-option>
+                      <el-option label="DATETIME" value="DATETIME"></el-option>
+                      <el-option label="DECIMAL" value="DECIMAL"></el-option>
+                      <el-option label="BOOLEAN" value="BOOLEAN"></el-option>
+                    </el-select>
+                    <div class="field-options">
+                      <!-- 使用图标按钮替代文字按钮 -->
+                      <el-button 
+                        size="mini" 
+                        :type="field.nullable ? 'primary' : 'default'" 
+                        text 
+                        @click.stop="toggleFieldOption(field, 'nullable')"
+                        title="允许为空"
+                      >
+                        <el-icon><CircleCheck /></el-icon>
+                      </el-button>
+                      <el-button 
+                        size="mini" 
+                        :type="field.primaryKey ? 'primary' : 'default'" 
+                        text 
+                        @click.stop="toggleFieldOption(field, 'primaryKey')"
+                        title="主键"
+                      >
+                        <el-icon><Key /></el-icon>
+                      </el-button>
+                      <el-button 
+                        size="mini" 
+                        :type="field.unique ? 'primary' : 'default'" 
+                        text 
+                        @click.stop="toggleFieldOption(field, 'unique')"
+                        title="唯一约束"
+                      >
+                        <el-icon><Lock /></el-icon>
+                      </el-button>
+                      <el-button 
+                        size="mini" 
+                        type="text" 
+                        @click.stop="showAdvancedOptions(field, $event)"
+                        title="更多选项"
+                        class="more-options-btn"
+                      >
+                        <el-icon><More /></el-icon>
+                      </el-button>
+                      <el-button 
+                        size="mini" 
+                        type="danger" 
+                        text 
+                        @click.stop="removeField(table.id, field.id)"
+                        title="删除字段"
+                        class="delete-field-btn"
+                      >
+                        <el-icon><Close /></el-icon>
+                      </el-button>
+                    </div>
                   </div>
-                  <div class="field-actions">
-                    <el-button size="mini" text @click="editField(table.id, field.id)" icon="Edit"></el-button>
-                    <el-button size="mini" text type="danger" @click="removeField(table.id, field.id)" icon="Delete"></el-button>
+                </div>
+                
+                <!-- 高级选项悬浮框 -->
+                <div 
+                  v-if="activeAdvancedField" 
+                  class="advanced-options-panel"
+                  :style="{ top: advancedOptionsPosition.top + 'px', left: advancedOptionsPosition.left + 'px' }"
+                >
+                  <div class="advanced-header">
+                    <span>高级选项</span>
+                    <el-button size="mini" text @click="closeAdvancedOptions" icon="Close"></el-button>
+                  </div>
+                  <div class="advanced-content">
+                    <div class="option-item">
+                      <label>默认值:</label>
+                      <el-input v-model="activeAdvancedField.defaultValue" size="small" placeholder="默认值"></el-input>
+                    </div>
+                    <div class="option-item">
+                      <el-checkbox v-model="activeAdvancedField.autoIncrement">自增</el-checkbox>
+                    </div>
+                    <div class="option-item">
+                      <el-checkbox v-model="activeAdvancedField.unsigned">无符号</el-checkbox>
+                    </div>
+                    <div class="option-item">
+                      <label>长度:</label>
+                      <el-input-number 
+                        v-model="activeAdvancedField.length" 
+                        size="small" 
+                        :min="1" 
+                        :max="65535"
+                      ></el-input-number>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -85,7 +196,8 @@
                 >
                   <span class="field-name">{{ field.name }}</span>
                   <span class="field-type">{{ field.type }}</span>
-                  <span v-if="field.primaryKey" class="pk-indicator">🔑</span>
+                  <span v-if="field.primaryKey" class="pk-indicator">������</span>
+                  <span v-if="field.unique" class="unique-indicator">������</span>
                 </div>
               </div>
             </div>
@@ -107,90 +219,173 @@
         </div>
       </div>
     </div>
-
-    <!-- 添加/编辑字段对话框 -->
-    <el-dialog 
-      :title="fieldDialog.title" 
-      v-model="fieldDialog.visible"
-      width="500px"
-    >
-      <el-form :model="fieldDialog.form" label-width="80px">
-        <el-form-item label="字段名">
-          <el-input v-model="fieldDialog.form.name" placeholder="请输入字段名"></el-input>
-        </el-form-item>
-        <el-form-item label="数据类型">
-          <el-select v-model="fieldDialog.form.type" placeholder="请选择数据类型">
-            <el-option label="INT" value="INT"></el-option>
-            <el-option label="VARCHAR" value="VARCHAR"></el-option>
-            <el-option label="TEXT" value="TEXT"></el-option>
-            <el-option label="DATE" value="DATE"></el-option>
-            <el-option label="DATETIME" value="DATETIME"></el-option>
-            <el-option label="DECIMAL" value="DECIMAL"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="长度">
-          <el-input-number v-model="fieldDialog.form.length" :min="1"></el-input-number>
-        </el-form-item>
-        <el-form-item>
-          <el-checkbox v-model="fieldDialog.form.primaryKey">主键</el-checkbox>
-          <el-checkbox v-model="fieldDialog.form.foreignKey">外键</el-checkbox>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="fieldDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="saveField">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 添加表对话框 -->
-    <el-dialog 
-      title="新建表" 
-      v-model="tableDialog.visible"
-      width="400px"
-    >
-      <el-form :model="tableDialog.form" label-width="80px">
-        <el-form-item label="表名">
-          <el-input v-model="tableDialog.form.name" placeholder="请输入表名"></el-input>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="tableDialog.visible = false">取消</el-button>
-        <el-button type="primary" @click="saveTable">保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { ArrowRight, CircleCheck, Key, Lock, More, Close } from '@element-plus/icons-vue'
 
 // 表数据
 const tables = ref([])
 const activeTableId = ref(null)
 const draggingTableId = ref(null)
 const dragOffset = reactive({ x: 0, y: 0 })
+const activeAdvancedField = ref(null)
+const advancedOptionsPosition = reactive({ top: 0, left: 0 })
 
-// 对话框状态
-const fieldDialog = reactive({
-  visible: false,
-  title: '添加字段',
-  form: {
-    name: '',
-    type: 'VARCHAR',
-    length: 255,
-    primaryKey: false,
-    foreignKey: false
-  },
-  tableId: null,
-  fieldId: null
-})
+// 点击外部关闭高级选项
+const handleClickOutside = (event) => {
+  const advancedPanel = document.querySelector('.advanced-options-panel')
+  if (advancedPanel && !advancedPanel.contains(event.target) && 
+      !event.target.closest('.more-options-btn')) {
+    closeAdvancedOptions()
+  }
+}
 
-const tableDialog = reactive({
-  visible: false,
-  form: {
-    name: ''
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+  
+  // 默认激活第一个表
+  if (tables.value.length > 0 && !activeTableId.value) {
+    setActiveTable(tables.value[0].id)
   }
 })
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// 表操作方法
+const addNewTable = () => {
+  const newTable = {
+    id: Date.now().toString(),
+    name: `table_${tables.value.length + 1}`,
+    collapsed: false, // 默认展开状态
+    fields: [
+      {
+        id: Date.now().toString() + '_1',
+        name: 'id',
+        type: 'INT',
+        primaryKey: true,
+        nullable: false,
+        unique: false,
+        autoIncrement: true,
+        unsigned: true,
+        length: 11,
+        defaultValue: ''
+      },
+      {
+        id: Date.now().toString() + '_2',
+        name: 'name',
+        type: 'VARCHAR',
+        primaryKey: false,
+        nullable: false,
+        unique: false,
+        autoIncrement: false,
+        unsigned: false,
+        length: 255,
+        defaultValue: ''
+      },
+      {
+        id: Date.now().toString() + '_3',
+        name: 'created_at',
+        type: 'DATETIME',
+        primaryKey: false,
+        nullable: false,
+        unique: false,
+        autoIncrement: false,
+        unsigned: false,
+        length: null,
+        defaultValue: 'CURRENT_TIMESTAMP'
+      }
+    ],
+    position: { x: 100 + tables.value.length * 200, y: 100 }
+  }
+  tables.value.push(newTable)
+  setActiveTable(newTable.id)
+}
+
+const updateTableName = (tableId, newName) => {
+  const table = tables.value.find(t => t.id === tableId)
+  if (table) {
+    table.name = newName
+  }
+}
+
+const removeTable = (tableId) => {
+  const index = tables.value.findIndex(table => table.id === tableId)
+  if (index !== -1) {
+    tables.value.splice(index, 1)
+    if (activeTableId.value === tableId) {
+      activeTableId.value = tables.value.length > 0 ? tables.value[0].id : null
+    }
+  }
+}
+
+const setActiveTable = (tableId) => {
+  activeTableId.value = tableId
+}
+
+// 表折叠功能
+const toggleTableCollapse = (tableId) => {
+  const table = tables.value.find(t => t.id === tableId)
+  if (table) {
+    table.collapsed = !table.collapsed
+  }
+}
+
+// 字段操作方法
+const addField = (tableId) => {
+  const table = tables.value.find(t => t.id === tableId)
+  if (table) {
+    const newField = {
+      id: Date.now().toString(),
+      name: `field_${table.fields.length + 1}`,
+      type: 'VARCHAR',
+      primaryKey: false,
+      nullable: true,
+      unique: false,
+      autoIncrement: false,
+      unsigned: false,
+length: 255,
+      defaultValue: ''
+    }
+    table.fields.push(newField)
+}
+}
+
+const removeField = (tableId, fieldId) => {
+  const table = tables.value.find(t => t.id === tableId)
+  if (table) {
+    const index = table.fields.findIndex(f => f.id === fieldId)
+    if (index !== -1) {
+      table.fields.splice(index, 1)
+    }
+  }
+}
+
+const toggleFieldOption = (field, option) => {
+  field[option] = !field[option]
+  
+  // 确保主键和唯一约束的逻辑正确
+  if (option === 'primaryKey' && field.primaryKey) {
+    field.nullable = false // 主键不能为空
+  }
+}
+
+const showAdvancedOptions = (field, event) => {
+  activeAdvancedField.value = field
+  // 根据按钮位置计算悬浮框位置
+  const rect = event.target.getBoundingClientRect()
+  advancedOptionsPosition.top = rect.bottom + 5
+  advancedOptionsPosition.left = rect.left
+}
+
+const closeAdvancedOptions = () => {
+  activeAdvancedField.value = null
+}
 
 // 计算关系连线
 const relationships = computed(() => {
@@ -219,102 +414,6 @@ const relationships = computed(() => {
   })
   return relations
 })
-
-// 表操作方法
-const addNewTable = () => {
-  tableDialog.visible = true
-  tableDialog.form.name = ''
-}
-
-const saveTable = () => {
-  if (tableDialog.form.name.trim()) {
-    const newTable = {
-      id: Date.now().toString(),
-      name: tableDialog.form.name,
-      fields: [],
-      position: { x: 100 + tables.value.length * 200, y: 100 }
-    }
-    tables.value.push(newTable)
-    setActiveTable(newTable.id)
-    tableDialog.visible = false
-  }
-}
-
-const removeTable = (tableId) => {
-  const index = tables.value.findIndex(table => table.id === tableId)
-  if (index !== -1) {
-    tables.value.splice(index, 1)
-    if (activeTableId.value === tableId) {
-      activeTableId.value = tables.value.length > 0 ? tables.value[0].id : null
-    }
-  }
-}
-
-const setActiveTable = (tableId) => {
-  activeTableId.value = tableId
-}
-
-// 字段操作方法
-const addField = (tableId) => {
-  fieldDialog.visible = true
-  fieldDialog.title = '添加字段'
-  fieldDialog.tableId = tableId
-  fieldDialog.fieldId = null
-  fieldDialog.form = {
-    name: '',
-    type: 'VARCHAR',
-    length: 255,
-    primaryKey: false,
-    foreignKey: false
-  }
-}
-
-const editField = (tableId, fieldId) => {
-  const table = tables.value.find(t => t.id === tableId)
-  if (table) {
-    const field = table.fields.find(f => f.id === fieldId)
-    if (field) {
-      fieldDialog.visible = true
-      fieldDialog.title = '编辑字段'
-      fieldDialog.tableId = tableId
-      fieldDialog.fieldId = fieldId
-      fieldDialog.form = { ...field }
-    }
-  }
-}
-
-const removeField = (tableId, fieldId) => {
-  const table = tables.value.find(t => t.id === tableId)
-  if (table) {
-    const index = table.fields.findIndex(f => f.id === fieldId)
-    if (index !== -1) {
-      table.fields.splice(index, 1)
-    }
-  }
-}
-
-const saveField = () => {
-  if (fieldDialog.form.name.trim()) {
-    const table = tables.value.find(t => t.id === fieldDialog.tableId)
-    if (table) {
-      if (fieldDialog.fieldId) {
-        // 编辑字段
-        const field = table.fields.find(f => f.id === fieldDialog.fieldId)
-        if (field) {
-          Object.assign(field, fieldDialog.form)
-        }
-      } else {
-        // 添加新字段
-        const newField = {
-          id: Date.now().toString(),
-          ...fieldDialog.form
-        }
-        table.fields.push(newField)
-      }
-      fieldDialog.visible = false
-    }
-  }
-}
 
 // 拖拽功能
 const startDrag = (tableId, event) => {
@@ -351,8 +450,23 @@ const generateSQL = () => {
     sql += `CREATE TABLE ${table.name} (\n`
     table.fields.forEach((field, index) => {
       sql += `  ${field.name} ${field.type}`
-      if (field.length) {
+      if (field.length && field.type !== 'TEXT' && field.type !== 'DATE' && field.type !== 'DATETIME') {
         sql += `(${field.length})`
+      }
+      if (field.unsigned) {
+        sql += ' UNSIGNED'
+      }
+      if (!field.nullable) {
+        sql += ' NOT NULL'
+      }
+      if (field.unique) {
+        sql += ' UNIQUE'
+      }
+      if (field.autoIncrement) {
+        sql += ' AUTO_INCREMENT'
+      }
+      if (field.defaultValue) {
+        sql += ` DEFAULT ${field.defaultValue}`
       }
       if (field.primaryKey) {
         sql += ' PRIMARY KEY'
@@ -395,6 +509,12 @@ const clearAll = () => {
   gap: 10px;
 }
 
+.table-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+
 .main-content {
   flex: 1;
   display: flex;
@@ -403,7 +523,7 @@ const clearAll = () => {
 }
 
 .left-panel {
-  width: 350px;
+  width: 400px;
   border-right: 1px solid #e4e7ed;
   display: flex;
   flex-direction: column;
@@ -452,75 +572,175 @@ const clearAll = () => {
 }
 
 .table-header {
-  padding: 10px 15px;
+  padding: 8px 12px;
   border-bottom: 1px solid #e4e7ed;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
+  user-select: none;
 }
 
-.table-name {
-  font-weight: 600;
-  color: #303133;
+.table-title-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
 }
 
+.collapse-icon {
+  transition: transform 0.3s;
+  font-size: 12px;
+  color: #909399;
+}
+
+.collapse-icon.rotated {
+  transform: rotate(90deg);
+}
+
+.table-actions {
+  flex-shrink: 0;
+}
+
+.table-actions .el-button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
 .fields-section {
-  padding: 10px 15px;
+  padding: 8px 12px;
 }
 
 .fields-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 12px;
   color: #606266;
 }
 
 .fields-list {
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
-.field-item {
+.editable-field {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 5px 0;
+  padding: 4px 0;
   border-bottom: 1px dashed #e4e7ed;
+  gap: 6px;
 }
 
-.field-info {
+.field-editor {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.field-name-input {
+  width: 90px;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.field-type-select {
+  width: 85px;
+  min-width: 85px;
+  flex-shrink: 0;
+}
+
+.field-options {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+.field-options .el-button {
+  padding: 1px 3px;
+  min-width: 20px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.field-options .el-icon {
+  font-size: 10px;
+}
+.field-options {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.field-options .el-button {
+  padding: 2px 4px;
+  min-width: 24px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.field-options .el-icon {
   font-size: 12px;
 }
 
-.field-name {
-  font-weight: 500;
+.more-options-btn,
+.delete-field-btn {
+  font-weight: bold;
 }
 
-.field-type {
-  color: #909399;
-  font-size: 11px;
+.delete-field-btn .el-icon {
+  color: #f56c6c;
 }
 
-.pk-badge, .fk-badge {
-  padding: 1px 4px;
-  border-radius: 2px;
+.advanced-options-panel {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  z-index: 1000;
+  min-width: 200px;
+}
+
+.advanced-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.advanced-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option-item label {
+  font-size: 12px;
+  min-width: 60px;
+}
+
+.unique-indicator {
   font-size: 10px;
-  color: white;
+  color: #67c23a;
 }
 
-.pk-badge {
-  background: #f56c6c;
-}
-
-.fk-badge {
-  background: #e6a23c;
-}
-
+/* 其他样式保持不变 */
 .er-diagram-container {
   flex: 1;
   position: relative;
@@ -582,14 +802,5 @@ const clearAll = () => {
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-
-.field-actions {
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.field-item:hover .field-actions {
-  opacity: 1;
 }
 </style>

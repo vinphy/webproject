@@ -114,12 +114,11 @@
           </div>
         </div>
         
-        
-        <!-- <div class="test-code-section">
+<!-- <div class="test-code-section">
           <div class="section-header">
             <h4>测试代码</h4>
           </div>
-          <div class="markdown-code-block" data-language="python">
+<div class="markdown-code-block" data-language="python">
             <div class="code-header">
               <span class="language-label">Python</span>
             </div>
@@ -409,6 +408,44 @@ const findParent = (itemId) => {
   }
   return null;
 };
+
+// 查找第一个叶子节点（三级菜单项）
+const findFirstLeafNode = () => {
+  for (const topItem of menuData.value) {
+    if (topItem.children) {
+      for (const child of topItem.children) {
+        if (child.children) {
+          for (const grandchild of child.children) {
+            return {
+              grandchild,
+              childId: child.id,
+              topItemId: topItem.id
+            }; // 返回第一个三级菜单项及其父级信息
+          }
+        }
+      }
+    }
+  }
+  return null;
+};
+
+// 组件挂载时自动选择第一个叶子节点
+onMounted(() => {
+  const firstLeafData = findFirstLeafNode();
+  if (firstLeafData) {
+    const { grandchild, childId, topItemId } = firstLeafData;
+    
+    // 展开所有父级菜单（一级和二级）
+    expandedItems.value.add(topItemId);    // 展开"数据库测试"
+    expandedItems.value.add(childId);      // 展开"MySQL测试"
+    
+    // 设置选中状态
+    selectedCategory.value = topItemId;    // 选中"数据库测试"
+    selectedSubCategory.value = childId;   // 选中"MySQL测试"
+    selectedItem.value = grandchild.id;    // 选中"创建表测试"
+    currentContent.value = grandchild;     // 设置当前内容
+  }
+});
 </script>
 
 <style scoped>
@@ -712,7 +749,6 @@ const findParent = (itemId) => {
   justify-content: space-between;
   margin-bottom: 8px;
 }
-
 .meta-item:last-child {
   margin-bottom: 0;
 }
