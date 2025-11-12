@@ -410,7 +410,7 @@ const findParent = (itemId) => {
 }
 
 .menu-item {
-  padding: 8px 20px;
+  padding: 4px 20px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
