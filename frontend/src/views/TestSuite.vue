@@ -114,7 +114,8 @@
           </div>
         </div>
         
-        <div class="test-code-section">
+        
+        <!-- <div class="test-code-section">
           <div class="section-header">
             <h4>测试代码</h4>
           </div>
@@ -124,61 +125,69 @@
             </div>
             <pre class="markdown-pre"><code class="markdown-code">{{ currentContent.testCode }}</code></pre>
           </div>
-        </div>
-        
-        <div class="test-result-section">
+        </div> -->
+<div class="test-result-section">
           <div class="section-header">
-            <h4>测试结果</h4>
+          <h4>自定义建模</h4>
           </div>
           <div class="test-result-content">
-            <p>{{ currentContent.testResult }}</p>
+            <!-- <p>{{ currentContent.testResult }}</p> -->
           </div>
         </div>
+        <ErDiagramModeler></ErDiagramModeler>
       </div>
+      
       <div v-else class="no-content">
         <p>请从左侧选择测试用例查看详情</p>
       </div>
     </div>
 <!-- 右侧描述区 -->
-    <div class="right-sidebar">
-      <div class="description-section">
-        <div class="section-header">
-          <h4>描述信息</h4>
-        </div>
-        <div class="description-content" v-if="currentContent">
-          <p>{{ currentContent.description }}</p>
-          
-          <div class="meta-info">
-            <div class="meta-item">
-              <span class="label">创建时间:</span>
-              <span class="value">{{ currentContent.createTime }}</span>
-            </div>
-            <div class="meta-item">
-              <span class="label">最后修改:</span>
-              <span class="value">{{ currentContent.updateTime }}</span>
-            </div>
-            <div class="meta-item">
-              <span class="label">作者:</span>
-              <span class="value">{{ currentContent.author }}</span>
+    <div class="right-sidebar" :class="{ 'collapsed': !isRightSidebarVisible }">
+      <!-- 折叠按钮 - 右上角悬浮 -->
+      <div class="collapse-btn" @click="toggleRightSidebar">
+        <span class="arrow-icon" :class="{ 'collapsed': !isRightSidebarVisible }"></span>
+      </div>
+      
+      <div class="sidebar-content" v-if="isRightSidebarVisible">
+        <div class="description-section">
+          <div class="section-header">
+            <h4>描述信息</h4>
+          </div>
+          <div class="description-content" v-if="currentContent">
+            <p>{{ currentContent.description }}</p>
+            
+            <div class="meta-info">
+              <div class="meta-item">
+                <span class="label">创建时间:</span>
+                <span class="value">{{ currentContent.createTime }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="label">最后修改:</span>
+                <span class="value">{{ currentContent.updateTime }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="label">作者:</span>
+                <span class="value">{{ currentContent.author }}</span>
+              </div>
             </div>
           </div>
+          <div v-else class="no-content">
+            <p>请从左侧选择测试用例查看详情</p>
+          </div>
         </div>
-        <div v-else class="no-content">
-          <p>请从左侧选择测试用例查看详情</p>
-        </div>
-      </div>
-
-      <!-- 相关链接区域 -->
-      <div class="related-links">
-        <div class="section-header">
-          <h4>相关链接</h4>
-        </div>
-        <div class="links-content">
-          <ul>
-            <li v-for="link in relatedLinks" :key="link.id">
-              <a :href="link.url" target="_blank">{{ link.title }}</a>
-            </li>
-          </ul>
+    
+        <!-- 相关链接区域 -->
+        <div class="related-links">
+          <div class="section-header">
+            <h4>相关链接</h4>
+          </div>
+          <div class="links-content">
+            <ul>
+              <li v-for="link in relatedLinks" :key="link.id">
+                <a :href="link.url" target="_blank">{{ link.title }}</a>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -186,9 +195,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import ErDiagramModeler from './ErDiagramModeler.vue';      
 
-// 优化后的菜单数据结构
+// 模拟菜单数据 - 添加ER图建模菜单项
 const menuData = ref([
   {
     id: 'database',
@@ -198,27 +208,62 @@ const menuData = ref([
         id: 'mysql',
         name: 'MySQL测试',
         children: [
-          {
-            id: 'mysql-connection',
-            name: '连接测试',
-            sql: 'SELECT 1;',
-            testCode: 'import mysql.connector\n\n# 测试数据库连接\ndef test_connection():\n    conn = mysql.connector.connect(\n        host="localhost",\n        user="root",\n        password="password",\n        database="test"\n    )\n    cursor = conn.cursor()\n    cursor.execute("SELECT 1")\n    result = cursor.fetchone()\n    print("连接测试通过" if result[0] == 1 else "连接测试失败")\n    conn.close()',
-            testResult: '连接测试通过',
-            description: '测试MySQL数据库连接是否正常',
-            createTime: '2024-01-15',
-            updateTime: '2024-01-15',
-            author: '系统管理员'
+          { 
+            id: 'mysql-create', 
+            name: '创建表测试', 
+            sql: `CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES posts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);`,
+            code: `# 数据库连接测试代码
+import mysql.connector
+from mysql.connector import Error
+
+def test_database_connection():
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='test_db',
+            user='root',
+            password='password'
+        )
+        
+        if connection.is_connected():
+            print("数据库连接成功")
+            return True
+    except Error as e:
+        print(f"连接错误: {e}")
+        return False
+    finally:
+        if connection.is_connected():
+            connection.close()`
           },
           {
-            id: 'mysql-create-table',
-            name: '建表测试',
-            sql: 'CREATE TABLE users (\n    id INT PRIMARY KEY AUTO_INCREMENT,\n    username VARCHAR(50) NOT NULL,\n    email VARCHAR(100) UNIQUE,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);',
-            testCode: 'import mysql.connector\n\n# 测试建表功能\ndef test_create_table():\n    conn = mysql.connector.connect(\n        host="localhost",\n        user="root",\n        password="password",\n        database="test"\n    )\n    cursor = conn.cursor()\n    \n    # 执行建表SQL\n    cursor.execute(sql)\n    \n    # 验证表是否存在\n    cursor.execute("SHOW TABLES LIKE \'users\'")\n    result = cursor.fetchone()\n    \n    if result:\n        print("建表测试通过")\n        # 清理测试表\n        cursor.execute("DROP TABLE users")\n    else:\n        print("建表测试失败")\n    \n    conn.close()',
-            testResult: '建表测试通过',
-            description: '测试MySQL建表功能是否正常',
-            createTime: '2024-01-15',
-            updateTime: '2024-01-15',
-            author: '系统管理员'
+            id: 'mysql-er-diagram',
+            name: 'ER图建模',
+            type: 'er-diagram'
           }
         ]
       },
@@ -226,17 +271,8 @@ const menuData = ref([
         id: 'postgresql',
         name: 'PostgreSQL测试',
         children: [
-          {
-            id: 'postgresql-connection',
-            name: '连接测试',
-            sql: 'SELECT 1;',
-            testCode: 'import psycopg2\n\n# 测试PostgreSQL数据库连接\ndef test_connection():\n    conn = psycopg2.connect(\n        host="localhost",\n        user="postgres",\n        password="password",\n        database="test"\n    )\n    cursor = conn.cursor()\n    cursor.execute("SELECT 1")\n    result = cursor.fetchone()\n    print("连接测试通过" if result[0] == 1 else "连接测试失败")\n    conn.close()',
-            testResult: '连接测试通过',
-            description: '测试PostgreSQL数据库连接是否正常',
-            createTime: '2024-01-15',
-            updateTime: '2024-01-15',
-            author: '系统管理员'
-          }
+          { id: 'pg-conn', name: '连接测试', content: 'pg-conn' },
+          { id: 'pg-query', name: '查询测试', content: 'pg-query' }
         ]
       }
     ]
@@ -253,8 +289,8 @@ const menuData = ref([
             id: 'api-get',
             name: 'GET请求测试',
             sql: 'N/A',
-            testCode: 'import requests\n\n# 测试GET API\ndef test_get_api():\n    response = requests.get("https://api.example.com/users")\n    if response.status_code == 200:\n        print("GET API测试通过")\n        return response.json()\n    else:\n        print("GET API测试失败")\n        return None',
-            testResult: 'GET API测试通过',
+            // testCode: 'import requests\n\n# 测试GET API\ndef test_get_api():\n    response = requests.get("https://api.example.com/users")\n    if response.status_code == 200:\n        print("GET API测试通过")\n        return response.json()\n    else:\n        print("GET API测试失败")\n        return None',
+            // testResult: 'GET API测试通过',
             description: '测试REST API的GET请求功能',
             createTime: '2024-01-15',
             updateTime: '2024-01-15',
@@ -276,8 +312,8 @@ const menuData = ref([
             id: 'load-test',
             name: '基础负载测试',
             sql: 'N/A',
-            testCode: 'import time\nimport threading\n\n# 基础负载测试\ndef load_test():\n    def worker():\n        time.sleep(1)  # 模拟工作负载\n    \n    threads = []\n    start_time = time.time()\n    \n    # 创建10个线程模拟并发\n    for i in range(10):\n        thread = threading.Thread(target=worker)\n        threads.append(thread)\n        thread.start()\n    \n    # 等待所有线程完成\n    for thread in threads:\n        thread.join()\n    \n    end_time = time.time()\n    print(f"负载测试完成，耗时: {end_time - start_time:.2f}秒")',
-            testResult: '负载测试完成，耗时: 1.02秒',
+            // testCode: 'import time\nimport threading\n\n# 基础负载测试\ndef load_test():\n    def worker():\n        time.sleep(1)  # 模拟工作负载\n    \n    threads = []\n    start_time = time.time()\n    \n    # 创建10个线程模拟并发\n    for i in range(10):\n        thread = threading.Thread(target=worker)\n        threads.append(thread)\n        thread.start()\n    \n    # 等待所有线程完成\n    for thread in threads:\n        thread.join()\n    \n    end_time = time.time()\n    print(f"负载测试完成，耗时: {end_time - start_time:.2f}秒")',
+            // testResult: '负载测试完成，耗时: 1.02秒',
             description: '基础并发负载性能测试',
             createTime: '2024-01-15',
             updateTime: '2024-01-15',
@@ -302,8 +338,8 @@ const selectedSubCategory = ref(null);
 const selectedItem = ref(null);
 const currentContent = ref(null);
 const expandedItems = ref(new Set()); // 存储展开的菜单项ID
+const isRightSidebarVisible = ref(true); // 控制右侧面板显示状态
 
-// 计算属性
 const getCurrentContentTitle = () => {
   return currentContent.value ? currentContent.value.name : '请选择测试用例';
 };
@@ -334,6 +370,11 @@ const handleMenuClick = (item) => {
   }
 };
 
+// 切换右侧面板显示状态
+const toggleRightSidebar = () => {
+  isRightSidebarVisible.value = !isRightSidebarVisible.value;
+};
+
 // 辅助方法：查找顶级父节点
 const findTopLevelParent = (itemId) => {
   for (const topItem of menuData.value) {
@@ -344,7 +385,7 @@ const findTopLevelParent = (itemId) => {
         if (child.children) {
           for (const grandchild of child.children) {
             if (grandchild.id === itemId) return topItem.id;
-          }
+}
         }
       }
     }
@@ -591,10 +632,65 @@ const findParent = (itemId) => {
   box-shadow: none;
   overflow-y: auto;
   border-left: 1px solid #e6e6e6;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.right-sidebar.collapsed {
+  width: 40px;
+}
+
+/* 折叠按钮样式 */
+.collapse-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.collapse-btn:hover {
+  background-color: #e0e0e0;
+  transform: scale(1.1);
+}
+
+/* 箭头图标样式 */
+.arrow-icon {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #666;
+  border-top: none;
+  border-right: none;
+  transform: rotate(45deg);
+  transition: all 0.3s ease;
+}
+
+.arrow-icon.collapsed {
+  transform: rotate(-135deg);
+}
+
+/* 侧边栏内容 */
+.sidebar-content {
+  padding: 15px 20px;
+  transition: all 0.3s ease;
+}
+
+.right-sidebar.collapsed .sidebar-content {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .description-section, .related-links {
-  padding: 15px 20px;
+  padding: 15px 0;
   border-bottom: none;
 }
 
@@ -657,35 +753,38 @@ const findParent = (itemId) => {
   padding: 30px 0;
 }
 
-.no-content {
-  text-align: center;
-  color: #909399;
-  padding: 30px 0;
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .right-sidebar {
+    width: 280px;
+  }
+  
+  .right-sidebar.collapsed {
+    width: 40px;
+  }
 }
 
-.links-content ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.links-content li {
-  margin-bottom: 8px;
-}
-
-.links-content a {
-  color: #007bff;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.links-content a:hover {
-  text-decoration: underline;
-}
-
-.no-content {
-  text-align: center;
-  color: #909399;
-  padding: 30px 0;
+@media (max-width: 768px) {
+  .right-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100%;
+    z-index: 1000;
+  }
+  
+  .right-sidebar.collapsed {
+    transform: translateX(calc(100% - 40px));
+  }
+  
+  .collapse-btn {
+    right: 10px;
+    top: 10px;
+  }
+  
+  .expand-btn {
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 </style>
