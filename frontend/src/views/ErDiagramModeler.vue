@@ -362,30 +362,30 @@ const addNewTable = () => {
     name: `table_${tables.value.length + 1}`,
     collapsed: false, // 默认展开状态
     fields: [
-      {
-        id: Date.now().toString() + '_1',
-        name: 'id',
-        type: 'INT',
-        primaryKey: true,
-        nullable: false,
-        unique: false,
-        autoIncrement: true,
-        unsigned: true,
-        length: 11,
-        defaultValue: ''
-      },
-      {
-        id: Date.now().toString() + '_2',
-        name: 'name',
-        type: 'VARCHAR',
-        primaryKey: false,
-        nullable: false,
-        unique: false,
-        autoIncrement: false,
-        unsigned: false,
-        length: 255,
-        defaultValue: ''
-      },
+      // {
+      //   id: Date.now().toString() + '_1',
+      //   name: 'id',
+      //   type: 'INT',
+      //   primaryKey: true,
+      //   nullable: false,
+      //   unique: false,
+      //   autoIncrement: true,
+      //   unsigned: true,
+      //   length: 11,
+      //   defaultValue: ''
+      // },
+      // {
+      //   id: Date.now().toString() + '_2',
+      //   name: 'name',
+      //   type: 'VARCHAR',
+      //   primaryKey: false,
+      //   nullable: false,
+      //   unique: false,
+      //   autoIncrement: false,
+      //   unsigned: false,
+      //   length: 255,
+      //   defaultValue: ''
+      // },
       {
         id: Date.now().toString() + '_3',
         name: 'created_at',
@@ -448,7 +448,7 @@ const addField = (tableId) => {
       unique: false,
       autoIncrement: false,
       unsigned: false,
-length: 255,
+      length: 255,
       defaultValue: ''
     }
     table.fields.push(newField)
