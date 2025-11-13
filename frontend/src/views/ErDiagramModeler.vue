@@ -285,8 +285,9 @@ class="table-card"
                 >
                   <span class="field-name">{{ field.name }}</span>
                   <span class="field-type">{{ field.type }}</span>
-                  <span v-if="field.primaryKey" class="pk-indicator">������</span>
-                  <span v-if="field.unique" class="unique-indicator">������</span>
+                  <span v-if="field.primaryKey" class="pk-indicator">PK</span>
+                  <span v-if="field.unique" class="unique-indicator">Unique</span>
+                  <span v-if="field.nullable" class="unique-indicator">Null</span>
                 </div>
               </div>
             </div>
@@ -955,6 +956,7 @@ min-width: 0;
 
 .pk-indicator {
   font-size: 10px;
+  color: #c23a3a;
 }
 
 .relationship-lines {
