@@ -100,22 +100,24 @@
 
           <!-- 图形建模标签页 -->
           <div v-if="activeTab === 'modeling'" class="modeling-section">
-            <div class="modeling-header">
-              <div class="modeling-actions">
-                <el-button type="primary" @click="addNewTable">
-                  <img src="@/assets/definition.png" class="table-icon" />
-                  新建表
-                </el-button>
-              </div>
-            </div>
-
+            <!-- <div class="modeling-header">
+              
+            </div> -->
+            <div class="modeling-actions">
+              <el-button type="primary" @click="addNewTable">
+                <img src="@/assets/definition.png" class="table-icon" />
+                新建表
+              </el-button>
+            </div>  
             <div class="table-list">
+              
               <div 
                 v-for="table in tables" 
                 :key="table.id"
                 class="table-card"
                 :class="{ active: activeTableId === table.id }"
               >
+              
                 <!-- 表标题栏 - 添加折叠功能 -->
                 <div class="table-header" @click.stop="toggleTableCollapse(table.id)">
                   <div class="table-title-area">
@@ -1117,7 +1119,9 @@ connections.value.push(connection)
 .modeling-actions {
   display: flex;
   gap: 10px;
-  
+  justify-content: flex-end;  /*让内容靠右对齐 */
+  margin-top: 10px;
+  margin-right: 10px;
 }
 .table-title {
   flex: 1;
