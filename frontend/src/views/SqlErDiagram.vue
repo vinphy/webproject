@@ -480,8 +480,9 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Search, Delete, Upload, Grid, Download } from '@element-plus/icons-vue'
+// import { Search, Delete, Upload, Grid, Download } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { Search, Delete,Upload, Grid,Download, ArrowRight, CircleCheck, Key, Lock, More, Close ,Plus } from '@element-plus/icons-vue'
 
 export default {
   name: 'SqlErDiagram',
@@ -490,7 +491,14 @@ export default {
     Delete,
     Upload,
     Grid,
-    Download
+    Download,
+    ArrowRight,
+    CircleCheck,
+    Key,
+    Lock,
+    More,
+    Close,
+    Plus
   },
   setup() {
     // 响应式数据
