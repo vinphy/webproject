@@ -58,7 +58,7 @@
         </el-table-column>
 
         <!-- ID、名称、描述 -->
-        <el-table-column prop="id" label="项目ID" width="120" class-name="col-id" align="left" header-align="left" />
+        <el-table-column prop="project_code" label="项目ID" width="120" class-name="col-id" align="left" header-align="left" />
         <el-table-column prop="name" label="项目名称" min-width="150" align="left" header-align="left" />
 
         

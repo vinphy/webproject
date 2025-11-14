@@ -201,15 +201,16 @@ import ErDiagramModeler from './ErDiagramModeler.vue';
 const menuData = ref([
   {
     id: 'database',
-    name: '数据库测试',
+    name: '功能测试',
     children: [
       {
         id: 'mysql',
-        name: 'MySQL测试',
+        name: '表操作测试',
         children: [
           { 
             id: 'mysql-create', 
-            name: '创建表测试', 
+            name: '创建表', 
+            description: '数据库交互提供了统一的语言框架。SQL/92标准中文资源文件，正是为了帮助中国地区的开发者、学者和数据库管理人员更深入地理解这一标准，降低学习难度而制作的。该资源文件详细介绍了SQL/92标准的各个方面，包括其制定的目的、背景、重要性和具体语言结构。通过对SQL/92的语言结构、功能描述的详细解析，用户可以轻松掌握如何在实际应用中运用这些标准。',
             sql: `CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -261,28 +262,29 @@ def test_database_connection():
           },
           {
             id: 'mysql-er-diagram',
-            name: 'ER图建模',
-            type: 'er-diagram'
+            name: '删除表',
+            type: 'er-diagram',
+            description: '数据库交互提供了统一的语言框架。SQL/92标准中文资源文件，正是为了帮助中国地区的开发者、学者和数据库管理人员更深入地理解这一标准，降低学习难度而制作的。该资源文件详细介绍了SQL/92标准的各个方面，包括其制定的目的、背景、重要性和具体语言结构。通过对SQL/92的语言结构、功能描述的详细解析，用户可以轻松掌握如何在实际应用中运用这些标准。',
           }
         ]
       },
       {
         id: 'postgresql',
-        name: 'PostgreSQL测试',
+        name: '视图操作测试',
         children: [
-          { id: 'pg-conn', name: '连接测试', content: 'pg-conn' },
-          { id: 'pg-query', name: '查询测试', content: 'pg-query' }
+          { id: 'pg-conn', name: '创建视图', content: 'pg-conn' },
+          { id: 'pg-query', name: '删除视图', content: 'pg-query' }
         ]
       }
     ]
   },
   {
     id: 'api',
-    name: 'API测试',
+    name: 'TPC-H基准测试用例',
     children: [
       {
         id: 'rest',
-        name: 'REST API',
+        name: '嵌套子查询测试',
         children: [
           {
             id: 'api-get',
@@ -305,7 +307,7 @@ def test_database_connection():
     children: [
       {
         id: 'load',
-        name: '负载测试',
+        name: '事务处理测试',
         children: [
           {
             id: 'load-test',
