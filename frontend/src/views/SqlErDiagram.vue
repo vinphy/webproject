@@ -109,8 +109,7 @@
                 新建表
               </el-button>
             </div>  
-            <div class="table-list">
-              
+            <div class="table-list">             
               <div 
                 v-for="table in tables" 
                 :key="table.id"
@@ -194,7 +193,7 @@
                           >
                             <el-icon><Key /></el-icon>
                           </el-button>
-                          <el-button 
+<el-button 
                             size="mini" 
                             :type="field.unique ? 'primary' : 'default'" 
                             text 
@@ -359,7 +358,7 @@
           <div class="diagram-actions">
             <el-button @click="autoLayout" :disabled="!hasNodes">
               <el-icon><Grid /></el-icon>
-              自动布局
+自动布局
             </el-button>
             <el-button @click="exportDiagram" :disabled="!hasNodes">
               <el-icon><Download /></el-icon>
@@ -480,7 +479,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 // import { Search, Delete, Upload, Grid, Download } from '@element-plus/icons-vue'
 import axios from 'axios'
@@ -653,10 +652,25 @@ export default {
         top: event.clientY,
         left: event.clientX
       }
+      
+      // 修复：使用持续监听器而不是一次性监听器
+      nextTick(() => {
+        document.addEventListener('click', handleClickOutside)
+      })
     }
 
     const closeAdvancedOptions = () => {
       activeAdvancedField.value = null
+      // 修复：移除点击外部关闭监听器
+      document.removeEventListener('click', handleClickOutside)
+    }
+
+    // 修复：点击外部关闭高级选项面板
+    const handleClickOutside = (event) => {
+      const advancedPanel = document.querySelector('.advanced-options-panel')
+      if (advancedPanel && !advancedPanel.contains(event.target)) {
+        closeAdvancedOptions()
+      }
     }
 
     // 表折叠功能
@@ -1620,8 +1634,8 @@ connections.value.push(connection)
 }
 .advanced-header {
   padding: 8px 12px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #e4e7ed;
+  /* background: #f5f7fa; */
+  /* border-bottom: 1px solid #e4e7ed; */
   display: flex;
   justify-content: space-between;
   align-items: center;
