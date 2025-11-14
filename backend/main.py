@@ -60,6 +60,7 @@ app.include_router(code_file_control.router, prefix="/api/code", tags=["代码�
 app.include_router(sql_parser_control.router, prefix="/api/sqlParser", tags=["SQL解析"])
 app.include_router(bit_test_control.router, prefix="/api/bitTest", tags=["位测试"])
 app.include_router(test_case_control.router, prefix="/api/test-cases", tags=["测试用例"])
+app.include_router(sql_parser_control.router, prefix="/api/sql", tags=["sql-parser"])
 
 @app.get("/")
 async def root():
