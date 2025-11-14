@@ -101,88 +101,247 @@
           <!-- 图形建模标签页 -->
           <div v-if="activeTab === 'modeling'" class="modeling-section">
             <div class="modeling-header">
-              <h3>图形建模</h3>
               <div class="modeling-actions">
                 <el-button type="primary" @click="addNewTable">
-                  <el-icon><Plus /></el-icon>
+                  <img src="@/assets/definition.png" class="table-icon" />
                   新建表
                 </el-button>
               </div>
             </div>
 
-            <!-- 表列表 -->
-            <div class="table-panel">
+            <div class="table-list">
               <div 
                 v-for="table in tables" 
                 :key="table.id"
-                class="table-panel-item"
-                :class="{ 'active': activeTableId === table.id }"
-                @click="setActiveTable(table.id)"
+                class="table-card"
+                :class="{ active: activeTableId === table.id }"
               >
-                <div class="table-panel-header">
-                  <div class="table-title">
-                    <el-input
-                      v-model="table.name"
+                <!-- 表标题栏 - 添加折叠功能 -->
+                <div class="table-header" @click.stop="toggleTableCollapse(table.id)">
+                  <div class="table-title-area">
+                    <el-icon class="collapse-icon" :class="{ rotated: table.collapsed }">
+                      <ArrowRight />
+                    </el-icon>
+                    <el-input 
+                      v-model="table.name" 
+                      size="small" 
                       placeholder="表名"
-                      size="small"
+                      @click.stop
                       @input="updateTableName(table.id, $event)"
                     />
                   </div>
-                  <div class="table-actions">
-                    <el-button type="danger" size="small" @click.stop="removeTable(table.id)">
-                      <el-icon><Delete /></el-icon>
-                    </el-button>
+                  <div class="table-actions" @click.stop>
+                    <el-button size="small" type="danger" text @click="removeTable(table.id)">删除</el-button>
                   </div>
                 </div>
-
-                <!-- 字段列表 -->
-                <div class="fields-section">
+                
+                <!-- 字段区域 - 根据折叠状态显示 -->
+                <div class="fields-section" v-show="!table.collapsed">
                   <div class="fields-header">
-                    <span>字段</span>
-                    <el-button size="small" @click.stop="addField(table.id)">
-                      <el-icon><Plus /></el-icon>
-                      添加字段
-                    </el-button>
+                    <span>字段列表</span>
+                    <div class="field-buttons">
+                      <el-button size="small" type="primary" text @click="addField(table.id)" icon="Plus">添加字段</el-button>
+                      <el-button size="small" type="success" text @click="addIndex(table.id)" icon="Plus">添加索引</el-button>
+                    </div>
                   </div>
                   <div class="fields-list">
+                    <!-- 可编辑的字段行 -->
                     <div 
                       v-for="field in table.fields" 
                       :key="field.id"
-                      class="field-item"
+                      class="field-item editable-field"
                     >
-                      <div class="field-info">
-                        <el-input
-                          v-model="field.name"
+                      <div class="field-editor">
+                        <el-input 
+                          v-model="field.name" 
+                          size="small" 
                           placeholder="字段名"
-                          size="small"
+                          class="field-name-input"
                         />
-                        <el-select v-model="field.type" placeholder="数据类型" size="small">
-                          <el-option label="INT" value="INT" />
-                          <el-option label="VARCHAR" value="VARCHAR" />
-                          <el-option label="TEXT" value="TEXT" />
-                          <el-option label="DATE" value="DATE" />
-                          <el-option label="DATETIME" value="DATETIME" />
-                          <el-option label="DECIMAL" value="DECIMAL" />
+                        <el-select 
+                          v-model="field.type" 
+                          size="small" 
+                          placeholder="类型"
+                          class="field-type-select"
+                        >
+                          <el-option label="INT" value="INT"></el-option>
+                          <el-option label="VARCHAR" value="VARCHAR"></el-option>
+                          <el-option label="TEXT" value="TEXT"></el-option>
+                          <el-option label="DATE" value="DATE"></el-option>
+                          <el-option label="DATETIME" value="DATETIME"></el-option>
+                          <el-option label="DECIMAL" value="DECIMAL"></el-option>
+                          <el-option label="BOOLEAN" value="BOOLEAN"></el-option>
                         </el-select>
-                      </div>
-                      <div class="field-actions">
-                        <el-checkbox v-model="field.nullable">可空</el-checkbox>
-                        <el-button type="danger" size="small" @click.stop="removeField(table.id, field.id)">
-                          <el-icon><Delete /></el-icon>
-                        </el-button>
+                        <div class="field-options">
+                          <!-- 使用图标按钮替代文字按钮 -->
+                          <el-button 
+                            size="mini" 
+                            :type="field.nullable ? 'primary' : 'default'" 
+                            text 
+                            @click.stop="toggleFieldOption(field, 'nullable')"
+                            title="允许为空"
+                          >
+                            <el-icon><CircleCheck /></el-icon>
+                          </el-button>
+                          <el-button 
+                            size="mini" 
+                            :type="field.primaryKey ? 'primary' : 'default'" 
+                            text 
+                            @click.stop="toggleFieldOption(field, 'primaryKey')"
+                            title="主键"
+                          >
+                            <el-icon><Key /></el-icon>
+                          </el-button>
+                          <el-button 
+                            size="mini" 
+                            :type="field.unique ? 'primary' : 'default'" 
+                            text 
+                            @click.stop="toggleFieldOption(field, 'unique')"
+                            title="唯一约束"
+                          >
+                            <el-icon><Lock /></el-icon>
+                          </el-button>
+                          <el-button 
+                            size="mini" 
+                            type="text" 
+                            @click.stop="showAdvancedOptions(field, $event)"
+                            title="更多选项"
+                            class="more-options-btn"
+                          >
+                            <el-icon><More /></el-icon>
+                          </el-button>
+                          <el-button 
+                            size="mini" 
+                            type="danger" 
+                            text 
+                            @click.stop="removeField(table.id, field.id)"
+                            title="删除字段"
+                            class="delete-field-btn"
+                          >
+                            <el-icon><Close /></el-icon>
+                          </el-button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                <!-- 索引列表 -->
-                <div class="indexes-section">
-                  <div class="indexes-header">
-                    <span>索引</span>
-                    <el-button size="small" @click.stop="addIndex(table.id)">
-                      <el-icon><Plus /></el-icon>
-                      添加索引
-                    </el-button>
+                    
+                    <!-- 索引列表 -->
+                    <div v-if="table.indices && table.indices.length > 0" class="indices-section">
+                      <div class="indices-header">
+                        <span>索引列表</span>
+                      </div>
+                      <div v-for="index in table.indices" :key="index.id" class="index-item">
+                        <div class="index-editor">
+                          <el-input 
+                            v-model="index.name" 
+                            size="small" 
+                            placeholder="索引名称"
+                            class="index-name-input"
+                          />
+                          <el-select 
+                            v-model="index.fields" 
+                            size="small" 
+                            multiple
+                            placeholder="选择字段"
+                            class="index-fields-select"
+                            :popper-append-to-body="false"
+                          >
+                            <el-option 
+                              v-for="field in table.fields" 
+                              :key="field.id"
+                              :label="field.name" 
+                              :value="field.id"
+                            ></el-option>
+                          </el-select>
+                          <el-checkbox 
+                            v-model="index.unique" 
+                            class="index-unique-checkbox"
+                            title="唯一索引"
+                          ></el-checkbox>
+                          <el-button 
+                            size="mini" 
+                            type="danger" 
+                            text 
+                            @click.stop="removeIndex(table.id, index.id)"
+                            title="删除索引"
+                            class="delete-index-btn"
+                          >
+                            <el-icon><Close /></el-icon>
+                          </el-button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 索引添加框 -->
+                    <div v-if="activeIndexTableId === table.id" class="index-add-panel">
+                      <div class="index-add-header">
+                        <span>添加索引</span>
+                        <el-button size="mini" text @click="closeIndexAddPanel" icon="Close"></el-button>
+                      </div>
+                      <div class="index-add-content">
+                        <div class="index-add-item">
+                          <label>索引名称:</label>
+                          <el-input v-model="newIndex.name" size="small" placeholder="请输入索引名称"></el-input>
+                        </div>
+                        <div class="index-add-item">
+                          <label>选择字段:</label>
+                          <el-select 
+                            v-model="newIndex.fields" 
+                            size="small" 
+                            multiple
+                            placeholder="请选择字段"
+                            class="index-add-select"
+                            :popper-append-to-body="false"
+                          >
+                            <el-option 
+                              v-for="field in table.fields" 
+                              :key="field.id"
+                              :label="field.name" 
+                              :value="field.id"
+                            ></el-option>
+                          </el-select>
+                        </div>
+                        <div class="index-add-item">
+                          <el-checkbox v-model="newIndex.unique">唯一索引</el-checkbox>
+                        </div>
+                        <div class="index-add-buttons">
+                          <el-button size="small" type="primary" @click="confirmAddIndex(table.id)">确认添加</el-button>
+                          <el-button size="small" @click="closeIndexAddPanel">取消</el-button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 高级选项悬浮框 -->
+                    <div 
+                      v-if="activeAdvancedField" 
+                      class="advanced-options-panel"
+                      :style="{ top: advancedOptionsPosition.top + 'px', left: advancedOptionsPosition.left + 'px' }"
+                    >
+                      <div class="advanced-header">
+                        <span>高级选项</span>
+                        <el-button size="mini" text @click="closeAdvancedOptions" icon="Close"></el-button>
+                      </div>
+                      <div class="advanced-content">
+                        <div class="option-item">
+                          <label>默认值:</label>
+                          <el-input v-model="activeAdvancedField.defaultValue" size="small" placeholder="默认值"></el-input>
+                        </div>
+                        <div class="option-item">
+                          <el-checkbox v-model="activeAdvancedField.autoIncrement">自增</el-checkbox>
+                        </div>
+                        <div class="option-item">
+                          <el-checkbox v-model="activeAdvancedField.unsigned">无符号</el-checkbox>
+                        </div>
+                        <div class="option-item">
+                          <label>长度:</label>
+                          <el-input-number 
+                            v-model="activeAdvancedField.length" 
+                            size="small" 
+                            :min="1" 
+                            :max="65535"
+                          ></el-input-number> 
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -344,7 +503,18 @@ export default {
     const uploadRef = ref(null)
     const diagramContainer = ref(null)
     const diagramCanvas = ref(null)
+    // 添加图形建模相关的响应式数据
+    const tables = ref([])
+    const activeTableId = ref(null)
+    const activeIndexTableId = ref(null)
+    const activeAdvancedField = ref(null)
+    const advancedOptionsPosition = ref({ top: 0, left: 0 })
 
+    const newIndex = ref({
+      name: '',
+      fields: [],
+      unique: false
+    })
 
     // 添加activeTab响应式变量
     const activeTab = ref('sql')
@@ -358,6 +528,161 @@ export default {
     const isDragging = ref(false)
     const dragTarget = ref(null)
     const dragOffset = ref({ x: 0, y: 0 })
+
+    // 表折叠功能
+    const toggleTableCollapse = (tableId) => {
+      const table = tables.value.find(t => t.id === tableId)
+      if (table) {
+        table.collapsed = !table.collapsed
+      }
+    }
+
+    const setActiveTable = (tableId) => {
+      activeTableId.value = tableId
+    }
+    const removeTable = (tableId) => {
+      const index = tables.value.findIndex(t => t.id === tableId)
+      if (index !== -1) {
+        tables.value.splice(index, 1)
+        if (activeTableId.value === tableId) {
+          activeTableId.value = null
+        }
+      }
+    }
+
+    const updateTableName = (tableId, newName) => {
+      const table = tables.value.find(t => t.id === tableId)
+      if (table) {
+        table.name = newName
+      }
+    }
+    // 字段操作方法
+    const addField = (tableId) => {
+      const table = tables.value.find(t => t.id === tableId)
+      if (table) {
+        const newField = {
+          id: Date.now().toString(),
+          name: `field_${table.fields.length + 1}`,
+          type: 'VARCHAR',
+          primaryKey: false,
+          nullable: true,
+          unique: false,
+          autoIncrement: false,
+          unsigned: false,
+          length: 255,
+          defaultValue: null
+        }
+        table.fields.push(newField)
+      }
+    }
+
+    const removeField = (tableId, fieldId) => {
+      const table = tables.value.find(t => t.id === tableId)
+      if (table) {
+        const index = table.fields.findIndex(f => f.id === fieldId)
+        if (index !== -1) {
+          table.fields.splice(index, 1)
+        }
+      }
+    }
+
+    const toggleFieldOption = (field, option) => {
+      field[option] = !field[option]
+    }
+
+    // 索引操作方法
+    const addIndex = (tableId) => {
+      activeIndexTableId.value = tableId
+      newIndex.value = {
+        name: `index_${tables.value.find(t => t.id === tableId)?.indices?.length || 0 + 1}`,
+        fields: [],
+        unique: false
+      }
+    }
+
+    const confirmAddIndex = (tableId) => {
+      const table = tables.value.find(t => t.id === tableId)
+      if (table && newIndex.value.name && newIndex.value.fields.length > 0) {
+        const index = {
+          id: Date.now().toString(),
+          name: newIndex.value.name,
+          fields: newIndex.value.fields,
+          unique: newIndex.value.unique
+        }
+        if (!table.indices) table.indices = []
+        table.indices.push(index)
+        closeIndexAddPanel()
+      } else {
+        ElMessage.warning('请填写索引名称并选择至少一个字段')
+      }
+    }
+
+    const closeIndexAddPanel = () => {
+      activeIndexTableId.value = null
+      newIndex.value = {
+        name: '',
+        fields: [],
+        unique: false
+      }
+    }
+
+    const removeIndex = (tableId, indexId) => {
+      const table = tables.value.find(t => t.id === tableId)
+      if (table && table.indices) {
+        const index = table.indices.findIndex(i => i.id === indexId)
+        if (index !== -1) {
+          table.indices.splice(index, 1)
+        }
+      }
+    }
+
+    // 高级选项方法
+    const showAdvancedOptions = (field, event) => {
+      activeAdvancedField.value = field
+      advancedOptionsPosition.value = {
+        top: event.clientY,
+        left: event.clientX
+      }
+    }
+
+    const closeAdvancedOptions = () => {
+      activeAdvancedField.value = null
+    }
+
+    // 表折叠功能
+    // const toggleTableCollapse = (tableId) => {
+    //   const table = tables.value.find(t => t.id === tableId)
+    //   if (table) {
+    //     table.collapsed = !table.collapsed
+    //   }
+    // }
+
+    // 表操作方法
+    const addNewTable = () => {
+      const newTable = {
+        id: Date.now().toString(),
+        name: `table_${tables.value.length + 1}`,
+        collapsed: false, // 默认展开状态
+        fields: [
+          {
+            id: Date.now().toString() + '_3',
+            name: 'created_at',
+            type: 'DATETIME',
+            primaryKey: false,
+            nullable: false,
+            unique: false,
+            autoIncrement: false,
+            unsigned: false,
+            length: null,
+            defaultValue: 'CURRENT_TIMESTAMP'
+          }
+        ],
+        indices: [], // 添加索引数组
+        position: { x: 100 + tables.value.length * 200, y: 100 }
+      }
+      tables.value.push(newTable)
+      setActiveTable(newTable.id)
+    }
 
     // 计算属性
     const hasNodes = computed(() => tableNodes.value.length > 0)
@@ -591,6 +916,29 @@ connections.value.push(connection)
       exportDiagram,
       clearDiagram,
       activeTab,
+       // 新增的图形建模数据
+      tables,
+      activeTableId,
+      activeIndexTableId,
+      activeAdvancedField,
+      advancedOptionsPosition,
+      newIndex,
+      
+      // 新增的方法
+      addNewTable,
+      setActiveTable,
+      removeTable,
+      updateTableName,
+      addField,
+      removeField,
+      toggleFieldOption,
+      addIndex,
+      confirmAddIndex,
+      closeIndexAddPanel,
+      removeIndex,
+      showAdvancedOptions,
+      closeAdvancedOptions,
+      toggleTableCollapse
     }
   }
 }
@@ -737,7 +1085,6 @@ connections.value.push(connection)
   height: 200px !important;
   resize: vertical;
 }
-
 /* 图形建模区域 */
 .modeling-section {
   flex: 1;
@@ -745,7 +1092,6 @@ connections.value.push(connection)
   flex-direction: column;
   overflow: hidden;
 }
-
 .modeling-header {
   padding: 20px;
   border-bottom: 1px solid #e4e7ed;
@@ -763,67 +1109,30 @@ connections.value.push(connection)
 .modeling-actions {
   display: flex;
   gap: 10px;
+  
 }
-
-.table-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-.table-panel-item {
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  margin-bottom: 15px;
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.table-panel-item:hover {
-  border-color: #409EFF;
-}
-
-.table-panel-item.active {
-  border-color: #409EFF;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
-}
-
-.table-panel-header {
-  padding: 15px;
-  background: #f5f7fa;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e4e7ed;
-}
-
 .table-title {
   flex: 1;
 }
-
 .table-actions {
   display: flex;
   gap: 5px;
 }
-
 .fields-section, .indexes-section {
   padding: 15px;
 }
-
 .fields-header, .indexes-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
-
-.fields-list {
+/* .fields-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.field-item {
+} */
+ /* .field-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -832,26 +1141,22 @@ connections.value.push(connection)
   border: 1px solid #f0f0f0;
   border-radius: 4px;
   background: #fafafa;
-}
-
-.field-info {
+} */
+ .field-info {
   display: flex;
   gap: 10px;
   flex: 1;
 }
-
 .field-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .table-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-
 .table-item {
   padding: 15px;
   border: 1px solid #e4e7ed;
@@ -859,29 +1164,24 @@ connections.value.push(connection)
   cursor: pointer;
   transition: all 0.3s;
 }
-
 .table-item:hover {
   border-color: #409EFF;
   background: #f0f9ff;
 }
-
 .table-item.selected {
   border-color: #409EFF;
   background: #e6f7ff;
 }
-
 .table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
-
 .table-name {
   font-weight: 600;
   color: #303133;
 }
-
 .table-count {
   font-size: 12px;
   color: #909399;
@@ -889,35 +1189,29 @@ connections.value.push(connection)
   padding: 2px 8px;
   border-radius: 10px;
 }
-
 .table-columns {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
-
 .column-item {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
   color: #606266;
 }
-
 .column-name {
   font-weight: 500;
 }
-
 .column-type {
   color: #909399;
 }
-
 .more-columns {
   font-size: 12px;
   color: #909399;
   text-align: center;
   padding: 5px 0;
 }
-
 .er-diagram-section {
   flex: 1;
   display: flex;
@@ -925,7 +1219,6 @@ connections.value.push(connection)
   background: white;
   min-width: 0; /* 重要：允许flex子项收缩 */
 }
-
 .diagram-header {
   padding: 10px;
   border-bottom: 1px solid #e4e7ed;
@@ -934,31 +1227,26 @@ connections.value.push(connection)
   align-items: center;
   flex-shrink: 0;
 }
-
 .diagram-header h3 {
   margin: 0;
   color: #303133;
 }
-
 .diagram-actions {
   display: flex;
   gap: 10px;
 }
-
 .diagram-container {
   flex: 1;
   position: relative;
   overflow: hidden;
   background: #fafafa;
 }
-
 .diagram-canvas {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: auto;
 }
-
 .connections-layer {
   position: absolute;
   top: 0;
@@ -966,12 +1254,10 @@ connections.value.push(connection)
   pointer-events: none;
   z-index: 1;
 }
-
 .connection-path {
   pointer-events: stroke;
   cursor: pointer;
 }
-
 .table-node {
   position: absolute;
   background: white;
@@ -985,18 +1271,15 @@ connections.value.push(connection)
   overflow: hidden;
   z-index: 2;
 }
-
 .table-node:hover {
   border-color: #409EFF;
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
   transform: translateY(-2px);
 }
-
 .table-node.selected {
   border-color: #409EFF;
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
 }
-
 .table-node .table-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -1007,12 +1290,10 @@ connections.value.push(connection)
   font-weight: 600;
   font-size: 14px;
 }
-
 .table-node .table-icon {
   display: flex;
   align-items: center;
 }
-
 .table-node .table-name {
   flex: 1;
   overflow: hidden;
@@ -1020,7 +1301,6 @@ connections.value.push(connection)
   white-space: nowrap;
   color: white;
 }
-
 .table-node .table-actions {
   display: flex;
   align-items: center;
@@ -1030,7 +1310,6 @@ connections.value.push(connection)
   max-height: 300px;
   overflow-y: auto;
 }
-
 .table-node .column-row {
   padding: 8px 16px;
   border-bottom: 1px solid #f0f0f0;
@@ -1039,11 +1318,9 @@ connections.value.push(connection)
   align-items: center;
   transition: background-color 0.2s;
 }
-
 .table-node .column-row:hover {
   background-color: #f8f9fa;
 }
-
 .table-node .column-row:last-child {
   border-bottom: none;
 }
@@ -1057,7 +1334,6 @@ connections.value.push(connection)
   background-color: #f0f9ff;
   border-left: 3px solid #409EFF;
 }
-
 .table-node .column-info {
   display: flex;
   flex-direction: column;
@@ -1076,7 +1352,6 @@ connections.value.push(connection)
   color: #909399;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
-
 .table-node .column-constraints {
   display: flex;
   gap: 4px;
@@ -1095,7 +1370,6 @@ connections.value.push(connection)
   background-color: #fef0f0;
   color: #f56c6c;
 }
-
 .table-node .constraint.pk {
   background-color: #f56c6c;
   color: white;
@@ -1117,7 +1391,6 @@ connections.value.push(connection)
   margin: 0 0 20px 0;
   color: #303133;
 }
-
 /* 滚动条样式 */
 .table-node .table-columns::-webkit-scrollbar {
   width: 4px;
@@ -1131,11 +1404,9 @@ connections.value.push(connection)
   background: #c1c1c1;
   border-radius: 2px;
 }
-
 .table-node .table-columns::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
-
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .left-panel {
@@ -1159,8 +1430,6 @@ connections.value.push(connection)
     height: 60%;
   }
 }
-
-
 /* 建模内容区域 */
 .modeling-section {
   height: 100%;
@@ -1168,7 +1437,6 @@ connections.value.push(connection)
   flex-direction: column;
   overflow: hidden;
 }
-
 .modeling-header {
   padding: 20px;
   border-bottom: 1px solid #e4e7ed;
@@ -1183,5 +1451,653 @@ connections.value.push(connection)
   overflow-y: auto;
   min-height: 0;
 }
+.table-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+/* 表格卡片样式 */
+/* .table-card {
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  margin: 10px;
+  background: white;
+  transition: all 0.3s;
+} */
+ .table-card.active {
+  border-color: #409EFF;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+}
+.table-card:hover {
+  border-color: #409EFF;
+}
+/* 表头样式 */
+.table-header {
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.table-title-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.collapse-icon {
+  transition: transform 0.3s;
+}
+.collapse-icon.rotated {
+  transform: rotate(90deg);
+}
+/* 字段区域样式 */
+.fields-section {
+  padding: 0;
+}
+/* .fields-header {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+} */
+/* .field-buttons {
+  display: flex;
+  gap: 8px;
+} */
+/* .fields-list {
+  padding: 16px;
+} */
+/* 字段编辑样式 */
+/* .field-item {
+  margin-bottom: 8px;
+} */
+.field-editor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.field-name-input {
+  flex: 2;
+}
+.field-type-select {
+  flex: 1;
+}
+.field-options {
+  display: flex;
+  gap: 4px;
+}
+/* 索引样式 */
+.indices-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #e4e7ed;
+}
+.indices-header {
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: #606266;
+}
+.index-item {
+  margin-bottom: 8px;
+}
+.index-editor {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.index-name-input {
+  flex: 1;
+}
+.index-fields-select {
+  flex: 2;
+}
+.index-unique-checkbox {
+  margin-left: 8px;
+}
+/* 添加索引面板样式 */
+.index-add-panel {
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  margin-top: 12px;
+  background: #f8f9fa;
+}
+/* .index-add-header {
+  padding: 8px 12px;
+  background: #e6f7ff;
+  border-bottom: 1px solid #bae7ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+} */
+/* .index-add-content {
+  padding: 12px;
+} */
+/* .index-add-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+} */
+.index-add-item label {
+  min-width: 80px;
+  font-size: 14px;
+  color: #606266;
+}
+.index-add-select {
+  flex: 1;
+}
+.index-add-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+/* 高级选项面板样式 */
+.advanced-options-panel {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+}
+.advanced-header {
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.advanced-content {
+  padding: 12px;
+}
+.option-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.option-item label {
+  min-width: 60px;
+  font-size: 14px;
+  color: #606266;
+}
+/**----- */
+.er-diagram-modeler {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
 
+.toolbar {
+  padding: 10px 20px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  gap: 10px;
+}
+
+.table-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 5px;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  height: calc(100vh - 200px);
+  min-height: 500px;
+}
+
+.left-panel {
+  width: 400px;
+  border-right: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
+  padding: 15px 20px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.panel-header h5 {
+  margin: 0;
+  color: #303133;
+}
+
+.table-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.table-card {
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.table-card:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.table-card.active {
+  border-color: #409eff;
+  background: #f0f9ff;
+}
+
+.table-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.table-title-area {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.collapse-icon {
+  transition: transform 0.3s;
+  font-size: 12px;
+  color: #909399;
+}
+
+.collapse-icon.rotated {
+  transform: rotate(90deg);
+}
+
+.table-actions {
+  flex-shrink: 0;
+}
+
+.table-actions .el-button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.fields-section {
+  padding: 8px 12px;
+}
+
+.fields-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #606266;
+}
+
+.fields-list {
+max-height: 300px;
+  overflow-y: auto;
+}
+
+.editable-field {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed #e4e7ed;
+  gap: 6px;
+}
+
+.field-editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+min-width: 0;
+  overflow: hidden;
+}
+
+.field-name-input {
+  width: 90px;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.field-type-select {
+  width: 85px;
+  min-width: 85px;
+  flex-shrink: 0;
+}
+.field-options {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+.field-options .el-button {
+  padding: 1px 3px;
+  min-width: 20px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.field-options .el-icon {
+  font-size: 10px;
+}
+.field-options {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.field-options .el-button {
+  padding: 2px 4px;
+  min-width: 24px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.field-options .el-icon {
+  font-size: 12px;
+}
+
+.more-options-btn,
+.delete-field-btn {
+  font-weight: bold;
+}
+
+.delete-field-btn .el-icon {
+  color: #f56c6c;
+}
+
+.advanced-options-panel {
+  position: fixed;
+  background: white;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+  z-index: 1000;
+  min-width: 200px;
+}
+
+.advanced-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.advanced-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option-item label {
+  font-size: 12px;
+  min-width: 60px;
+}
+
+.unique-indicator {
+  font-size: 10px;
+  color: #67c23a;
+}
+
+/* 其他样式保持不变 */
+.er-diagram-container {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background: #f8f9fa;
+}
+
+.er-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+}
+
+.er-table-node {
+  position: absolute;
+  width: 200px;
+  background: white;
+  border: 2px solid #409eff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: move;
+  user-select: none;
+}
+
+.er-table-header {
+  background: #409eff;
+  color: white;
+  padding: 8px 12px;
+  font-weight: 600;
+  border-radius: 4px 4px 0 0;
+}
+
+.er-table-fields {
+  padding: 8px 0;
+}
+
+.er-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.er-field:last-child {
+  border-bottom: none;
+}
+
+.pk-indicator {
+  font-size: 10px;
+  color: #c23a3a;
+}
+
+.relationship-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* 字段按钮组样式 */
+.field-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 索引相关样式 */
+.indices-section {
+  margin-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 12px;
+}
+
+.indices-header {
+  font-weight: 500;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #666;
+}
+
+.index-item {
+  margin-bottom: 0px;
+  padding: 0px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.index-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.index-name-input {
+  width: 100px;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.index-fields-select {
+  flex: 1;
+  min-width: 150px;
+  max-width: 200px;
+}
+
+.index-fields-select :deep(.el-select__tags) {
+  max-width: 100%;
+  overflow: hidden;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.index-fields-select :deep(.el-tag) {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 1px 4px 1px 0;
+}
+
+.index-fields-select :deep(.el-select .el-input__inner) {
+  padding-left: 8px;
+}
+
+.index-add-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.index-add-select :deep(.el-select__tags) {
+  max-width: 100%;
+  overflow: hidden;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.index-add-select :deep(.el-tag) {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 1px 4px 1px 0;
+}
+
+.index-add-select :deep(.el-select .el-input__inner) {
+  padding-left: 8px;
+}
+
+.index-unique-checkbox {
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.index-unique-checkbox .el-checkbox__label {
+  display: inline;
+}
+
+.delete-index-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* 索引添加面板样式 */
+.index-add-panel {
+  margin-top: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
+  background: #f8f9fa;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.index-add-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.index-add-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.index-add-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.index-add-item label {
+  width: 80px;
+  font-size: 12px;
+  color: #666;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.index-add-item .el-input,
+.index-add-item .el-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.index-add-item .el-checkbox {
+  margin-left: 88px; /* 对齐到标签后面 */
+}
+
+.index-add-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
 </style>
