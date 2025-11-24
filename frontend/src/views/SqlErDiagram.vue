@@ -556,6 +556,11 @@ export default {
         if (activeTableId.value === tableId) {
           activeTableId.value = null
         }
+
+        // 新增：同步更新ER图
+        if (activeTab.value === 'modeling') {
+          convertModelingTablesToErNodes()
+        }
       }
     }
 
@@ -563,6 +568,11 @@ export default {
       const table = tables.value.find(t => t.id === tableId)
       if (table) {
         table.name = newName
+
+        // 新增：同步更新ER图
+        if (activeTab.value === 'modeling') {
+          convertModelingTablesToErNodes()
+        }
       }
     }
     // 字段操作方法
@@ -582,6 +592,11 @@ export default {
           defaultValue: null
         }
         table.fields.push(newField)
+
+        // 新增：同步更新ER图
+        if (activeTab.value === 'modeling') {
+          convertModelingTablesToErNodes()
+        }
       }
     }
 
@@ -591,12 +606,22 @@ export default {
         const index = table.fields.findIndex(f => f.id === fieldId)
         if (index !== -1) {
           table.fields.splice(index, 1)
+
+          // 新增：同步更新ER图
+          if (activeTab.value === 'modeling') {
+            convertModelingTablesToErNodes()
+          }
         }
       }
     }
 
     const toggleFieldOption = (field, option) => {
       field[option] = !field[option]
+
+      // 新增：同步更新ER图
+      if (activeTab.value === 'modeling') {
+        convertModelingTablesToErNodes()
+      }
     }
 
     // 索引操作方法
@@ -621,6 +646,11 @@ export default {
         if (!table.indices) table.indices = []
         table.indices.push(index)
         closeIndexAddPanel()
+
+        // 新增：同步更新ER图
+        if (activeTab.value === 'modeling') {
+          convertModelingTablesToErNodes()
+        }
       } else {
         ElMessage.warning('请填写索引名称并选择至少一个字段')
       }
@@ -641,6 +671,11 @@ export default {
         const index = table.indices.findIndex(i => i.id === indexId)
         if (index !== -1) {
           table.indices.splice(index, 1)
+
+           // 新增：同步更新ER图
+          if (activeTab.value === 'modeling') {
+            convertModelingTablesToErNodes()
+          }
         }
       }
     }
@@ -681,6 +716,49 @@ export default {
     //   }
     // }
 
+    // 新增：将图形建模表转换为ER图节点
+    const convertModelingTablesToErNodes = () => {
+      tableNodes.value = []
+      connections.value = []
+      let nodeId = 1
+
+      // 转换图形建模表为ER图节点
+      tables.value.forEach((table, index) => {
+        // 提取主键字段
+        const primaryKeyFields = table.fields.filter(field => field.primaryKey).map(field => field.name)
+        
+        // 转换字段格式
+        const columns = table.fields.map(field => ({
+          name: field.name,
+          type: field.type,
+          nullable: field.nullable,
+          defaultValue: field.defaultValue,
+          autoIncrement: field.autoIncrement,
+          unsigned: field.unsigned,
+          length: field.length
+        }))
+
+        const node = {
+          id: `table-${nodeId}`,
+          name: table.name,
+          columns: columns,
+          primaryKey: primaryKeyFields,
+          foreignKeys: [], // 图形建模暂时不支持外键关系
+          x: table.position?.x || 100 + (index % 3) * 350,
+          y: table.position?.y || 100 + Math.floor(index / 3) * 300
+        }
+        tableNodes.value.push(node)
+        nodeId++
+      })
+    }
+
+    // 新增：监听activeTab变化，切换到图形建模时自动生成ER图
+    watch(activeTab, (newTab) => {
+      if (newTab === 'modeling' && tables.value.length > 0) {
+        convertModelingTablesToErNodes()
+      }
+    })
+
     // 表操作方法
     const addNewTable = () => {
       const newTable = {
@@ -706,7 +784,14 @@ export default {
       }
       tables.value.push(newTable)
       setActiveTable(newTable.id)
+
+      // 新增：同步更新ER图
+      if (activeTab.value === 'modeling') {
+        convertModelingTablesToErNodes()
+      }
     }
+
+    
 
     // 计算属性
     const hasNodes = computed(() => tableNodes.value.length > 0)
