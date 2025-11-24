@@ -364,6 +364,11 @@
               <el-icon><Download /></el-icon>
               导出图片
             </el-button>
+            <!-- 新增：导出SQL按钮 -->
+            <el-button @click="generateSQL" :disabled="tables.length === 0" type="primary">
+              <el-icon><Document /></el-icon>
+              导出SQL
+            </el-button>
             <el-button @click="clearDiagram" :disabled="!hasNodes">
               <el-icon><Delete /></el-icon>
               清空图表
@@ -483,7 +488,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 // import { Search, Delete, Upload, Grid, Download } from '@element-plus/icons-vue'
 import axios from 'axios'
-import { Search, Delete,Upload, Grid,Download, ArrowRight, CircleCheck, Key, Lock, More, Close ,Plus } from '@element-plus/icons-vue'
+import { Search, Delete,Upload, Grid,Download, ArrowRight, CircleCheck, Key, Lock, More, Close ,Plus, Document} from '@element-plus/icons-vue'
 
 export default {
   name: 'SqlErDiagram',
@@ -499,7 +504,8 @@ export default {
     Lock,
     More,
     Close,
-    Plus
+    Plus,
+    Document  // 新增：Document图标
   },
   setup() {
     // 响应式数据
@@ -824,6 +830,13 @@ export default {
         if (response.data.success) {
           parsedTables.value = response.data.tables
           ElMessage.success(`成功解析 ${parsedTables.value.length} 个表`)
+
+           // 新增：将SQL解析结果转换为图形建模格式
+          convertSqlTablesToModelingTables()
+          
+          // 新增：自动切换到图形建模标签页
+          activeTab.value = 'modeling'
+
           generateErDiagram()
         } else {
           ElMessage.error(response.data.message || 'SQL解析失败')
@@ -836,12 +849,157 @@ export default {
       }
     }
 
+    // 新增：将SQL解析的表转换为图形建模格式
+    const convertSqlTablesToModelingTables = () => {
+      tables.value = []
+      
+      parsedTables.value.forEach((sqlTable, index) => {
+        // 转换字段格式
+        const fields = sqlTable.columns.map(column => ({
+          id: Date.now().toString() + '_' + column.name,
+          name: column.name,
+          type: column.type,
+          primaryKey: sqlTable.primaryKey && sqlTable.primaryKey.includes(column.name),
+          nullable: column.nullable,
+          unique: column.unique || false,
+          autoIncrement: column.autoIncrement || false,
+          unsigned: column.unsigned || false,
+          length: column.length,
+          defaultValue: column.defaultValue
+        }))
+        
+        // 转换索引格式
+        const indices = []
+        if (sqlTable.indices) {
+          sqlTable.indices.forEach(index => {
+            indices.push({
+              id: Date.now().toString() + '_' + index.name,
+              name: index.name,
+              fields: index.fields,
+              unique: index.unique || false
+            })
+          })
+        }
+        
+        const modelingTable = {
+          id: Date.now().toString() + '_' + sqlTable.name,
+          name: sqlTable.name,
+          collapsed: false,
+          fields: fields,
+          indices: indices,
+          position: { x: 100 + (index % 3) * 350, y: 100 + Math.floor(index / 3) * 300 }
+        }
+        
+        tables.value.push(modelingTable)
+      })
+    }
+
+    // 新增：生成SQL导出功能
+    const generateSQL = () => {
+      if (tables.value.length === 0) {
+        ElMessage.warning('没有表结构可以导出')
+        return
+      }
+      
+      let sql = ''
+      
+      // 生成CREATE TABLE语句
+      tables.value.forEach(table => {
+        sql += `CREATE TABLE ${table.name} (\n`
+        
+        // 生成字段定义
+        table.fields.forEach((field, index) => {
+          sql += `  ${field.name} ${field.type}`
+          
+          // 添加长度（如果适用）
+          if (field.length && ['VARCHAR', 'CHAR', 'DECIMAL'].includes(field.type)) {
+            sql += `(${field.length})`
+          }
+          
+          // 添加属性
+          if (field.unsigned) {
+            sql += ' UNSIGNED'
+          }
+          if (!field.nullable) {
+            sql += ' NOT NULL'
+          }
+          if (field.unique) {
+            sql += ' UNIQUE'
+          }
+          if (field.autoIncrement) {
+            sql += ' AUTO_INCREMENT'
+          }
+          if (field.defaultValue) {
+            sql += ` DEFAULT ${field.defaultValue}`
+          }
+          
+          // 添加逗号（除了最后一个字段）
+          if (index < table.fields.length - 1) {
+            sql += ','
+          }
+          sql += '\n'
+        })
+        
+        // 添加主键约束
+        const primaryKeyFields = table.fields.filter(field => field.primaryKey)
+        if (primaryKeyFields.length > 0) {
+          sql += `  PRIMARY KEY (${primaryKeyFields.map(field => field.name).join(', ')}),\n`
+        }
+        
+        // 添加索引
+        if (table.indices && table.indices.length > 0) {
+          table.indices.forEach((index, idx) => {
+            const indexFields = table.fields.filter(field => index.fields.includes(field.id))
+            if (indexFields.length > 0) {
+              const uniqueKeyword = index.unique ? 'UNIQUE ' : ''
+              sql += `  ${uniqueKeyword}INDEX ${index.name} (${indexFields.map(field => field.name).join(', ')})`
+              
+              // 添加逗号（除了最后一个索引）
+              if (idx < table.indices.length - 1) {
+                sql += ','
+              }
+              sql += '\n'
+            }
+          })
+        }
+        
+        // 移除末尾的逗号
+        sql = sql.replace(/,\s*$/, '')
+        
+        sql += '\n);\n\n'
+      })
+      
+      // 生成外键约束（如果支持）
+      // 这里可以添加外键约束的生成逻辑
+      
+      // 下载SQL文件
+      downloadSQLFile(sql, 'database_schema.sql')
+      ElMessage.success('SQL文件生成成功')
+    }
+
+    // 新增：下载SQL文件
+    const downloadSQLFile = (content, filename) => {
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+
+    // 修改：清空SQL方法，同时清空图形建模数据
     const clearSql = () => {
       sqlText.value = ''
       parsedTables.value = []
       selectedTable.value = ''
+      tables.value = [] // 新增：同时清空图形建模数据
       clearDiagram()
+      ElMessage.info('已清空所有数据')
     }
+
 
     const selectTable = (tableName) => {
       selectedTable.value = tableName
@@ -1032,7 +1190,14 @@ connections.value.push(connection)
       activeAdvancedField,
       advancedOptionsPosition,
       newIndex,
-      
+
+      isDragging,
+      dragTarget,
+      dragOffset,
+      // hasTables,
+      generateErDiagram,
+      handleClickOutside,
+
       // 新增的方法
       addNewTable,
       setActiveTable,
@@ -1047,7 +1212,11 @@ connections.value.push(connection)
       removeIndex,
       showAdvancedOptions,
       closeAdvancedOptions,
-      toggleTableCollapse
+      toggleTableCollapse,
+
+      generateSQL, // 新增：导出SQL方法
+      downloadSQLFile, // 新增：下载SQL文件方法
+      convertSqlTablesToModelingTables, // 新增：数据转换方法
     }
   }
 }
