@@ -53,3 +53,12 @@ export function batchExecuteTestCases(testCaseIds) {
     }
   })
 }
+
+// 执行测试用例
+export function executeTestCase(testCaseId, data) {
+  return api({
+    url: `/api/test-cases/${testCaseId}/execute`,
+    method: 'post',
+    data
+  })
+}

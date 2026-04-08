@@ -88,7 +88,7 @@
               <span>权限管理</span>
             </el-menu-item>
           </el-sub-menu>
-          <el-sub-menu index="9" v-if="can('cases') || can('cases')">
+          <el-sub-menu index="9" v-if="can('cases') || can('custom')">
             <template #title>
               <el-icon><User /></el-icon>
               <span>测试用例库</span>
@@ -130,8 +130,9 @@
                   <el-dropdown-item v-if="user" @click="router.push('/home')">个人信息</el-dropdown-item>
                   <el-dropdown-item v-if="user" @click="router.push('/home')">修改密码</el-dropdown-item>
                   <el-dropdown-item divided v-if="user" @click="onLogout">退出登录</el-dropdown-item>
-                  <el-dropdown-item v-else @click="router.push('/login')">登录</el-dropdown-item>
-                  <el-dropdown-item v-else @click="router.push('/register')">注册</el-dropdown-item>
+
+                  <el-dropdown-item v-if="!user" @click="router.push('/login')">登录</el-dropdown-item>
+                  <el-dropdown-item v-if="!user" @click="router.push('/register')">注册</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -176,7 +177,7 @@ const can = (key) => {
   if (perm) {
     try { if (hasPermission(perm)) return true } catch (e) {}
   }
-  const allow = ['dashboard', 'modules', 'logs', 'test', 'bit', 'er', 'projects']
+  const allow = ['dashboard', 'modules', 'logs', 'test', 'bit', 'er', 'projects', 'cases', 'custom']
   return allow.includes(key)
 }
 

@@ -103,6 +103,12 @@ const routes = [
     name: 'CustomTestSuite',
     component: () => import('../views/CustomTestSuite.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/custom/edit/:id',
+    name: 'EditTestCase',
+    component: () => import('../views/EditTestCase.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

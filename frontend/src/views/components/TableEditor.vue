@@ -4,7 +4,7 @@
         <el-table-column 
           v-for="col in columns" 
           :key="col.key" 
-          :label="col.name"
+          :label="col.label || col.key"
           :width="getColWidth(col)"
         >
           <template #default="{ row }">
@@ -62,53 +62,76 @@
       >
         <el-form :model="editingConstraint" label-width="100px">
           <!-- 主键配置 -->
-          <el-form-item label="主键">         <el-checkbox 
-              v-model="editingConstraint.primary"           @change="handlePrimaryChange"    />
+          <el-form-item label="主键">
+            <el-checkbox 
+              v-model="editingConstraint.primaryKey" 
+              @change="handlePrimaryChange"
+            />
             <span style="margin-left:10px; color: #993999; font-size: 12px;">
               设置为主键
             </span>
           </el-form-item>
           
           <!-- 主键自增配置 -->
-          <el-form-item label="自增" :disabled="!editingConstraint.primary">         <el-checkbox 
-              v-model="editingConstraint.autoIncrement"    />
+          <el-form-item label="自增" :disabled="!editingConstraint.primaryKey">
+            <el-checkbox 
+              v-model="editingConstraint.autoIncrement"
+            />
             <span style="margin-left:10px; color: #993999; font-size: 12px;">
               自动递增
             </span>
           </el-form-item>
           
           <!-- 唯一约束 -->
-          <el-form-item label="唯一">         <el-checkbox 
-              v-model="editingConstraint.unique"    />
+          <el-form-item label="唯一">
+            <el-checkbox 
+              v-model="editingConstraint.unique"
+            />
             <span style="margin-left:10px; color: #993999; font-size: 12px;">
               唯一约束
             </span>
           </el-form-item>
           
           <!-- 可空配置 -->
-          <el-form-item label="允许为空">         <el-checkbox 
-              v-model="editingConstraint.nullable"    />
+          <el-form-item label="不允许为空">
+            <el-checkbox 
+              v-model="editingConstraint.notNull"
+            />
             <span style="margin-left:10px; color: #993999; font-size: 12px;">
-              允许NULL值
+              不允许NULL值
             </span>
           </el-form-item>
           
           <!-- 默认值 -->
-          <el-form-item label="默认值">         <el-input 
+          <el-form-item label="默认值">
+            <el-input 
               v-model="editingConstraint.default" 
-              placeholder="请输入默认值"      />
+              placeholder="请输入默认值"
+            />
+          </el-form-item>
+          
+          <!-- 备注 -->
+          <el-form-item label="备注">
+            <el-input 
+              v-model="editingConstraint.comment" 
+              placeholder="请输入备注"
+            />
           </el-form-item>
           
           <!-- 外键配置 -->
-          <el-form-item label="外键">         <el-checkbox 
-              v-model="editingConstraint.hasForeignKey"           @change="handleForeignKeyChange"    />
+          <el-form-item label="外键">
+            <el-checkbox 
+              v-model="editingConstraint.hasForeignKey" 
+              @change="handleForeignKeyChange"
+            />
             <span style="margin-left:10px; color: #993999; font-size: 12px;">
               外键约束
             </span>
           </el-form-item>
           
           <!-- 外键详细配置 -->
-          <template v-if="editingConstraint.hasForeignKey">          <el-form-item label="关联表">
+          <template v-if="editingConstraint.hasForeignKey">
+            <el-form-item label="关联表">
               <el-select
                 v-model="editingConstraint.foreignKey.table"
                 placeholder="选择关联表"
@@ -142,7 +165,8 @@
         </el-form>
         
         <template #footer>
-          <span class="dialog-footer">        <el-button @click="constraintDialogVisible = false">取消</el-button>
+          <span class="dialog-footer">
+            <el-button @click="constraintDialogVisible = false">取消</el-button>
             <el-button type="primary" @click="saveConstraint">保存</el-button>
           </span>
         </template>
@@ -152,7 +176,7 @@
   
   <script setup>
   import { ref } from 'vue'
-  import { ElDialog, ElForm, ElFormItem, ElCheckbox, ElInput, ElButton, ElMessage } from 'element-plus'
+  import { ElDialog, ElForm, ElFormItem, ElCheckbox, ElInput, ElButton, ElMessage, ElSelect, ElOption } from 'element-plus'
 
   const props = defineProps({
     modelValue: {
@@ -180,14 +204,17 @@
   let editingIndex = -1
 
   const openConstraintDialog = (row, index) => {
-    editingConstraint.value = JSON.parse(JSON.stringify(row.constraint || {
-      primary: false,
-      unique: false,
-      autoIncrement: false,
-      nullable: true,
-      default: '',
-      hasForeignKey: false,
-      foreignKey: { table: '', column: '' }
+    editingConstraint.value = JSON.parse(JSON.stringify({
+      fieldName: row.fieldName || '',
+      dataType: row.dataType || '',
+      notNull: row.notNull || false,
+      primaryKey: row.primaryKey || false,
+      autoIncrement: row.autoIncrement || false,
+      comment: row.comment || '',
+      unique: row.unique || false,
+      default: row.default || '',
+      hasForeignKey: row.hasForeignKey || false,
+      foreignKey: row.foreignKey || { table: '', column: '' }
     }))
     editingIndex = index
     constraintDialogVisible.value = true
@@ -196,10 +223,21 @@
   const saveConstraint = () => {
     if (editingIndex !== -1) {
       const newValue = [...props.modelValue]
-      newValue[editingIndex].constraint = JSON.parse(JSON.stringify(editingConstraint.value))
+      newValue[editingIndex] = {
+        ...newValue[editingIndex],
+        notNull: editingConstraint.value.notNull,
+        primaryKey: editingConstraint.value.primaryKey,
+        autoIncrement: editingConstraint.value.autoIncrement,
+        comment: editingConstraint.value.comment,
+        unique: editingConstraint.value.unique,
+        default: editingConstraint.value.default,
+        hasForeignKey: editingConstraint.value.hasForeignKey,
+        foreignKey: editingConstraint.value.foreignKey
+      }
+      console.log('保存约束前的数据:', props.modelValue[editingIndex])
+      console.log('保存约束后的数据:', newValue[editingIndex])
       emit('update:modelValue', newValue)
-      console.log('打印约束参数')
-      console.log(newValue)
+      console.log('约束配置已保存:', newValue[editingIndex])
       ElMessage.success('约束配置已保存')
     }
     constraintDialogVisible.value = false
@@ -220,11 +258,12 @@
       editingConstraint.value.foreignKey = { table: '', column: '' }
     }
   }
+  
   // 列宽设置
   const getColWidth = (col) => {
     if (col.type === 'input') return 120
     if (col.type === 'select') return 160
-    if (col.type === 'checkbox') return 80
+    if (col.type === 'checkbox') return 100
     return 120
   }
   
@@ -239,16 +278,15 @@
       }
     })
     
-    // 初始化约束对象
-    newRow.constraint = {
-      primary: false,
-      unique: false,
-      autoIncrement: false,
-      nullable: true,
-      default: '',
-      hasForeignKey: false,
-      foreignKey: { table: '', column: '' }
-    }
+    // 初始化约束相关字段
+    newRow.notNull = false
+    newRow.primaryKey = false
+    newRow.autoIncrement = false
+    newRow.comment = ''
+    newRow.unique = false
+    newRow.default = ''
+    newRow.hasForeignKey = false
+    newRow.foreignKey = { table: '', column: '' }
     
     emit('update:modelValue', [...props.modelValue, newRow])
   }
@@ -267,7 +305,7 @@
   }
   defineExpose({ getTableData })
 
-  // methods
+  // 处理外键表变化
   const onForeignTableChange = (table) => {
     editingConstraint.value.foreignKey.column = ''
   }

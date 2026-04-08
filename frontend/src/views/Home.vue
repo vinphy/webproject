@@ -41,6 +41,10 @@
               <el-icon><Goods /></el-icon>
               <span>测试结果</span>
             </div>
+            <div class="tile tile-d" @click="navigateToCustomTestSuite">
+              <el-icon><Box /></el-icon>
+              <span>自定义测试库</span>
+            </div>
           </div>
         </el-card>
       </div>
@@ -84,10 +88,10 @@
 <script setup>
 import { onMounted, ref, computed, watch } from 'vue'
 import { userRef, api } from '../utils/auth'
-import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen } from '@element-plus/icons-vue'
+import { Monitor, User, Goods, DataAnalysis, Setting, List, EditPen, Box } from '@element-plus/icons-vue'
 import HomeProjectItem from './childernVue.vue/HomeProjectItem.vue'
 import { useRouter } from 'vue-router'
-// import * as echarts from 'echarts'
+import * as echarts from 'echarts'
 
 const user = ref(null)
 const router = useRouter()
@@ -335,7 +339,8 @@ watch(monthlyStats, () => {
 // 导航函数
 const navigateToProjects = () => router.push('/projects')
 const navigateToTestCases = () => router.push('/test-cases')
-const navigateToTestResults = () => router.push('/test-results')
+const navigateToTestResults = () => router.push('/test-cases')
+const navigateToCustomTestSuite = () => router.push('/custom')
 
 const createdCount = ref(12)
 
@@ -535,7 +540,7 @@ onMounted(() => {
 /* 工作柜台网格 */
 .workbench-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   grid-template-rows: 1fr; /* 单行，撑满高度 */
   gap: 20px;
   height: 100%;

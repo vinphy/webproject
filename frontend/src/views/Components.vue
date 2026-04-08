@@ -599,6 +599,51 @@ const loadModelModules = async () => {
                 subType: "database",
                 category: "database_definition",
                 inputs: [{ name: "数据库配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }],
+                ui_schema: [
+                  { key: "databaseName", type: "input", label: "数据库名", required: true }
+                ],
+                sql_template: "CREATE DATABASE {{databaseName}};"
+              },
+              {
+                id: "create_table",
+                name: "创建表",
+                description: "创建新的数据库表",
+                type: "create",
+                subType: "table",
+                category: "database_definition",
+                inputs: [{ name: "表结构配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }],
+                ui_schema: [
+                  { key: "databaseName", type: "select", label: "数据库名", required: true },
+                  { key: "tableName", type: "input", label: "表名", required: true },
+                  { key: "columns", type: "table-editor", label: "字段定义", required: true, columns: [
+                    { key: "fieldName", label: "字段名", type: "input", required: true },
+                    { key: "dataType", label: "数据类型", type: "select", required: true, options: [
+                      { label: "INT", value: "INT" },
+                      { label: "VARCHAR", value: "VARCHAR" },
+                      { label: "TEXT", value: "TEXT" },
+                      { label: "DATE", value: "DATE" },
+                      { label: "TIME", value: "TIME" },
+                      { label: "DATETIME", value: "DATETIME" },
+                      { label: "DECIMAL", value: "DECIMAL" }
+                    ] },
+                    { key: "notNull", label: "不允许为空", type: "checkbox" },
+                    { key: "primaryKey", label: "主键", type: "checkbox" },
+                    { key: "autoIncrement", label: "自增", type: "checkbox" },
+                    { key: "comment", label: "注释", type: "input" }
+                  ] }
+                ],
+                sql_template: "CREATE TABLE {{databaseName}}.{{tableName}} ({{#each columns}}{{fieldName}} {{dataType}}{{#if constraint}} {{constraint}}{{/if}}{{#if comment}} COMMENT '{{comment}}'{{/if}}{{#unless @last}},{{/unless}}{{/each}});"
+              },
+              {
+                id: "create_index",
+                name: "创建索引",
+                description: "为表创建索引",
+                type: "create",
+                subType: "index",
+                category: "database_definition",
+                inputs: [{ name: "索引配置", connected: false, id: "input1", type: "config" }],
                 outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }]
               }
             ]
@@ -624,6 +669,283 @@ const loadModelModules = async () => {
                 category: "database_operation",
                 inputs: [{ name: "查询条件", connected: false, id: "input1", type: "condition" }],
                 outputs: [{ name: "查询结果", connected: false, id: "output1", type: "data" }]
+              },
+              {
+                id: "conditional_select",
+                name: "条件查询",
+                description: "带条件的数据查询操作",
+                type: "select",
+                subType: "conditional",
+                category: "database_operation",
+                inputs: [{ name: "查询条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "查询结果", connected: false, id: "output1", type: "data" }]
+              },
+              {
+                id: "join_select",
+                name: "连接查询",
+                description: "多表连接查询操作",
+                type: "select",
+                subType: "join",
+                category: "database_operation",
+                inputs: [{ name: "查询条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "查询结果", connected: false, id: "output1", type: "data" }]
+              }
+            ]
+          },
+          insert: {
+            name: "插入操作",
+            description: "数据插入相关操作",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "basic_insert",
+                name: "基本插入",
+                description: "基础数据插入操作",
+                type: "insert",
+                subType: "basic",
+                category: "database_operation",
+                inputs: [{ name: "插入数据", connected: false, id: "input1", type: "data" }],
+                outputs: [{ name: "插入结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "bulk_insert",
+                name: "批量插入",
+                description: "批量数据插入操作",
+                type: "insert",
+                subType: "bulk",
+                category: "database_operation",
+                inputs: [{ name: "批量数据", connected: false, id: "input1", type: "data" }],
+                outputs: [{ name: "插入结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          },
+          update: {
+            name: "更新操作",
+            description: "数据更新相关操作",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "basic_update",
+                name: "基本更新",
+                description: "基础数据更新操作",
+                type: "update",
+                subType: "basic",
+                category: "database_operation",
+                inputs: [{ name: "更新条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "更新结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "conditional_update",
+                name: "条件更新",
+                description: "带条件的数据更新操作",
+                type: "update",
+                subType: "conditional",
+                category: "database_operation",
+                inputs: [{ name: "更新条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "更新结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          },
+          delete: {
+            name: "删除操作",
+            description: "数据删除相关操作",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "basic_delete",
+                name: "基本删除",
+                description: "基础数据删除操作",
+                type: "delete",
+                subType: "basic",
+                category: "database_operation",
+                inputs: [{ name: "删除条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "删除结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "conditional_delete",
+                name: "条件删除",
+                description: "带条件的数据删除操作",
+                type: "delete",
+                subType: "conditional",
+                category: "database_operation",
+                inputs: [{ name: "删除条件", connected: false, id: "input1", type: "condition" }],
+                outputs: [{ name: "删除结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          }
+        }
+      },
+      data_validation: {
+        name: "数据验证",
+        description: "数据验证相关模块",
+        icon: "/src/assets/demo.svg",
+        children: {
+          integrity: {
+            name: "完整性验证",
+            description: "验证数据完整性",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "primary_key_validation",
+                name: "主键验证",
+                description: "验证主键完整性",
+                type: "validate",
+                subType: "primary_key",
+                category: "data_validation",
+                inputs: [{ name: "验证配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "验证结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "foreign_key_validation",
+                name: "外键验证",
+                description: "验证外键完整性",
+                type: "validate",
+                subType: "foreign_key",
+                category: "data_validation",
+                inputs: [{ name: "验证配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "验证结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          },
+          consistency: {
+            name: "一致性验证",
+            description: "验证数据一致性",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "data_consistency",
+                name: "数据一致性",
+                description: "验证数据一致性",
+                type: "validate",
+                subType: "consistency",
+                category: "data_validation",
+                inputs: [{ name: "验证配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "验证结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          }
+        }
+      },
+      performance_testing: {
+        name: "性能测试",
+        description: "数据库性能测试相关模块",
+        icon: "/src/assets/demo.svg",
+        children: {
+          query_performance: {
+            name: "查询性能",
+            description: "测试查询性能",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "single_table_performance",
+                name: "单表查询性能",
+                description: "测试单表查询性能",
+                type: "performance",
+                subType: "single_table",
+                category: "performance_testing",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "multi_table_performance",
+                name: "多表连接性能",
+                description: "测试多表连接性能",
+                type: "performance",
+                subType: "multi_table",
+                category: "performance_testing",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          },
+          load_testing: {
+            name: "负载测试",
+            description: "测试数据库负载能力",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "concurrency_testing",
+                name: "并发测试",
+                description: "测试数据库并发处理能力",
+                type: "performance",
+                subType: "concurrency",
+                category: "performance_testing",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "bulk_insert_performance",
+                name: "批量插入性能",
+                description: "测试批量插入性能",
+                type: "performance",
+                subType: "bulk_insert",
+                category: "performance_testing",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              }
+            ]
+          }
+        }
+      },
+      sql_compliance: {
+        name: "SQL合规性",
+        description: "SQL标准合规性测试模块",
+        icon: "/src/assets/demo.svg",
+        children: {
+          sql92: {
+            name: "SQL92标准",
+            description: "测试SQL92标准合规性",
+            icon: "/src/assets/test.svg",
+            children: [
+              {
+                id: "basic_sql_test",
+                name: "基本SQL测试",
+                description: "测试基本SQL语句",
+                type: "compliance",
+                subType: "basic_sql",
+                category: "sql_compliance",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "data_types_test",
+                name: "数据类型测试",
+                description: "测试数据类型支持",
+                type: "compliance",
+                subType: "data_types",
+                category: "sql_compliance",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "constraints_test",
+                name: "约束测试",
+                description: "测试约束支持",
+                type: "compliance",
+                subType: "constraints",
+                category: "sql_compliance",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "joins_test",
+                name: "连接测试",
+                description: "测试连接查询支持",
+                type: "compliance",
+                subType: "joins",
+                category: "sql_compliance",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "transactions_test",
+                name: "事务测试",
+                description: "测试事务支持",
+                type: "compliance",
+                subType: "transactions",
+                category: "sql_compliance",
+                inputs: [{ name: "测试配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "测试结果", connected: false, id: "output1", type: "result" }]
               }
             ]
           }
@@ -735,6 +1057,18 @@ const preloadDatabases = async () => {
     }
   } catch (error) {
     console.error('预加载数据库列表失败:', error)
+  }
+}
+
+// 更新数据库列表
+const updateDatabaseList = (newDatabaseName) => {
+  // 检查数据库是否已存在
+  if (!databaseList.value.includes(newDatabaseName)) {
+    // 添加新数据库到列表
+    databaseList.value.push(newDatabaseName)
+    // 更新缓存
+    databaseCache.value.set('databases', databaseList.value)
+    console.log('数据库列表已更新，添加了新数据库:', newDatabaseName)
   }
 }
 
@@ -1172,6 +1506,12 @@ const handleConfigSave = (updatedNode) => {
   if (node) {
     Object.assign(node, updatedNode)
   }
+  
+  // 如果是创建数据库操作，更新数据库列表
+  if (updatedNode.type === 'create' && updatedNode.subType === 'database' && updatedNode.databaseName) {
+    updateDatabaseList(updatedNode.databaseName)
+  }
+  
   configDialogVisible.value = false
 }
 

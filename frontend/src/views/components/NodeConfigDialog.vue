@@ -286,14 +286,9 @@ const saveConfig = () => {
     }
   }
   
-  // 创建数据库参数校验
+  // 创建数据库参数处理
   if (currentNode.value.type === 'create' ) {
-    // 只校验databaseName，charset和collation交由DynamicForm的表单校验
-    if (!currentNode.value.databaseName) {
-      ElMessage.error('数据库名不能为空')
-      return
-    }
-    // 获取表单所有数据和sql
+    // 先获取表单所有数据和sql
     if (dynamicFormRef.value && dynamicFormRef.value.getFormDataWithSql) {
       const allFormData = dynamicFormRef.value.getFormDataWithSql()
       Object.assign(currentNode.value, allFormData)
@@ -301,6 +296,11 @@ const saveConfig = () => {
       currentNode.value.parameters = Object.keys(allFormData)
         .filter(key => key !== 'sql')
         .map(key => ({ name: key, value: allFormData[key] }))
+    }
+    // 再校验databaseName，charset和collation交由DynamicForm的表单校验
+    if (!currentNode.value.databaseName) {
+      ElMessage.error('数据库名不能为空')
+      return
     }
   }
 

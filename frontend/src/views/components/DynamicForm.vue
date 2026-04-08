@@ -57,7 +57,7 @@
         <el-input 
           type="textarea" 
           :rows="3" 
-          :model-value="buildSQL()" 
+          :model-value="sqlPreview" 
           readonly 
         />
       </div>
@@ -101,6 +101,11 @@
   // 新增外键下拉数据
   const availableTables = ref([])
   const availableColumnsMap = ref({})
+  
+  // 计算SQL语句
+  const sqlPreview = computed(() => {
+    return buildSQL()
+  })
 
   // 初始化表单数据
   function buildFormData(schema, initial) {
@@ -152,6 +157,17 @@
     }
     availableColumnsMap.value = map
   }, { immediate: true })
+
+  // 监听columns变化，确保SQL预览更新
+  watch(
+    () => formData.value.columns,
+    (newColumns) => {
+      console.log('columns变化:', newColumns)
+      // 触发SQL预览更新
+      console.log('SQL预览:', sqlPreview.value)
+    },
+    { deep: true }
+  )
   
   // 提交表单（保留submit事件，兼容老用法）
   const submitForm = async () => {
@@ -165,62 +181,93 @@
 
   // 生成SQL
   function buildSQL() {
-    // 1. 优先用模板
+    console.log('生成SQL时的formData:', formData.value)
+    
+    // 检查是否是创建表
+    const isCreateTable = props.sqlTemplate && props.sqlTemplate.includes('CREATE TABLE')
+    
+    // 如果是创建表，使用自动拼接方式，确保约束条件正确添加
+    if (isCreateTable) {
+      const databaseName = formData.value.databaseName || ''
+      const tableName = formData.value.tableName || 'table_name'
+      const fields = formData.value.columns || formData.value.fields || []
+      
+      console.log('使用的字段数据:', fields)
+
+      if (!fields.length) return '-- 请添加字段'
+
+      // 字段定义
+      const fieldLines = []
+      const pkFields = []
+      const uniqueFields = []
+      const foreignKeys = []
+
+      fields.forEach(f => {
+        const name = f.fieldName || f.name || f['字段名']
+        const type = f.dataType || f.fieldType || f.type || f['类型']
+        const length = f.length ? `(${f.length})` : ''
+
+        let line = `\`${name}\` ${type}${length}`
+
+        // 约束
+        if (f.notNull) line += ' NOT NULL'
+        if (f.primaryKey) {
+          line += ' PRIMARY KEY'
+          pkFields.push(name)
+        }
+        if (f.autoIncrement) line += ' AUTO_INCREMENT'
+        if (f.unique) line += ' UNIQUE'
+        if (f.default) line += ` DEFAULT ${f.default}`
+        
+        // 注释
+        if (f.comment) {
+          line += ` COMMENT '${f.comment}'`
+        }
+        
+        // 外键约束
+        if (f.hasForeignKey && f.foreignKey && f.foreignKey.table && f.foreignKey.column) {
+          foreignKeys.push(`FOREIGN KEY (\`${name}\`) REFERENCES \`${f.foreignKey.table}\`(\`${f.foreignKey.column}\`)`)
+        }
+        
+        fieldLines.push(line)
+      })
+
+      // 表级约束
+      if (pkFields.length && !fields.some(f => f.primaryKey)) {
+        fieldLines.push(`PRIMARY KEY (${pkFields.map(n => `\`${n}\``).join(', ')})`)
+      }
+      if (uniqueFields.length) fieldLines.push(`UNIQUE (${uniqueFields.map(n => `\`${n}\``).join(', ')})`)
+      if (foreignKeys.length) fieldLines.push(...foreignKeys)
+
+      // 拼接完整SQL
+      let sql = ''
+      if (databaseName) {
+        sql += `USE \`${databaseName}\`;\n`
+      }
+      sql += `CREATE TABLE ${databaseName ? `\`${databaseName}\`.` : ''}\`${tableName}\` (\n  ${fieldLines.join(',\n  ')}\n);`
+      console.log('创建表生成的SQL:', sql)
+      return sql
+    }
+    
+    // 其他情况使用模板
     if (props.sqlTemplate) {
       try {
         const template = Handlebars.compile(props.sqlTemplate)
-        return template(formData.value)
+        const sql = template(formData.value)
+        console.log('使用模板生成的SQL:', sql)
+        return sql
       } catch (e) {
+        console.error('SQL模板渲染错误:', e)
         return 'SQL模板渲染出错'
       }
     }
 
-    // 2. 自动拼接
-    const tableName = formData.value.tableName || 'table_name'
-    const fields = formData.value.fields || []
-
-    if (!fields.length) return '-- 请添加字段'
-
-    // 字段定义
-    const fieldLines = []
-    const pkFields = []
-    const uniqueFields = []
-    const foreignKeys = []
-
-    fields.forEach(f => {
-      const name = f.fieldName || f.name || f['字段名']
-      const type = f.fieldType || f.type || f['类型']
-      const length = f.length ? `(${f.length})` : ''
-      const constraint = f.constraint || {}
-
-      let line = `\`${name}\` ${type}${length}`
-
-      // 约束
-      if (constraint.nullable === false || constraint.notNull) line += ' NOT NULL'
-      if (constraint.nullable === true) line += ' NULL'
-      if (constraint.unique) uniqueFields.push(name)
-      if (constraint.autoIncrement) line += ' AUTO_INCREMENT'
-      if (constraint.default !== undefined && constraint.default !== '') line += ` DEFAULT '${constraint.default}'`
-      fieldLines.push(line)
-
-      // 主键
-      if (constraint.primary) pkFields.push(name)
-
-      // 外键
-      if (constraint.hasForeignKey && constraint.foreignKey && constraint.foreignKey.table && constraint.foreignKey.column) {
-        foreignKeys.push(
-          `FOREIGN KEY (\`${name}\`) REFERENCES \`${constraint.foreignKey.table}\`(\`${constraint.foreignKey.column}\`)`
-        )
-      }
-    })
-
-    // 表级约束
-    if (pkFields.length) fieldLines.push(`PRIMARY KEY (${pkFields.map(n => `\`${n}\``).join(', ')})`)
-    if (uniqueFields.length) fieldLines.push(`UNIQUE (${uniqueFields.map(n => `\`${n}\``).join(', ')})`)
-    if (foreignKeys.length) fieldLines.push(...foreignKeys)
-
-    // 拼接完整SQL
-    return `CREATE TABLE \`${tableName}\` (\n  ${fieldLines.join(',\n  ')}\n);`
+    // 默认情况
+    const databaseName = formData.value.databaseName || ''
+    if (databaseName) {
+      return `CREATE DATABASE \`${databaseName}\`;`
+    }
+    return '-- 请配置参数'
   }
 
   // 暴露方法供父组件获取表单数据
