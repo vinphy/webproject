@@ -160,48 +160,6 @@
               { "key": "subquery", "label": "子查询SQL", "type": "textarea", "required": true, "placeholder": "例如：SELECT id FROM users WHERE age > 30" }
             ],
             "sql_template": "DELETE FROM {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}} WHERE {{subqueryField}} IN ({{subquery}});"
-          },
-          {
-            "id": "multi_table_delete",
-            "name": "多表删除",
-            "description": "多表关联删除操作",
-            "type": "delete",
-            "subType": "multi_table",
-            "category": "database_operation",
-            "version": "1.0.0",
-            "status": "active",
-            "inputs": [
-              { "name": "删除条件", "connected": false, "id": "input1", "type": "condition" }
-            ],
-            "outputs": [
-              { "name": "删除结果", "connected": false, "id": "output1", "type": "result" }
-            ],
-            "ui_schema": [
-              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
-              { "key": "deleteTables", "label": "要删除的表", "type": "select", "required": true, "multiple": true, "placeholder": "例如：t1, t2" },
-              {
-                "key": "joinTables",
-                "label": "关联表",
-                "type": "table-editor",
-                "required": true,
-                "columns": [
-                  { "name": "表名", "key": "tableName", "type": "input", "required": true },
-                  { "name": "别名", "key": "alias", "type": "input", "required": true },
-                  { "name": "关联条件", "key": "condition", "type": "input", "required": true, "placeholder": "例如：t1.id = t2.id" }
-                ]
-              },
-              {
-                "key": "conditions",
-                "label": "删除条件",
-                "type": "table-editor",
-                "columns": [
-                  { "name": "字段名", "key": "fieldName", "type": "input", "required": true, "placeholder": "例如：t2.status" },
-                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
-                  { "name": "字段值", "key": "fieldValue", "type": "input" }
-                ]
-              }
-            ],
-            "sql_template": "DELETE {{#each deleteTables}}{{this}}{{#unless @last}}, {{/unless}}{{/each}} FROM {{#each joinTables}}{{tableName}} AS {{alias}}{{#unless @last}} JOIN {{/unless}}{{/each}} ON {{#each joinTables}}{{condition}}{{#unless @last}} AND {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           }
         ]
       },
