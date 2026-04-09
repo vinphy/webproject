@@ -271,8 +271,13 @@
     // 其他情况使用模板
     if (props.sqlTemplate) {
       try {
+        // 为创建索引添加isPrimaryKey计算
+        const templateData = {
+          ...formData.value,
+          isPrimaryKey: formData.value.indexType === 'PRIMARY KEY'
+        }
         const template = Handlebars.compile(props.sqlTemplate)
-        const sql = template(formData.value)
+        const sql = template(templateData)
         console.log('使用模板生成的SQL:', sql)
         return sql
       } catch (e) {

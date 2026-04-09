@@ -658,7 +658,24 @@ const loadModelModules = async () => {
                 subType: "index",
                 category: "database_definition",
                 inputs: [{ name: "索引配置", connected: false, id: "input1", type: "config" }],
-                outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }]
+                outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }],
+                ui_schema: [
+                  { key: "databaseName", type: "select", label: "数据库名", required: true },
+                  { key: "tableName", type: "select", label: "选择表", required: true },
+                  { key: "indexName", type: "input", label: "索引名称", required: true },
+                  { key: "indexType", type: "select", label: "索引类型", required: true, options: [
+                    { label: "普通索引", value: "INDEX" },
+                    { label: "唯一索引", value: "UNIQUE INDEX" },
+                    { label: "主键索引", value: "PRIMARY KEY" },
+                    { label: "全文索引", value: "FULLTEXT INDEX" }
+                  ] },
+                  { key: "columns", type: "select", label: "选择字段", required: true, multiple: true },
+                  { key: "indexMethod", type: "select", label: "索引方法", required: false, options: [
+                    { label: "BTREE", value: "USING BTREE" },
+                    { label: "HASH", value: "USING HASH" }
+                  ] }
+                ],
+                sql_template: "{{#if databaseName}}USE \`{{databaseName}}\`;\n{{/if}}{{#if isPrimaryKey}}ALTER TABLE \`{{tableName}}\` ADD PRIMARY KEY ({{#each columns}}\`{{this}}\`{{#unless @last}},{{/unless}}{{/each}}){{#if indexMethod}} {{indexMethod}}{{/if}};{{else}}CREATE {{indexType}} \`{{indexName}}\` ON \`{{tableName}}\` ({{#each columns}}\`{{this}}\`{{#unless @last}},{{/unless}}{{/each}}){{#if indexMethod}} {{indexMethod}}{{/if}};{{/if}}"
               },
               {
                 id: "create_view",
