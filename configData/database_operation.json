@@ -41,11 +41,11 @@
               "sql_template": "INSERT INTO {{tableName}} ({{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}) VALUES ({{#each fields}}{{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}});"
           },
           {
-            "id": "insert_condition",
-            "name": "条件插新增",
-            "description": "带where条件语句的新增",
+            "id": "batch_insert",
+            "name": "批量新增",
+            "description": "批量插入多条数据",
             "type": "insert",
-            "subType": "condition",
+            "subType": "batch",
             "category": "database_operation",
             "version": "1.0.0",
             "status": "active",
@@ -55,12 +55,13 @@
             "outputs": [
               { "name": "插入结果", "connected": false, "id": "output1", "type": "result" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": [],
-              "batchSize": 100
-            }
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              { "key": "columns", "label": "选择字段", "type": "select", "required": true, "multiple": true },
+              { "key": "records", "label": "批量数据", "type": "textarea", "required": true, "placeholder": "每行一条记录，按字段顺序用逗号分隔，字符串用引号包裹" }
+            ],
+            "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#each records}}INSERT INTO `{{../tableName}}` ({{#each ../columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}) VALUES ({{this}});\n{{/each}}"
           }
         ]
       },

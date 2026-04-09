@@ -55,6 +55,21 @@
           />
         </el-form-item>
         
+        <!-- 文本域 -->
+        <el-form-item 
+          v-else-if="item.type === 'textarea'" 
+          :label="item.label" 
+          :prop="item.key"
+          :rules="item.required ? [{ required: true, message: `${item.label}不能为空` }] : []"
+        >
+          <el-input
+            v-model="formData[item.key]"
+            type="textarea"
+            :rows="5"
+            :placeholder="item.placeholder"
+          />
+        </el-form-item>
+        
         <!-- 复选框 -->
         <el-form-item 
           v-else-if="item.type === 'checkbox'" 
@@ -283,7 +298,9 @@
           isModify: formData.value.operation === 'modify',
           isDrop: formData.value.operation === 'drop',
           // 处理批量插入的valueRows，转换为数组
-          valueRows: formData.value.valueRows ? formData.value.valueRows.split('\n').filter(row => row.trim()) : []
+          valueRows: formData.value.valueRows ? formData.value.valueRows.split('\n').filter(row => row.trim()) : [],
+          // 处理批量新增的records，转换为数组
+          records: formData.value.records ? formData.value.records.split('\n').filter(row => row.trim()) : []
         }
         // 注册Handlebars助手函数
         Handlebars.registerHelper('isString', function(value) {
