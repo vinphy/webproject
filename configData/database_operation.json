@@ -88,6 +88,7 @@
             "ui_schema": [
               { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
               { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              { "key": "tableAlias", "label": "表别名", "type": "input", "required": false },
               {
                 "key": "conditions",
                 "label": "删除条件",
@@ -99,7 +100,7 @@
                 ]
               }
             ],
-            "sql_template": "DELETE FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
+            "sql_template": "DELETE FROM {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}}{{#if conditions.length}} WHERE {{#each conditions}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "where_delete",
