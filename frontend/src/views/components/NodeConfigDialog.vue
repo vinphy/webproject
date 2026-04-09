@@ -141,6 +141,14 @@ watch(() => props.node, async (newNode) => {
             onChange: handleOldIndexNameChange
           }
         }
+        // 删除操作中的索引名称下拉
+        if (item.key === 'indexName' && item.type === 'select') {
+          return {
+            ...item,
+            options: [], // 初始为空，由watch异步填充
+            onChange: handleIndexNameChange
+          }
+        }
         // 字段选择下拉（用于创建视图）
         if (item.key === 'columns' && item.type === 'select' && item.multiple) {
           return {
@@ -217,6 +225,20 @@ watch(() => props.node, async (newNode) => {
                   return {
                     ...item,
                     options: indexOptions
+                  }
+                }
+                // 删除操作中的索引名称下拉
+                if (item.key === 'indexName' && item.type === 'select') {
+                  return {
+                    ...item,
+                    options: indexOptions
+                  }
+                }
+                // 处理是否主键索引复选框
+                if (item.key === 'isPrimaryKey' && item.type === 'checkbox') {
+                  return {
+                    ...item,
+                    onChange: handleIsPrimaryKeyChange
                   }
                 }
                 return item
@@ -343,14 +365,13 @@ function handleDatabaseChange(val) {
   console.log('数据库名变更:', val)
   // 更新表名下拉
   const tables = props.getTablesByDatabase(val)
-  const newTableName = tables.length > 0 ? tables[0] : ''
   
   // 更新当前节点，重置视图名
   currentNode.value = {
     ...currentNode.value,
     databaseName: val,
-    tableName: newTableName,
-    viewName: '', // 重置视图名
+    tableName: [], // 重置表名为空数组
+    viewName: [], // 重置视图名为空数组
     columns: [] // 清空字段选择
   }
   
@@ -394,36 +415,50 @@ async function handleTableChange(val) {
   }
   // 触发ui_schema更新（table-editor字段名下拉联动）
   if (Array.isArray(currentNode.value.ui_schema)) {
+    // 如果是多选，取第一个表来获取字段列表
+    const firstTableName = Array.isArray(val) && val.length > 0 ? val[0] : val
+    
     // 更新字段选择下拉框的选项
     try {
-      const fields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, val) || []
-      console.log('获取到的字段列表:', fields)
-      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
-        if (item.key === 'columns' && item.type === 'select' && item.multiple) {
-          return {
-            ...item,
-            options: fields.map(field => ({ label: field, value: field }))
+      if (firstTableName) {
+        const fields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, firstTableName) || []
+        console.log('获取到的字段列表:', fields)
+        currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+          if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+            return {
+              ...item,
+              options: fields.map(field => ({ label: field, value: field }))
+            }
           }
-        }
-        return item
-      })
+          return item
+        })
+      }
     } catch (error) {
       console.error('获取字段列表失败:', error)
     }
     
     // 更新索引名称下拉框的选项
     try {
-      const indexes = props.getIndexesByDatabaseTable(currentNode.value.databaseName, val) || []
-      console.log('获取到的索引列表:', indexes)
-      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
-        if (item.key === 'oldIndexName' && item.type === 'select') {
-          return {
-            ...item,
-            options: indexes.map(index => ({ label: index, value: index }))
+      if (firstTableName) {
+        const indexes = props.getIndexesByDatabaseTable(currentNode.value.databaseName, firstTableName) || []
+        console.log('获取到的索引列表:', indexes)
+        currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+          if (item.key === 'oldIndexName' && item.type === 'select') {
+            return {
+              ...item,
+              options: indexes.map(index => ({ label: index, value: index }))
+            }
           }
-        }
-        return item
-      })
+          // 删除操作中的索引名称下拉
+          if (item.key === 'indexName' && item.type === 'select') {
+            return {
+              ...item,
+              options: indexes.map(index => ({ label: index, value: index }))
+            }
+          }
+          return item
+        })
+      }
     } catch (error) {
       console.error('获取索引列表失败:', error)
     }
@@ -459,6 +494,26 @@ function handleOldIndexNameChange(val) {
   currentNode.value = {
     ...currentNode.value,
     oldIndexName: val
+  }
+}
+
+// 处理索引名称变更
+function handleIndexNameChange(val) {
+  console.log('索引名称变更:', val)
+  // 更新当前节点的索引名
+  currentNode.value = {
+    ...currentNode.value,
+    indexName: val
+  }
+}
+
+// 处理是否主键索引变更
+function handleIsPrimaryKeyChange(val) {
+  console.log('是否主键索引变更:', val)
+  // 更新当前节点的是否主键索引状态
+  currentNode.value = {
+    ...currentNode.value,
+    isPrimaryKey: val
   }
 }
 
@@ -624,10 +679,45 @@ function onSubmit(formData) {
   // 生成SQL
   if (currentNode.value.sql_template) {
     let sql = currentNode.value.sql_template
-    Object.keys(formData).forEach(key => {
-      sql = sql.replace(`{{${key}}}`, formData[key] || '')
+    
+    console.log('当前节点信息:', {
+      type: currentNode.value.type,
+      subType: currentNode.value.subType,
+      isPrimaryKey: currentNode.value.isPrimaryKey,
+      formData: formData
     })
+    
+    // 处理删除索引的特殊情况
+    if (currentNode.value.type === 'delete' && currentNode.value.subType === 'index') {
+      // 获取表名（如果是数组，取第一个）
+      const tableName = Array.isArray(currentNode.value.tableName) ? currentNode.value.tableName[0] : currentNode.value.tableName
+      
+      console.log('删除索引操作:', {
+        isPrimaryKey: currentNode.value.isPrimaryKey,
+        databaseName: currentNode.value.databaseName,
+        tableName: tableName,
+        indexName: currentNode.value.indexName,
+        ifExists: currentNode.value.ifExists
+      })
+      
+      if (currentNode.value.isPrimaryKey) {
+        // 生成删除主键索引的SQL
+        sql = `${currentNode.value.databaseName ? `USE \`${currentNode.value.databaseName}\`;\n` : ''}ALTER TABLE \`${tableName}\` DROP PRIMARY KEY;`
+        console.log('生成的主键索引删除SQL:', sql)
+      } else {
+        // 生成删除普通索引的SQL
+        sql = `${currentNode.value.databaseName ? `USE \`${currentNode.value.databaseName}\`;\n` : ''}ALTER TABLE \`${tableName}\` DROP INDEX${currentNode.value.ifExists ? ' IF EXISTS' : ''} \`${currentNode.value.indexName}\`;`
+        console.log('生成的普通索引删除SQL:', sql)
+      }
+    } else {
+      // 处理其他情况
+      Object.keys(formData).forEach(key => {
+        sql = sql.replace(`{{${key}}}`, formData[key] || '')
+      })
+    }
+    
     currentNode.value.sql = sql
+    console.log('最终生成的SQL:', currentNode.value.sql)
   }
   // 同步所有参数到parameters，便于模型图显示
   currentNode.value.parameters = Object.keys(formData)

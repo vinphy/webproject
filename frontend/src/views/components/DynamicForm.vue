@@ -276,7 +276,8 @@
         // 为创建索引添加isPrimaryKey计算
         const templateData = {
           ...formData.value,
-          isPrimaryKey: formData.value.indexType === 'PRIMARY KEY',
+          // 只有在创建索引时才根据indexType设置isPrimaryKey，删除索引时保持用户的选择
+          isPrimaryKey: formData.value.isPrimaryKey !== undefined ? formData.value.isPrimaryKey : (formData.value.indexType === 'PRIMARY KEY'),
           // 为修改数据表添加操作类型的布尔值
           isAdd: formData.value.operation === 'add',
           isModify: formData.value.operation === 'modify',

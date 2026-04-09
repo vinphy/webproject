@@ -336,11 +336,11 @@
               "outputs": [
                 { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "databaseName": "",
-                "charset": "utf8mb4",
-                "collation": "utf8mb4_unicode_ci"
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "ifExists", "type": "checkbox", "label": "IF EXISTS" }
+              ],
+              "sql_template": "DROP DATABASE{{#if ifExists}} IF EXISTS{{/if}} `{{databaseName}}`;"
             },
             {
               "id": "tableD",
@@ -357,11 +357,12 @@
               "outputs": [
                 { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true, "multiple": true },
+                { "key": "ifExists", "type": "checkbox", "label": "IF EXISTS" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#each tableName}}DROP TABLE{{#if ../ifExists}} IF EXISTS{{/if}} `{{this}}`;\n{{/each}}"
             },
             {
               "id": "viewD",
@@ -378,16 +379,17 @@
               "outputs": [
                 { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "viewName", "type": "select", "label": "视图名称", "required": true, "multiple": true },
+                { "key": "ifExists", "type": "checkbox", "label": "IF EXISTS" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#each viewName}}DROP VIEW{{#if ../ifExists}} IF EXISTS{{/if}} `{{this}}`;\n{{/each}}"
             },
             {
               "id": "indexD",
               "name": "删除索引",
-              "description": "删除索引",
+              "description": "删除索引，注意主键索引的特殊性",
               "type": "delete",
               "subType": "index",
               "category": "database_definition",
@@ -399,11 +401,15 @@
               "outputs": [
                 { "name": "输出", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true },
+                { "key": "indexName", "type": "select", "label": "索引名称", "required": true },
+                { "key": "isPrimaryKey", "type": "checkbox", "label": "主键索引", "tooltip": "注意：删除主键索引可能影响自增列和外键依赖" },
+                { "key": "ifExists", "type": "checkbox", "label": "IF EXISTS" },
+                { "key": "note", "type": "html", "label": "注意事项", "content": "<div style='color: #606266; font-size: 12px; line-height: 1.5;'>1. 删除主键索引时，如果该列是自增列，可能需要先修改列属性<br>2. 如果有外键依赖于该主键，删除会失败<br>3. 建议在删除前检查相关依赖关系</div>" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#if isPrimaryKey}}ALTER TABLE `{{tableName}}` DROP PRIMARY KEY;{{else}}ALTER TABLE `{{tableName}}` DROP INDEX{{#if ifExists}} IF EXISTS{{/if}} `{{indexName}}`;{{/if}}"
             }
           ]
         }
