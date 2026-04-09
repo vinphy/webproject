@@ -166,32 +166,12 @@
                 ] },
                 { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true },
                 { "key": "indexMethod", "type": "select", "label": "索引方法", "required": false, "options": [
+                  { "label": "none", "value": " " },
                   { "label": "BTREE", "value": "USING BTREE" },
                   { "label": "HASH", "value": "USING HASH" }
                 ] }
               ],
               "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#if isPrimaryKey}}ALTER TABLE `{{tableName}}` ADD PRIMARY KEY ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}){{#if indexMethod}} {{indexMethod}}{{/if}};{{else}}CREATE {{indexType}} `{{indexName}}` ON `{{tableName}}` ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}){{#if indexMethod}} {{indexMethod}}{{/if}};{{/if}}"
-            },
-            {
-              "id": "assertionC",
-              "name": "创建断言",
-              "description": "创建断言",
-              "type": "create",
-              "subType": "assertion",
-              "category": "database_definition",
-              "version": "1.0.0",
-              "status": "active",
-              "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
-              ],
-              "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
-              ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
             }
           ]
         },
@@ -283,27 +263,6 @@
                 "databaseName": "",
                 "fields": []
               }
-            },
-            {
-              "id": "assertionU",
-              "name": "修改断言",
-              "description": "修改断言",
-              "type": "update",
-              "subType": "assertion",
-              "category": "database_definition",
-              "version": "1.0.0",
-              "status": "active",
-              "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
-              ],
-              "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
-              ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
             }
           ]
         },
@@ -381,27 +340,6 @@
               "description": "删除索引",
               "type": "delete",
               "subType": "index",
-              "category": "database_definition",
-              "version": "1.0.0",
-              "status": "active",
-              "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
-              ],
-              "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
-              ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
-            },
-            {
-              "id": "assertionC",
-              "name": "删除断言",
-              "description": "删除断言",
-              "type": "delete",
-              "subType": "assertion",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
