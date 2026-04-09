@@ -77,70 +77,100 @@
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+                { "name": "表结构配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "ui_schema":[
-                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
-                { "key": "tableName", "label": "数据表名", "type": "input", "required": true },
-                { 
-                  "key": "fields", 
-                  "label": "列", 
-                  "type": "table-editor", 
-                  "columns": [
-                    {"name": "字段名", "key": "fieldName", "type": "input"},
-                    {"name": "类型", "key": "fieldType", "type": "select", "options": [
-                      "INT", "VARCHAR(255)", "TEXT", "DATETIME", "TIMESTAMP", "BOOLEAN"
-                    ]},
-                    { "name": "长度", "key": "length", "type": "input" }
-                  ]
-                }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "input", "label": "表名", "required": true },
+                { "key": "columns", "type": "table-editor", "label": "字段定义", "required": true, "columns": [
+                  { "key": "fieldName", "label": "字段名", "type": "input", "required": true },
+                  { "key": "dataType", "label": "数据类型", "type": "select", "required": true,"options": [
+                    { "label": "INT", "value": "INT" },
+                    { "label": "VARCHAR", "value": "VARCHAR" },
+                    { "label": "TEXT", "value": "TEXT" },
+                    { "label": "DATE", "value": "DATE" },
+                    { "label": "TIME", "value": "TIME" },
+                    { "label": "DATETIME", "value": "DATETIME" },
+                    { "label": "DECIMAL", "value": "DECIMAL" }
+                  ] },
+                  { "key": "length", "label": "长度", "type": "input", "required": false}
+                ] }
               ],
-              "sql_template": "USE DATABASE {{databaseName}};\nCREATE TABLE {{tableName}} (\n{{#each fields}}\n    {{fieldName}} {{fieldType}}{{#if isPrimary}} PRIMARY KEY{{/if}}{{#if notNull}} NOT NULL{{/if}}{{#unless @last}},{{/unless}}\n{{/each}}\n);"
+              "sql_template": "CREATE TABLE {{databaseName}}.{{tableName}} ({{#each columns}}{{fieldName}} {{dataType}}{{#if constraint}} {{constraint}}{{/if}}{{#if comment}} COMMENT '{{comment}}'{{/if}}{{#unless @last}},{{/unless}}{{/each}});"
             },
             {
               "id": "viewC",
               "name": "创建视图",
-              "description": "创建视图",
+              "description": "创建新的数据库视图",
               "type": "create",
               "subType": "view",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+                { "name": "视图配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "viewName", "type": "input", "label": "视图名称", "required": true },
+                { "key": "tableName", "type": "select", "label": "选择表", "required": true },
+                { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true },
+                { "key": "conditions", "type": "table-editor", "label": "查询条件", "columns": [
+                  { "key": "field", "label": "字段", "type": "select", "required": true },
+                  { "key": "operator", "label": "操作符", "type": "select", "required": true, "options": [
+                    { "label": "等于", "value": "=" },
+                    { "label": "不等于", "value": "!=" },
+                    { "label": "大于", "value": ">" },
+                    { "label": "大于等于", "value": ">=" },
+                    { "label": "小于", "value": "<" },
+                    { "label": "小于等于", "value": "<=" },
+                    { "label": "包含", "value": "LIKE" },
+                    { "label": "不包含", "value": "NOT LIKE" }
+                  ] },
+                  { "key": "value", "label": "值", "type": "input", "required": true }
+                ] },
+                { "key": "withCheckOption", "type": "checkbox", "label": " " }
+              ],
+              "sql_template": "CREATE VIEW {{databaseName}}.{{viewName}} AS SELECT {{#each columns}}{{this}}{{#unless @last}},{{/unless}}{{/each}} FROM {{databaseName}}.{{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{field}} {{operator}} '{{value}}'{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if withCheckOption}} WITH CHECK OPTION{{/if}};"
             },
             {
               "id": "indexC",
               "name": "创建索引",
-              "description": "创建索引",
+              "description": "为表创建索引",
               "type": "create",
               "subType": "index",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+                { "name": "索引配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "创建结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "选择表", "required": true },
+                { "key": "indexName", "type": "input", "label": "索引名称", "required": true },
+                { "key": "indexType", "type": "select", "label": "索引类型", "required": true, "options": [
+                  { "label": "普通索引", "value": "INDEX" },
+                  { "label": "唯一索引", "value": "UNIQUE INDEX" },
+                  { "label": "主键索引", "value": "PRIMARY KEY" },
+                  { "label": "全文索引", "value": "FULLTEXT INDEX" }
+                ] },
+                { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true },
+                { "key": "indexMethod", "type": "select", "label": "索引方法", "required": false, "options": [
+                  { "label": "BTREE", "value": "USING BTREE" },
+                  { "label": "HASH", "value": "USING HASH" }
+                ] }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#if isPrimaryKey}}ALTER TABLE `{{tableName}}` ADD PRIMARY KEY ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}){{#if indexMethod}} {{indexMethod}}{{/if}};{{else}}CREATE {{indexType}} `{{indexName}}` ON `{{tableName}}` ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}){{#if indexMethod}} {{indexMethod}}{{/if}};{{/if}}"
             },
             {
               "id": "assertionC",
