@@ -31,12 +31,33 @@
             :filterable="item['allow-create']"
             @change="(val) => handleSelectChange(item, val)"
           >
-            <el-option 
-              v-for="opt in item.options || []" 
-              :key="opt.value" 
-              :label="opt.label" 
-              :value="opt.value" 
-            />
+            <!-- 优先使用配置的options -->
+            <template v-if="item.options && item.options.length > 0">
+              <el-option 
+                v-for="opt in item.options" 
+                :key="opt.value" 
+                :label="opt.label" 
+                :value="opt.value" 
+              />
+            </template>
+            <!-- 否则尝试从availableColumnsMap中获取字段列表 -->
+            <template v-else-if="item.key === 'sortFields' && formData.databaseName && formData.tableName && availableColumnsMap[formData.tableName]">
+              <el-option 
+                v-for="column in availableColumnsMap[formData.tableName]" 
+                :key="column" 
+                :label="column" 
+                :value="column"
+              />
+            </template>
+            <!-- 否则尝试从availableColumnsMap中获取字段列表（通用情况） -->
+            <template v-else-if="(item.key === 'fieldName' || item.key === 'columns' || item.key === 'subqueryField') && formData.databaseName && formData.tableName && availableColumnsMap[formData.tableName]">
+              <el-option 
+                v-for="column in availableColumnsMap[formData.tableName]" 
+                :key="column" 
+                :label="column" 
+                :value="column"
+              />
+            </template>
           </el-select>
         </el-form-item>
         
@@ -300,7 +321,9 @@
           // 处理批量插入的valueRows，转换为数组
           valueRows: formData.value.valueRows ? formData.value.valueRows.split('\n').filter(row => row.trim()) : [],
           // 处理批量新增的records，转换为数组
-          records: formData.value.records ? formData.value.records.split('\n').filter(row => row.trim()) : []
+          records: formData.value.records ? formData.value.records.split('\n').filter(row => row.trim()) : [],
+          // 确保sortFields是数组
+          sortFields: Array.isArray(formData.value.sortFields) ? formData.value.sortFields : []
         }
         // 注册Handlebars助手函数
         Handlebars.registerHelper('isString', function(value) {

@@ -20,12 +20,24 @@
               v-model="row[col.key]" 
               style="width: 100%"
             >
-              <el-option 
-                v-for="option in col.options" 
-                :key="typeof option === 'object' ? option.value : option" 
-                :label="typeof option === 'object' ? option.label : option" 
-                :value="typeof option === 'object' ? option.value : option"
-              />
+              <!-- 优先使用列配置的options -->
+              <template v-if="col.options && col.options.length > 0">
+                <el-option 
+                  v-for="option in col.options" 
+                  :key="typeof option === 'object' ? option.value : option" 
+                  :label="typeof option === 'object' ? option.label : option" 
+                  :value="typeof option === 'object' ? option.value : option"
+                />
+              </template>
+              <!-- 否则尝试从availableColumnsMap中获取字段列表 -->
+              <template v-else-if="col.key === 'fieldName' && Object.keys(availableColumnsMap).length > 0">
+                <el-option 
+                  v-for="column in Object.values(availableColumnsMap)[0] || []" 
+                  :key="column" 
+                  :label="column" 
+                  :value="column"
+                />
+              </template>
             </el-select>
             
             <!-- 复选框 -->
