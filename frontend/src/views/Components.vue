@@ -566,7 +566,9 @@ const toggleSubCategory = (categoryKey, subCategoryKey) => {
 const loadModelModules = async () => {
   try {
     const response = await fetch('http://localhost:8000/api/code/get_model_modules')
+    
     if (response.ok) {
+      console.log('-------------j进入后台---')
       const data = await response.json()
       if (data.status === 'success') {
         availableModules.value = data.data
@@ -579,6 +581,7 @@ const loadModelModules = async () => {
     }
   } catch (error) {
     console.error('加载模型列表失败:', error)
+     console.log('**********j进入错误---')
     // 如果加载失败，使用默认数据
     availableModules.value = {
       database_definition: {
@@ -601,9 +604,23 @@ const loadModelModules = async () => {
                 inputs: [{ name: "数据库配置", connected: false, id: "input1", type: "config" }],
                 outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }],
                 ui_schema: [
-                  { key: "databaseName", type: "input", label: "数据库名", required: true }
+                  { key: "databaseName", type: "input", label: "数据库名", required: true },
+                  { key: "charset", type: "select", label: "字符集", required: true, options: [
+                    { label: "utf8mb4", value: "utf8mb4" },
+                    { label: "utf8", value: "utf8" },
+                    { label: "gbk", value: "gbk" },
+                    { label: "latin1", value: "latin1" }
+                  ], defaultValue: "utf8mb4" },
+                  { key: "collation", type: "select", label: "校对规则", required: true, options: [
+                    { label: "utf8mb4_general_ci", value: "utf8mb4_general_ci" },
+                    { label: "utf8mb4_unicode_ci", value: "utf8mb4_unicode_ci" },
+                    { label: "utf8_general_ci", value: "utf8_general_ci" },
+                    { label: "utf8_unicode_ci", value: "utf8_unicode_ci" },
+                    { label: "gbk_chinese_ci", value: "gbk_chinese_ci" },
+                    { label: "latin1_swedish_ci", value: "latin1_swedish_ci" }
+                  ], defaultValue: "utf8mb4_general_ci" }
                 ],
-                sql_template: "CREATE DATABASE {{databaseName}};"
+                sql_template: "CREATE DATABASE {{databaseName}} CHARACTER SET {{charset}} COLLATE {{collation}};"
               },
               {
                 id: "create_table",
@@ -619,7 +636,7 @@ const loadModelModules = async () => {
                   { key: "tableName", type: "input", label: "表名", required: true },
                   { key: "columns", type: "table-editor", label: "字段定义", required: true, columns: [
                     { key: "fieldName", label: "字段名", type: "input", required: true },
-                    { key: "dataType", label: "数据类型", type: "select", required: true, options: [
+                    { key: "dataType", label: "数据类型", type: "select", required: true,options: [
                       { label: "INT", value: "INT" },
                       { label: "VARCHAR", value: "VARCHAR" },
                       { label: "TEXT", value: "TEXT" },
@@ -628,10 +645,7 @@ const loadModelModules = async () => {
                       { label: "DATETIME", value: "DATETIME" },
                       { label: "DECIMAL", value: "DECIMAL" }
                     ] },
-                    { key: "notNull", label: "不允许为空", type: "checkbox" },
-                    { key: "primaryKey", label: "主键", type: "checkbox" },
-                    { key: "autoIncrement", label: "自增", type: "checkbox" },
-                    { key: "comment", label: "注释", type: "input" }
+                    { key: "length", label: "长度", type: "input", required: false,}
                   ] }
                 ],
                 sql_template: "CREATE TABLE {{databaseName}}.{{tableName}} ({{#each columns}}{{fieldName}} {{dataType}}{{#if constraint}} {{constraint}}{{/if}}{{#if comment}} COMMENT '{{comment}}'{{/if}}{{#unless @last}},{{/unless}}{{/each}});"
@@ -645,6 +659,38 @@ const loadModelModules = async () => {
                 category: "database_definition",
                 inputs: [{ name: "索引配置", connected: false, id: "input1", type: "config" }],
                 outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }]
+              },
+              {
+                id: "create_view",
+                name: "创建视图",
+                description: "创建新的数据库视图",
+                type: "create",
+                subType: "view",
+                category: "database_definition",
+                inputs: [{ name: "视图配置", connected: false, id: "input1", type: "config" }],
+                outputs: [{ name: "创建结果", connected: false, id: "output1", type: "result" }],
+                ui_schema: [
+                  { key: "databaseName", type: "select", label: "数据库名", required: true },
+                  { key: "viewName", type: "input", label: "视图名称", required: true },
+                  { key: "tableName", type: "select", label: "选择表", required: true },
+                  { key: "columns", type: "select", label: "选择字段", required: true, multiple: true },
+                  { key: "conditions", type: "table-editor", label: "查询条件", columns: [
+                    { key: "field", label: "字段", type: "select", required: true },
+                    { key: "operator", label: "操作符", type: "select", required: true, options: [
+                      { label: "等于", value: "=" },
+                      { label: "不等于", value: "!=" },
+                      { label: "大于", value: ">" },
+                      { label: "大于等于", value: ">=" },
+                      { label: "小于", value: "<" },
+                      { label: "小于等于", value: "<=" },
+                      { label: "包含", value: "LIKE" },
+                      { label: "不包含", value: "NOT LIKE" }
+                    ] },
+                    { key: "value", label: "值", type: "input", required: true }
+                  ] },
+                  { key: "withCheckOption", type: "checkbox", label: " " }
+                ],
+                sql_template: "CREATE VIEW {{databaseName}}.{{viewName}} AS SELECT {{#each columns}}{{this}}{{#unless @last}},{{/unless}}{{/each}} FROM {{databaseName}}.{{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{field}} {{operator}} '{{value}}'{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if withCheckOption}} WITH CHECK OPTION{{/if}};"
               }
             ]
           }
@@ -1072,6 +1118,37 @@ const updateDatabaseList = (newDatabaseName) => {
   }
 }
 
+// 更新表列表
+const updateTableList = (databaseName, newTableName, columns = []) => {
+  // 检查数据库是否存在
+  if (!databaseList.value.includes(databaseName)) {
+    // 添加新数据库到列表
+    databaseList.value.push(databaseName)
+    // 更新缓存
+    databaseCache.value.set('databases', databaseList.value)
+  }
+  
+  // 检查表是否已存在
+  if (!databaseTables.value[databaseName]) {
+    databaseTables.value[databaseName] = {}
+  }
+  
+  if (!databaseTables.value[databaseName][newTableName]) {
+    // 提取字段名列表
+    const fieldNames = columns.map(col => col.fieldName || col.name || col['字段名']).filter(Boolean)
+    // 添加新表到列表，同时保存字段信息
+    databaseTables.value[databaseName][newTableName] = fieldNames
+    // 更新缓存
+    tableCache.value.set('all', databaseTables.value)
+    tableCache.value.set(databaseName, Object.keys(databaseTables.value[databaseName]))
+    // 更新字段缓存
+    const key = `${databaseName}::${newTableName}`
+    columnsCache.value.set(key, fieldNames)
+    console.log(`数据库 ${databaseName} 的表列表已更新，添加了新表:`, newTableName)
+    console.log(`新表 ${newTableName} 的字段列表:`, fieldNames)
+  }
+}
+
 // 预加载表列表
 const preloadTables = async (databaseName = null) => {
   try {
@@ -1280,9 +1357,13 @@ const handleDrop = (event) => {
     
     console.log('拖拽的模块信息:', module)
     console.log('模块图标:', module.icon)
+    console.log('模块ui_schema:', module.ui_schema)
+    console.log('模块sql_template:', module.sql_template)
     
     placedNodes.value.push({
       ...module,
+      ui_schema: module.ui_schema,
+      sql_template: module.sql_template,
       icon: module.icon || fallbackIcon || '/src/assets/logo.svg',
       id: nodeId++,
       originId: module.id,
@@ -1510,6 +1591,12 @@ const handleConfigSave = (updatedNode) => {
   // 如果是创建数据库操作，更新数据库列表
   if (updatedNode.type === 'create' && updatedNode.subType === 'database' && updatedNode.databaseName) {
     updateDatabaseList(updatedNode.databaseName)
+  }
+  
+  // 如果是创建表操作，更新表列表
+  if (updatedNode.type === 'create' && updatedNode.subType === 'table' && updatedNode.databaseName && updatedNode.tableName) {
+    const columns = updatedNode.columns || updatedNode.fields || []
+    updateTableList(updatedNode.databaseName, updatedNode.tableName, columns)
   }
   
   configDialogVisible.value = false

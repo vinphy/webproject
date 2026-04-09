@@ -11,11 +11,11 @@
       <DynamicForm
         ref="dynamicFormRef"
         :ui-schema="currentNode?.ui_schema || []"
-        :initial-data="getDatabaseCreateInitialData()"
+        :initial-data="getInitialData()"
         :sql-template="currentNode?.sql_template"
         :get-tables-by-database="props.getTablesByDatabase"
         :get-columns-by-database-table="props.getColumnsByDatabaseTable"
-        @submit="onDatabaseCreateSubmit"
+        @submit="onSubmit"
       />
     </div>
     
@@ -70,9 +70,12 @@ const dialogVisible = computed({
 const dynamicFormRef = ref(null)
 
 // 监听节点变化
-watch(() => props.node, (newNode) => {
+watch(() => props.node, async (newNode) => {
+  console.log('节点变化:', newNode)
   if (newNode) {
     currentNode.value = { ...newNode }
+    console.log('currentNode:', currentNode.value)
+    console.log('currentNode.ui_schema:', currentNode.value.ui_schema)
     
     // 确保parameters数组存在且至少有一个元素
     if (!currentNode.value.parameters) {
@@ -95,6 +98,7 @@ watch(() => props.node, (newNode) => {
     }
     // 动态注入数据库下拉框的options
     if (Array.isArray(currentNode.value.ui_schema)) {
+      console.log('处理ui_schema:', currentNode.value.ui_schema)
       currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
         // 数据库名下拉
         if (item.key === 'databaseName' && item.type === 'select') {
@@ -111,6 +115,14 @@ watch(() => props.node, (newNode) => {
             ...item,
             options: tables.map(tb => ({ label: tb, value: tb })),
             onChange: handleTableChange
+          }
+        }
+        // 字段选择下拉（用于创建视图）
+        if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+          return {
+            ...item,
+            options: [], // 初始为空，由watch异步填充
+            onChange: handleColumnsChange
           }
         }
         // table-editor字段名下拉
@@ -132,6 +144,54 @@ watch(() => props.node, (newNode) => {
         }
         return item
       })
+      console.log('处理后的ui_schema:', currentNode.value.ui_schema)
+      
+      // 当节点被打开时，尝试获取字段列表
+          if (currentNode.value.databaseName && currentNode.value.tableName) {
+            try {
+              // 异步获取字段列表
+              const fieldList = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, currentNode.value.tableName) || []
+              console.log('获取到的字段列表:', fieldList)
+              
+              // 将字段名数组转换为label-value格式
+              const fieldOptions = fieldList.map(field => ({
+                label: field,
+                value: field
+              }))
+              
+              // 更新ui_schema中的字段名下拉选项
+              currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+                // 处理table-editor中的字段名（包括查询条件表格）
+                if (item.type === 'table-editor' && Array.isArray(item.columns)) {
+                  const columns = item.columns.map(col => {
+                    if ((col.key === 'fieldName' || col.key === 'field') && col.type === 'select') {
+                      return {
+                        ...col,
+                        options: fieldOptions
+                      }
+                    }
+                    return col
+                  })
+                  return {
+                    ...item,
+                    columns
+                  }
+                }
+                // 处理创建视图中的字段选择
+                if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+                  return {
+                    ...item,
+                    options: fieldOptions
+                  }
+                }
+                return item
+              })
+            } catch (error) {
+              console.error('获取字段列表失败:', error)
+            }
+          }
+    } else {
+      console.log('ui_schema不是数组:', currentNode.value.ui_schema)
     }
   }
 }, { immediate: true })
@@ -153,9 +213,10 @@ watch([() => currentNode.value?.databaseName, () => currentNode.value?.tableName
       
       // 更新ui_schema中的字段名下拉选项
       currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        // 处理table-editor中的字段名（包括查询条件表格）
         if (item.type === 'table-editor' && Array.isArray(item.columns)) {
           const columns = item.columns.map(col => {
-            if (col.key === 'fieldName' && col.type === 'select') {
+            if ((col.key === 'fieldName' || col.key === 'field') && col.type === 'select') {
               return {
                 ...col,
                 options: fieldOptions
@@ -166,6 +227,13 @@ watch([() => currentNode.value?.databaseName, () => currentNode.value?.tableName
           return {
             ...item,
             columns
+          }
+        }
+        // 处理创建视图中的字段选择
+        if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+          return {
+            ...item,
+            options: fieldOptions
           }
         }
         return item
@@ -183,20 +251,37 @@ function handleDatabaseChange(val) {
   const tables = props.getTablesByDatabase(val)
   const newTableName = tables.length > 0 ? tables[0] : ''
   
-  // 更新当前节点
+  // 更新当前节点，保留viewName等其他字段
   currentNode.value = {
     ...currentNode.value,
     databaseName: val,
-    tableName: newTableName
+    tableName: newTableName,
+    columns: [] // 清空字段选择
   }
   
   // 触发ui_schema更新
   if (Array.isArray(currentNode.value.ui_schema)) {
-    currentNode.value.ui_schema = [...currentNode.value.ui_schema]
+    // 更新表名下拉选项
+    currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+      if (item.key === 'tableName' && item.type === 'select') {
+        return {
+          ...item,
+          options: tables.map(tb => ({ label: tb, value: tb }))
+        }
+      }
+      // 清空字段选择下拉选项
+      if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+        return {
+          ...item,
+          options: []
+        }
+      }
+      return item
+    })
   }
 }
 // 处理表名变更
-function handleTableChange(val) {
+async function handleTableChange(val) {
   console.log('表名变更:', val)
   // 更新当前节点的表名
   currentNode.value = {
@@ -205,8 +290,35 @@ function handleTableChange(val) {
   }
   // 触发ui_schema更新（table-editor字段名下拉联动）
   if (Array.isArray(currentNode.value.ui_schema)) {
-    currentNode.value.ui_schema = [...currentNode.value.ui_schema]
+    // 更新字段选择下拉框的选项
+    try {
+      const fields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, val) || []
+      console.log('获取到的字段列表:', fields)
+      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+          return {
+            ...item,
+            options: fields.map(field => ({ label: field, value: field }))
+          }
+        }
+        return item
+      })
+    } catch (error) {
+      console.error('获取字段列表失败:', error)
+    }
   }
+}
+
+// 处理字段选择变更
+function handleColumnsChange(val) {
+  console.log('字段选择变更:', val)
+  console.log('变更前的currentNode:', currentNode.value)
+  // 更新当前节点的字段选择，保留其他字段
+  currentNode.value = {
+    ...currentNode.value,
+    columns: val
+  }
+  console.log('变更后的currentNode:', currentNode.value)
 }
 
 // 根据subtype获取对应的配置组件
@@ -341,6 +453,40 @@ function onDatabaseCreateSubmit(formData) {
     currentNode.value.sql = sql
   } else {
     currentNode.value.sql = `CREATE DATABASE ${formData.databaseName} CHARACTER SET ${formData.charset} COLLATE ${formData.collation};`
+  }
+  // 同步所有参数到parameters，便于模型图显示
+  currentNode.value.parameters = Object.keys(formData)
+    .map(key => ({ name: key, value: formData[key] }))
+  // 触发保存
+  emit('save', currentNode.value)
+  handleClose()
+}
+
+function getInitialData() {
+  const params = currentNode.value?.parameters || []
+  const paramMap = Object.fromEntries(params.map(p => [p.name, p.value]))
+  const data = {}
+  if (Array.isArray(currentNode.value?.ui_schema)) {
+    currentNode.value.ui_schema.forEach(item => {
+      data[item.key] = 
+        currentNode.value[item.key] ||
+        paramMap[item.key] ||
+        (item.type === 'input' && item.key === 'charset' ? 'utf8mb4' : '')
+    })
+  }
+  return data
+}
+
+function onSubmit(formData) {
+  // 直接将formData合并到currentNode.value
+  Object.assign(currentNode.value, formData)
+  // 生成SQL
+  if (currentNode.value.sql_template) {
+    let sql = currentNode.value.sql_template
+    Object.keys(formData).forEach(key => {
+      sql = sql.replace(`{{${key}}}`, formData[key] || '')
+    })
+    currentNode.value.sql = sql
   }
   // 同步所有参数到parameters，便于模型图显示
   currentNode.value.parameters = Object.keys(formData)

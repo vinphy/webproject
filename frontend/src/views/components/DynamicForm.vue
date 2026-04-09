@@ -26,6 +26,7 @@
           <el-select 
             v-model="formData[item.key]" 
             :placeholder="`请选择${item.label}`"
+            :multiple="item.multiple"
             @change="(val) => handleSelectChange(item, val)"
           >
             <el-option 
@@ -39,7 +40,7 @@
         
         <!-- 表格编辑器 -->
         <el-form-item 
-          v-if="item.type === 'table-editor'" 
+          v-else-if="item.type === 'table-editor'" 
           :label="item.label" 
           :prop="item.key"
         >
@@ -48,7 +49,17 @@
             :columns="item.columns"
             :available-tables="availableTables"
             :available-columns-map="availableColumnsMap"
+            :show-constraint="item.key !== 'conditions'"
           />
+        </el-form-item>
+        
+        <!-- 复选框 -->
+        <el-form-item 
+          v-else-if="item.type === 'checkbox'" 
+          :label="item.label" 
+          :prop="item.key"
+        >
+          <el-checkbox v-model="formData[item.key]">{{ item.label }}</el-checkbox>
         </el-form-item>
       </template>
     </el-form>
@@ -109,13 +120,17 @@
 
   // 初始化表单数据
   function buildFormData(schema, initial) {
-    const data = {}
+    const data = { ...formData.value } // 保留原有数据
     schema.forEach(item => {
       // 优先级：initial > defaultValue > 空
-      data[item.key] =
-        initial[item.key] !== undefined && initial[item.key] !== ''
-          ? initial[item.key]
-          : (item.defaultValue !== undefined ? item.defaultValue : (item.type === 'table-editor' ? [] : ''))
+      if (initial[item.key] !== undefined && initial[item.key] !== '') {
+        data[item.key] = initial[item.key]
+      } else if (item.defaultValue !== undefined) {
+        data[item.key] = item.defaultValue
+      } else if (data[item.key] === undefined) {
+        data[item.key] = item.type === 'table-editor' ? [] : ''
+      }
+      // 否则保留原有值
     })
     return data
   }
@@ -124,7 +139,10 @@
     () => props.uiSchema,
     () => props.initialData
   ], ([newSchema, newInitial]) => {
+    console.log('DynamicForm - uiSchema变化:', newSchema)
+    console.log('DynamicForm - initialData变化:', newInitial)
     formData.value = buildFormData(newSchema, newInitial)
+    console.log('DynamicForm - formData:', formData.value)
     if (formRef.value) {
       formRef.value.clearValidate && formRef.value.clearValidate()
     }
@@ -182,6 +200,7 @@
   // 生成SQL
   function buildSQL() {
     console.log('生成SQL时的formData:', formData.value)
+    console.log('使用的SQL模板:', props.sqlTemplate)
     
     // 检查是否是创建表
     const isCreateTable = props.sqlTemplate && props.sqlTemplate.includes('CREATE TABLE')

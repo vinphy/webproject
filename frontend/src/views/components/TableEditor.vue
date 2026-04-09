@@ -37,9 +37,10 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
+        <el-table-column label="操作" :width="showConstraint ? '160' : '80'">
           <template #default="{ row, $index }">
             <el-button 
+              v-if="showConstraint" 
               size="small" 
               @click="openConstraintDialog(row, $index)"
             >约束</el-button>
@@ -181,11 +182,11 @@
   const props = defineProps({
     modelValue: {
       type: Array,
-      required: true
+      default: () => []
     },
     columns: {
       type: Array,
-      required: true
+      default: () => []
     },
     availableTables: {
       type: Array,
@@ -194,6 +195,10 @@
     availableColumnsMap: {
       type: Object,
       default: () => ({})
+    },
+    showConstraint: {
+      type: Boolean,
+      default: true
     }
   })
   
