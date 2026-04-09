@@ -183,86 +183,136 @@
             {
               "id": "databaseU",
               "name": "修改数据库",
-              "description": "修改数据库",
+              "description": "修改数据库字符集和校对规则",
               "type": "update",
               "subType": "database",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+                { "name": "数据库配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "databaseName": "",
-                "charset": "utf8mb4",
-                "collation": "utf8mb4_unicode_ci"
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "charset", "type": "select", "label": "字符集", "required": true, "options": [
+                  { "label": "utf8mb4", "value": "utf8mb4" },
+                  { "label": "utf8", "value": "utf8" },
+                  { "label": "latin1", "value": "latin1" },
+                  { "label": "gbk", "value": "gbk" }
+                ], "defaultValue": "utf8mb4" },
+                { "key": "collation", "type": "select", "label": "校对规则", "required": true, "options": [
+                  { "label": "utf8mb4_general_ci", "value": "utf8mb4_general_ci" },
+                  { "label": "utf8mb4_unicode_ci", "value": "utf8mb4_unicode_ci" },
+                  { "label": "utf8_general_ci", "value": "utf8_general_ci" },
+                  { "label": "latin1_swedish_ci", "value": "latin1_swedish_ci" },
+                  { "label": "gbk_chinese_ci", "value": "gbk_chinese_ci" }
+                ], "defaultValue": "utf8mb4_general_ci" }
+              ],
+              "sql_template": "ALTER DATABASE {{databaseName}} CHARACTER SET {{charset}} COLLATE {{collation}};"
             },
             {
               "id": "tableU",
               "name": "修改数据表",
-              "description": "修改数据表结构",
+              "description": "修改数据表结构，包括添加、修改、删除字段",
               "type": "update",
               "subType": "table",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+                { "name": "表结构配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true },
+                { "key": "operation", "type": "select", "label": "操作类型", "required": true, "options": [
+                  { "label": "添加字段", "value": "add" },
+                  { "label": "修改字段", "value": "modify" },
+                  { "label": "删除字段", "value": "drop" }
+                ] },
+                { "key": "fieldName", "type": "select", "label": "字段名", "required": true, "multiple": false, "allow-create": true },
+                { "key": "dataType", "type": "select", "label": "数据类型", "required": true, "options": [
+                  { "label": "INT", "value": "INT" },
+                  { "label": "VARCHAR", "value": "VARCHAR" },
+                  { "label": "TEXT", "value": "TEXT" },
+                  { "label": "DATE", "value": "DATE" },
+                  { "label": "TIME", "value": "TIME" },
+                  { "label": "DATETIME", "value": "DATETIME" },
+                  { "label": "DECIMAL", "value": "DECIMAL" }
+                ] },
+                { "key": "notNull", "type": "checkbox", "label": "不允许为空" },
+                { "key": "primaryKey", "type": "checkbox", "label": "主键" },
+                { "key": "autoIncrement", "type": "checkbox", "label": "自增" },
+                { "key": "comment", "type": "input", "label": "注释" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#if isAdd}}ALTER TABLE `{{tableName}}` ADD `{{fieldName}}` {{dataType}}{{#if notNull}} NOT NULL{{/if}}{{#if primaryKey}} PRIMARY KEY{{/if}}{{#if autoIncrement}} AUTO_INCREMENT{{/if}}{{#if comment}} COMMENT '{{comment}}'{{/if}};{{/if}}{{#if isModify}}ALTER TABLE `{{tableName}}` MODIFY `{{fieldName}}` {{dataType}}{{#if notNull}} NOT NULL{{/if}}{{#if primaryKey}} PRIMARY KEY{{/if}}{{#if autoIncrement}} AUTO_INCREMENT{{/if}}{{#if comment}} COMMENT '{{comment}}'{{/if}};{{/if}}{{#if isDrop}}ALTER TABLE `{{tableName}}` DROP COLUMN `{{fieldName}}`;{{/if}}"
             },
             {
               "id": "viewU",
               "name": "修改视图",
-              "description": "修改视图",
+              "description": "修改数据库视图的定义",
               "type": "update",
               "subType": "view",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+                { "name": "视图配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "viewName", "type": "select", "label": "视图名称", "required": true },
+                { "key": "tableName", "type": "select", "label": "选择表", "required": true },
+                { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true },
+                { "key": "conditions", "type": "table-editor", "label": "查询条件", "columns": [
+                  { "key": "field", "label": "字段", "type": "select", "required": true },
+                  { "key": "operator", "label": "操作符", "type": "select", "required": true, "options": [
+                    { "label": "等于", "value": "=" },
+                    { "label": "不等于", "value": "!=" },
+                    { "label": "大于", "value": ">" },
+                    { "label": "大于等于", "value": ">=" },
+                    { "label": "小于", "value": "<" },
+                    { "label": "小于等于", "value": "<=" },
+                    { "label": "包含", "value": "LIKE" },
+                    { "label": "不包含", "value": "NOT LIKE" }
+                  ] },
+                  { "key": "value", "label": "值", "type": "input", "required": true }
+                ] },
+                { "key": "withCheckOption", "type": "checkbox", "label": "WITH CHECK OPTION" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}CREATE OR REPLACE VIEW `{{viewName}}` AS SELECT {{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}} FROM `{{tableName}}`{{#if conditions.length}} WHERE {{#each conditions}}`{{field}}` {{operator}} '{{value}}'{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if withCheckOption}} WITH CHECK OPTION{{/if}};"
             },
             {
               "id": "indexU",
               "name": "修改索引",
-              "description": "修改索引",
+              "description": "修改表的索引定义",
               "type": "update",
               "subType": "index",
               "category": "database_definition",
               "version": "1.0.0",
               "status": "active",
               "inputs": [
-                { "name": "输入", "connected": false, "id": "input1", "type": "schema" }
+                { "name": "索引配置", "connected": false, "id": "input1", "type": "config" }
               ],
               "outputs": [
-                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+                { "name": "修改结果", "connected": false, "id": "output1", "type": "result" }
               ],
-              "config": {
-                "tableName": "",
-                "databaseName": "",
-                "fields": []
-              }
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true },
+                { "key": "oldIndexName", "type": "select", "label": "原索引名称", "required": true },
+                { "key": "newIndexName", "type": "input", "label": "新索引名称", "required": true }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}ALTER TABLE `{{tableName}}` RENAME INDEX `{{oldIndexName}}` TO `{{newIndexName}}`;"
             }
           ]
         },

@@ -54,6 +54,14 @@ const props = defineProps({
   getColumnsByDatabaseTable: {
     type: Function,
     required: true
+  },
+  getViewsByDatabase: {
+    type: Function,
+    default: () => []
+  },
+  getIndexesByDatabaseTable: {
+    type: Function,
+    default: () => []
   }
 })
 
@@ -117,6 +125,22 @@ watch(() => props.node, async (newNode) => {
             onChange: handleTableChange
           }
         }
+        // 视图名称下拉
+        if (item.key === 'viewName' && item.type === 'select') {
+          return {
+            ...item,
+            options: [], // 初始为空，由watch异步填充
+            onChange: handleViewChange
+          }
+        }
+        // 索引名称下拉
+        if (item.key === 'oldIndexName' && item.type === 'select') {
+          return {
+            ...item,
+            options: [], // 初始为空，由watch异步填充
+            onChange: handleOldIndexNameChange
+          }
+        }
         // 字段选择下拉（用于创建视图）
         if (item.key === 'columns' && item.type === 'select' && item.multiple) {
           return {
@@ -146,7 +170,63 @@ watch(() => props.node, async (newNode) => {
       })
       console.log('处理后的ui_schema:', currentNode.value.ui_schema)
       
-      // 当节点被打开时，尝试获取字段列表
+      // 当节点被打开时，尝试获取字段列表、视图列表和索引列表
+          if (currentNode.value.databaseName) {
+            try {
+              // 异步获取视图列表
+              const views = props.getViewsByDatabase(currentNode.value.databaseName) || []
+              console.log('获取到的视图列表:', views)
+              
+              // 将视图名数组转换为label-value格式
+              const viewOptions = views.map(view => ({
+                label: view,
+                value: view
+              }))
+              
+              // 更新ui_schema中的视图名称下拉选项
+              currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+                if (item.key === 'viewName' && item.type === 'select') {
+                  return {
+                    ...item,
+                    options: viewOptions
+                  }
+                }
+                return item
+              })
+            } catch (error) {
+              console.error('获取视图列表失败:', error)
+            }
+          }
+          
+          // 当节点被打开时，尝试获取索引列表
+          if (currentNode.value.databaseName && currentNode.value.tableName) {
+            try {
+              // 异步获取索引列表
+              const indexes = props.getIndexesByDatabaseTable(currentNode.value.databaseName, currentNode.value.tableName) || []
+              console.log('获取到的索引列表:', indexes)
+              
+              // 将索引名数组转换为label-value格式
+              const indexOptions = indexes.map(index => ({
+                label: index,
+                value: index
+              }))
+              
+              // 更新ui_schema中的索引名称下拉选项
+              currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+                if (item.key === 'oldIndexName' && item.type === 'select') {
+                  return {
+                    ...item,
+                    options: indexOptions
+                  }
+                }
+                return item
+              })
+            } catch (error) {
+              console.error('获取索引列表失败:', error)
+            }
+          }
+          
+          // 当节点被打开时，尝试获取字段列表
           if (currentNode.value.databaseName && currentNode.value.tableName) {
             try {
               // 异步获取字段列表
@@ -179,6 +259,13 @@ watch(() => props.node, async (newNode) => {
                 }
                 // 处理创建视图中的字段选择
                 if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+                  return {
+                    ...item,
+                    options: fieldOptions
+                  }
+                }
+                // 处理修改数据表中的字段名下拉框
+                if (item.key === 'fieldName' && item.type === 'select') {
                   return {
                     ...item,
                     options: fieldOptions
@@ -236,6 +323,13 @@ watch([() => currentNode.value?.databaseName, () => currentNode.value?.tableName
             options: fieldOptions
           }
         }
+        // 处理修改数据表中的字段名下拉框
+        if (item.key === 'fieldName' && item.type === 'select') {
+          return {
+            ...item,
+            options: fieldOptions
+          }
+        }
         return item
       })
     } catch (error) {
@@ -251,33 +345,42 @@ function handleDatabaseChange(val) {
   const tables = props.getTablesByDatabase(val)
   const newTableName = tables.length > 0 ? tables[0] : ''
   
-  // 更新当前节点，保留viewName等其他字段
+  // 更新当前节点，重置视图名
   currentNode.value = {
     ...currentNode.value,
     databaseName: val,
     tableName: newTableName,
+    viewName: '', // 重置视图名
     columns: [] // 清空字段选择
   }
   
   // 触发ui_schema更新
   if (Array.isArray(currentNode.value.ui_schema)) {
     // 更新表名下拉选项
-    currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
-      if (item.key === 'tableName' && item.type === 'select') {
-        return {
-          ...item,
-          options: tables.map(tb => ({ label: tb, value: tb }))
+      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        if (item.key === 'tableName' && item.type === 'select') {
+          return {
+            ...item,
+            options: tables.map(tb => ({ label: tb, value: tb }))
+          }
         }
-      }
-      // 清空字段选择下拉选项
-      if (item.key === 'columns' && item.type === 'select' && item.multiple) {
-        return {
-          ...item,
-          options: []
+        // 更新视图名下拉选项
+        if (item.key === 'viewName' && item.type === 'select') {
+          const views = props.getViewsByDatabase(val) || []
+          return {
+            ...item,
+            options: views.map(view => ({ label: view, value: view }))
+          }
         }
-      }
-      return item
-    })
+        // 清空字段选择下拉选项
+        if (item.key === 'columns' && item.type === 'select' && item.multiple) {
+          return {
+            ...item,
+            options: []
+          }
+        }
+        return item
+      })
   }
 }
 // 处理表名变更
@@ -286,7 +389,8 @@ async function handleTableChange(val) {
   // 更新当前节点的表名
   currentNode.value = {
     ...currentNode.value,
-    tableName: val
+    tableName: val,
+    oldIndexName: '' // 重置旧索引名
   }
   // 触发ui_schema更新（table-editor字段名下拉联动）
   if (Array.isArray(currentNode.value.ui_schema)) {
@@ -306,6 +410,23 @@ async function handleTableChange(val) {
     } catch (error) {
       console.error('获取字段列表失败:', error)
     }
+    
+    // 更新索引名称下拉框的选项
+    try {
+      const indexes = props.getIndexesByDatabaseTable(currentNode.value.databaseName, val) || []
+      console.log('获取到的索引列表:', indexes)
+      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        if (item.key === 'oldIndexName' && item.type === 'select') {
+          return {
+            ...item,
+            options: indexes.map(index => ({ label: index, value: index }))
+          }
+        }
+        return item
+      })
+    } catch (error) {
+      console.error('获取索引列表失败:', error)
+    }
   }
 }
 
@@ -319,6 +440,26 @@ function handleColumnsChange(val) {
     columns: val
   }
   console.log('变更后的currentNode:', currentNode.value)
+}
+
+// 处理视图名称变更
+function handleViewChange(val) {
+  console.log('视图名称变更:', val)
+  // 更新当前节点的视图名
+  currentNode.value = {
+    ...currentNode.value,
+    viewName: val
+  }
+}
+
+// 处理旧索引名称变更
+function handleOldIndexNameChange(val) {
+  console.log('旧索引名称变更:', val)
+  // 更新当前节点的旧索引名
+  currentNode.value = {
+    ...currentNode.value,
+    oldIndexName: val
+  }
 }
 
 // 根据subtype获取对应的配置组件

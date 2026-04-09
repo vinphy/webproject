@@ -27,6 +27,8 @@
             v-model="formData[item.key]" 
             :placeholder="`请选择${item.label}`"
             :multiple="item.multiple"
+            :allow-create="item['allow-create'] && formData.operation === 'add'"
+            :filterable="item['allow-create']"
             @change="(val) => handleSelectChange(item, val)"
           >
             <el-option 
@@ -274,9 +276,23 @@
         // 为创建索引添加isPrimaryKey计算
         const templateData = {
           ...formData.value,
-          isPrimaryKey: formData.value.indexType === 'PRIMARY KEY'
+          isPrimaryKey: formData.value.indexType === 'PRIMARY KEY',
+          // 为修改数据表添加操作类型的布尔值
+          isAdd: formData.value.operation === 'add',
+          isModify: formData.value.operation === 'modify',
+          isDrop: formData.value.operation === 'drop'
         }
-        const template = Handlebars.compile(props.sqlTemplate)
+        // 替换模板中的条件判断语法
+        let templateStr = props.sqlTemplate
+        // 替换 operation == 'add' 为 isAdd
+        templateStr = templateStr.replace(/\{\{#if operation == 'add'}}/g, '{{#if isAdd}}')
+        templateStr = templateStr.replace(/\{\{\/if}}/g, '{{/if}}')
+        // 替换 operation == 'modify' 为 isModify
+        templateStr = templateStr.replace(/\{\{#if operation == 'modify'}}/g, '{{#if isModify}}')
+        // 替换 operation == 'drop' 为 isDrop
+        templateStr = templateStr.replace(/\{\{#if operation == 'drop'}}/g, '{{#if isDrop}}')
+        
+        const template = Handlebars.compile(templateStr)
         const sql = template(templateData)
         console.log('使用模板生成的SQL:', sql)
         return sql

@@ -281,6 +281,8 @@
       :database-list="databaseList"
       :get-tables-by-database="getTablesByDatabase"
       :get-columns-by-database-table="getColumnsByDatabaseTable"
+      :get-views-by-database="getViewsByDatabase"
+      :get-indexes-by-database-table="getIndexesByDatabaseTable"
       @save="handleConfigSave"
     />
 
@@ -1067,6 +1069,16 @@ const tableList = ref([])
 const tableCache = ref(new Map())
 const databaseTables = ref({})
 
+// 添加视图列表状态
+const viewList = ref([])
+const viewCache = ref(new Map())
+const databaseViews = ref({})
+
+// 添加索引列表状态
+const indexList = ref([])
+const indexCache = ref(new Map())
+const databaseTableIndexes = ref({})
+
 // 新增：列名缓存
 const columnsCache = ref(new Map())
 
@@ -1202,6 +1214,79 @@ const getTablesByDatabase = (databaseName) => {
   const tableNames = Object.keys(tablesObj)
   console.log('根据数据库',databaseName,'获取数据表结果：',tableNames)
   return tableNames
+}
+
+// 根据数据库名获取视图列表
+const getViewsByDatabase = (databaseName) => {
+  const viewsObj = databaseViews.value[databaseName] || {}
+  //获取所有视图名(对象的键)
+  const viewNames = Object.keys(viewsObj)
+  console.log('根据数据库',databaseName,'获取视图列表结果：',viewNames)
+  return viewNames
+}
+
+// 根据数据库名和表名获取索引列表
+const getIndexesByDatabaseTable = (databaseName, tableName) => {
+  const indexesObj = databaseTableIndexes.value[databaseName]?.[tableName] || {}
+  //获取所有索引名(对象的键)
+  const indexNames = Object.keys(indexesObj)
+  console.log('根据数据库',databaseName,'表',tableName,'获取索引列表结果：',indexNames)
+  return indexNames
+}
+
+// 更新视图列表
+const updateViewList = (databaseName, newViewName) => {
+  // 检查数据库是否存在
+  if (!databaseList.value.includes(databaseName)) {
+    // 添加新数据库到列表
+    databaseList.value.push(databaseName)
+    // 更新缓存
+    databaseCache.value.set('databases', databaseList.value)
+  }
+  
+  // 检查视图是否已存在
+  if (!databaseViews.value[databaseName]) {
+    databaseViews.value[databaseName] = {}
+  }
+  
+  if (!databaseViews.value[databaseName][newViewName]) {
+    // 添加新视图到列表
+    databaseViews.value[databaseName][newViewName] = true
+    // 更新缓存
+    viewCache.value.set('all', databaseViews.value)
+    viewCache.value.set(databaseName, Object.keys(databaseViews.value[databaseName]))
+    console.log(`数据库 ${databaseName} 的视图列表已更新，添加了新视图:`, newViewName)
+  }
+}
+
+// 更新索引列表
+const updateIndexList = (databaseName, tableName, newIndexName) => {
+  // 检查数据库是否存在
+  if (!databaseList.value.includes(databaseName)) {
+    // 添加新数据库到列表
+    databaseList.value.push(databaseName)
+    // 更新缓存
+    databaseCache.value.set('databases', databaseList.value)
+  }
+  
+  // 检查表是否已存在
+  if (!databaseTableIndexes.value[databaseName]) {
+    databaseTableIndexes.value[databaseName] = {}
+  }
+  
+  if (!databaseTableIndexes.value[databaseName][tableName]) {
+    databaseTableIndexes.value[databaseName][tableName] = {}
+  }
+  
+  if (!databaseTableIndexes.value[databaseName][tableName][newIndexName]) {
+    // 添加新索引到列表
+    databaseTableIndexes.value[databaseName][tableName][newIndexName] = true
+    // 更新缓存
+    indexCache.value.set('all', databaseTableIndexes.value)
+    const tableKey = `${databaseName}::${tableName}`
+    indexCache.value.set(tableKey, Object.keys(databaseTableIndexes.value[databaseName][tableName]))
+    console.log(`数据库 ${databaseName} 表 ${tableName} 的索引列表已更新，添加了新索引:`, newIndexName)
+  }
 }
 
 // 预加载文件内容
@@ -1614,6 +1699,16 @@ const handleConfigSave = (updatedNode) => {
   if (updatedNode.type === 'create' && updatedNode.subType === 'table' && updatedNode.databaseName && updatedNode.tableName) {
     const columns = updatedNode.columns || updatedNode.fields || []
     updateTableList(updatedNode.databaseName, updatedNode.tableName, columns)
+  }
+
+  // 如果是创建视图操作，更新视图列表
+  if (updatedNode.type === 'create' && updatedNode.subType === 'view' && updatedNode.databaseName && updatedNode.viewName ) {
+    updateViewList(updatedNode.databaseName, updatedNode.viewName)
+  }
+  
+  // 如果是创建索引操作，更新索引列表
+  if (updatedNode.type === 'create' && updatedNode.subType === 'index' && updatedNode.databaseName && updatedNode.tableName && updatedNode.indexName) {
+    updateIndexList(updatedNode.databaseName, updatedNode.tableName, updatedNode.indexName)
   }
   
   configDialogVisible.value = false
