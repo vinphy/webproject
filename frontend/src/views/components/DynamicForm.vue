@@ -42,16 +42,16 @@
         
         <!-- 表格编辑器 -->
         <el-form-item 
-          v-else-if="item.type === 'table-editor'" 
+          v-else-if="item.type === 'table-editor' " 
           :label="item.label" 
           :prop="item.key"
         >
           <TableEditor 
-            v-model="formData[item.key]" 
+            v-model="formData[item.key] " 
             :columns="item.columns"
             :available-tables="availableTables"
             :available-columns-map="availableColumnsMap"
-            :show-constraint="item.key !== 'conditions'"
+            :show-constraint="item.key !== 'conditions' && item.key !== 'fields'"
           />
         </el-form-item>
         
@@ -281,8 +281,15 @@
           // 为修改数据表添加操作类型的布尔值
           isAdd: formData.value.operation === 'add',
           isModify: formData.value.operation === 'modify',
-          isDrop: formData.value.operation === 'drop'
+          isDrop: formData.value.operation === 'drop',
+          // 处理批量插入的valueRows，转换为数组
+          valueRows: formData.value.valueRows ? formData.value.valueRows.split('\n').filter(row => row.trim()) : []
         }
+        // 注册Handlebars助手函数
+        Handlebars.registerHelper('isString', function(value) {
+          return typeof value === 'string';
+        });
+        
         // 替换模板中的条件判断语法
         let templateStr = props.sqlTemplate
         // 替换 operation == 'add' 为 isAdd

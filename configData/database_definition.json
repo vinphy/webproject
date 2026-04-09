@@ -412,6 +412,86 @@
               "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}{{#if isPrimaryKey}}ALTER TABLE `{{tableName}}` DROP PRIMARY KEY;{{else}}ALTER TABLE `{{tableName}}` DROP INDEX{{#if ifExists}} IF EXISTS{{/if}} `{{indexName}}`;{{/if}}"
             }
           ]
+        },
+        "insert": {
+          "name": "新增数据",
+          "description": "向表中插入数据",
+          "icon": "/src/assets/add.png",
+          "children": [
+            {
+              "id": "singleInsert",
+              "name": "单条插入",
+              "description": "向表中插入一条记录",
+              "type": "insert",
+              "subType": "single",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true },
+                { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true },
+                { "key": "values", "type": "input", "label": "字段值", "required": true, "placeholder": "按字段顺序用逗号分隔，字符串用引号包裹" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}INSERT INTO `{{tableName}}` ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}) VALUES ({{values}});"
+            },
+            {
+              "id": "batchInsert",
+              "name": "批量插入",
+              "description": "向表中插入多条记录",
+              "type": "insert",
+              "subType": "batch",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true },
+                { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true },
+                { "key": "valueRows", "type": "textarea", "label": "记录值", "required": true, "placeholder": "每行一条记录，按字段顺序用逗号分隔，字符串用引号包裹" }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}INSERT INTO `{{tableName}}` ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}}) VALUES {{#each valueRows}}{{this}}{{#unless @last}},{{/unless}}{{/each}};"
+            },
+            {
+              "id": "importData",
+              "name": "导入数据",
+              "description": "从文件导入数据到表中",
+              "type": "insert",
+              "subType": "import",
+              "category": "database_definition",
+              "version": "1.0.0",
+              "status": "active",
+              "inputs": [
+                { "name": "输入", "connected": false, "id": "input1", "type": "config" }
+              ],
+              "outputs": [
+                { "name": "输出", "connected": false, "id": "output1", "type": "result" }
+              ],
+              "ui_schema": [
+                { "key": "databaseName", "type": "select", "label": "数据库名", "required": true },
+                { "key": "tableName", "type": "select", "label": "表名", "required": true },
+                { "key": "filePath", "type": "input", "label": "文件路径", "required": true, "placeholder": "例如：/path/to/file.csv" },
+                { "key": "fieldTerminatedBy", "type": "input", "label": "字段分隔符", "required": true, "defaultValue": "," },
+                { "key": "enclosedBy", "type": "input", "label": "字段包围符", "required": true, "defaultValue": "\"" },
+                { "key": "linesTerminatedBy", "type": "input", "label": "行终止符", "required": true, "defaultValue": "\\n" },
+                { "key": "ignoreLines", "type": "input", "label": "忽略行数", "required": false, "defaultValue": "1" },
+                { "key": "columns", "type": "select", "label": "选择字段", "required": true, "multiple": true }
+              ],
+              "sql_template": "{{#if databaseName}}USE `{{databaseName}}`;\n{{/if}}LOAD DATA INFILE '{{filePath}}' INTO TABLE `{{tableName}}` FIELDS TERMINATED BY '{{fieldTerminatedBy}}' ENCLOSED BY '{{enclosedBy}}' LINES TERMINATED BY '{{linesTerminatedBy}}'{{#if ignoreLines}} IGNORE {{ignoreLines}} LINES{{/if}} ({{#each columns}}`{{this}}`{{#unless @last}},{{/unless}}{{/each}});"
+            }
+          ]
         }
       }
     }

@@ -33,22 +33,12 @@
                   "label": "参数", 
                   "type": "table-editor", 
                   "columns": [
-                    {"name": "字段名", "key": "fieldName", "type": "select"},
-                    {"name": "字段值", "key": "fieldType", "type": "input"}
-                  ]
-                },
-                {
-                  "key": "conditions",
-                  "label": "条件",
-                  "type": "table-editor",
-                  "columns": [
-                    { "name": "字段名", "key": "fieldName", "type": "select" },
-                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
-                    { "name": "字段值", "key": "fieldValue", "type": "input" }
+                    {"name": "参数名", "key": "fieldName", "type": "select"},
+                    {"name": "参数值", "key": "fieldValue", "type": "input"}
                   ]
                 }
               ],
-              "sql_template": "INSERT INTO {{tableName}} ({{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}) VALUES ({{#each fields}}{{#if (isString fieldType)}}'{{fieldType}}'{{else}}{{fieldType}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}){{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
+              "sql_template": "INSERT INTO {{tableName}} ({{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}) VALUES ({{#each fields}}{{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}});"
           },
           {
             "id": "insert_condition",
@@ -163,22 +153,12 @@
                   "label": "参数", 
                   "type": "table-editor", 
                   "columns": [
-                    {"name": "字段名", "key": "fieldName", "type": "select"},
-                    {"name": "字段值", "key": "fieldType", "type": "input"}
-                  ]
-                },
-                {
-                  "key": "conditions",
-                  "label": "条件",
-                  "type": "table-editor",
-                  "columns": [
-                    { "name": "字段名", "key": "fieldName", "type": "select" },
-                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
-                    { "name": "字段值", "key": "fieldValue", "type": "input" }
+                    {"name": "参数名", "key": "fieldName", "type": "select"},
+                    {"name": "参数值", "key": "fieldValue", "type": "input"}
                   ]
                 }
               ],
-              "sql_template": "UPDATE {{tableName}} SET {{#each fields}}{{fieldName}} = {{#if (isString fieldType)}}'{{fieldType}}'{{else}}{{fieldType}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
+              "sql_template": "UPDATE {{tableName}} SET {{#each fields}}{{fieldName}} = {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "where_update",
