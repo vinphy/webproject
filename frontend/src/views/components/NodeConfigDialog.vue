@@ -149,6 +149,15 @@ watch(() => props.node, async (newNode) => {
             onChange: handleIndexNameChange
           }
         }
+        // 关联表名下拉
+        if (item.key === 'joinTableName' && item.type === 'select') {
+          const tables = props.getTablesByDatabase(currentNode.value.databaseName)
+          return {
+            ...item,
+            options: tables.map(tb => ({ label: tb, value: tb })),
+            onChange: handleJoinTableNameChange
+          }
+        }
         // 字段选择下拉（用于创建视图）
         if (item.key === 'columns' && item.type === 'select' && item.multiple) {
           return {
@@ -251,25 +260,51 @@ watch(() => props.node, async (newNode) => {
           // 当节点被打开时，尝试获取字段列表
           if (currentNode.value.databaseName && currentNode.value.tableName) {
             try {
-              // 异步获取字段列表
-              const fieldList = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, currentNode.value.tableName) || []
-              console.log('获取到的字段列表:', fieldList)
+              // 异步获取主表字段列表
+              const mainFieldList = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, currentNode.value.tableName) || []
+              console.log('获取到的主表字段列表:', mainFieldList)
               
-              // 将字段名数组转换为label-value格式
-              const fieldOptions = fieldList.map(field => ({
-                label: field,
-                value: field
+              // 生成带表名的主表字段选项
+              const tableName = currentNode.value.tableName
+              const mainFieldOptions = mainFieldList.map(field => ({
+                label: `${tableName}.${field}`,
+                value: `${tableName}.${field}`
               }))
+              
+              // 初始化所有字段选项为主表字段选项
+              let allFieldOptions = [...mainFieldOptions]
+              
+              // 如果有关联表，也添加关联表的字段
+              if (currentNode.value.joinTableName) {
+                const joinFieldList = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, currentNode.value.joinTableName) || []
+                console.log('获取到的关联表字段列表:', joinFieldList)
+                
+                // 生成带表名的关联表字段选项
+                const joinTableName = currentNode.value.joinTableName
+                const joinFieldOptions = joinFieldList.map(field => ({
+                  label: `${joinTableName}.${field}`,
+                  value: `${joinTableName}.${field}`
+                }))
+                
+                // 合并主表和关联表字段选项
+                allFieldOptions = [...mainFieldOptions, ...joinFieldOptions]
+              }
               
               // 更新ui_schema中的字段名下拉选项
               currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
-                // 处理table-editor中的字段名（包括查询条件表格）
+                // 处理table-editor中的字段名（包括查询条件表格和关联条件）
                 if (item.type === 'table-editor' && Array.isArray(item.columns)) {
                   const columns = item.columns.map(col => {
+                    if (col.key === 'mainField' && col.type === 'select') {
+                      return {
+                        ...col,
+                        options: mainFieldOptions
+                      }
+                    }
                     if ((col.key === 'fieldName' || col.key === 'field') && col.type === 'select') {
                       return {
                         ...col,
-                        options: fieldOptions
+                        options: allFieldOptions
                       }
                     }
                     return col
@@ -283,14 +318,21 @@ watch(() => props.node, async (newNode) => {
                 if (item.key === 'columns' && item.type === 'select' && item.multiple) {
                   return {
                     ...item,
-                    options: fieldOptions
+                    options: mainFieldOptions
+                  }
+                }
+                // 处理查询字段的下拉多选
+                if (item.key === 'fields' && item.type === 'select' && item.multiple) {
+                  return {
+                    ...item,
+                    options: allFieldOptions
                   }
                 }
                 // 处理修改数据表中的字段名下拉框
                 if (item.key === 'fieldName' && item.type === 'select') {
                   return {
                     ...item,
-                    options: fieldOptions
+                    options: mainFieldOptions
                   }
                 }
                 return item
@@ -310,25 +352,50 @@ watch([() => currentNode.value?.databaseName, () => currentNode.value?.tableName
   console.log('数据库名或表名变化:', { databaseName, tableName })
   if (databaseName && tableName && Array.isArray(currentNode.value?.ui_schema)) {
     try {
-      // 异步获取字段列表
-      const fieldList = await props.getColumnsByDatabaseTable(databaseName, tableName) || []
-      console.log('获取到的字段列表:', fieldList)
+      // 异步获取主表字段列表
+      const mainFieldList = await props.getColumnsByDatabaseTable(databaseName, tableName) || []
+      console.log('获取到的主表字段列表:', mainFieldList)
       
-      // 将字段名数组转换为label-value格式
-      const fieldOptions = fieldList.map(field => ({
-        label: field,
-        value: field
+      // 生成带表名的主表字段选项
+      const mainFieldOptions = mainFieldList.map(field => ({
+        label: `${tableName}.${field}`,
+        value: `${tableName}.${field}`
       }))
+      
+      // 初始化所有字段选项为主表字段选项
+      let allFieldOptions = [...mainFieldOptions]
+      
+      // 如果有关联表，也添加关联表的字段
+      if (currentNode.value.joinTableName) {
+        const joinFieldList = await props.getColumnsByDatabaseTable(databaseName, currentNode.value.joinTableName) || []
+        console.log('获取到的关联表字段列表:', joinFieldList)
+        
+        // 生成带表名的关联表字段选项
+        const joinTableName = currentNode.value.joinTableName
+        const joinFieldOptions = joinFieldList.map(field => ({
+          label: `${joinTableName}.${field}`,
+          value: `${joinTableName}.${field}`
+        }))
+        
+        // 合并主表和关联表字段选项
+        allFieldOptions = [...mainFieldOptions, ...joinFieldOptions]
+      }
       
       // 更新ui_schema中的字段名下拉选项
       currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
-        // 处理table-editor中的字段名（包括查询条件表格）
+        // 处理table-editor中的字段名（包括查询条件表格和关联条件）
         if (item.type === 'table-editor' && Array.isArray(item.columns)) {
           const columns = item.columns.map(col => {
+            if (col.key === 'mainField' && col.type === 'select') {
+              return {
+                ...col,
+                options: mainFieldOptions
+              }
+            }
             if ((col.key === 'fieldName' || col.key === 'field') && col.type === 'select') {
               return {
                 ...col,
-                options: fieldOptions
+                options: allFieldOptions
               }
             }
             return col
@@ -342,14 +409,21 @@ watch([() => currentNode.value?.databaseName, () => currentNode.value?.tableName
         if (item.key === 'columns' && item.type === 'select' && item.multiple) {
           return {
             ...item,
-            options: fieldOptions
+            options: mainFieldOptions
+          }
+        }
+        // 处理查询字段的下拉多选
+        if (item.key === 'fields' && item.type === 'select' && item.multiple) {
+          return {
+            ...item,
+            options: allFieldOptions
           }
         }
         // 处理修改数据表中的字段名下拉框
         if (item.key === 'fieldName' && item.type === 'select') {
           return {
             ...item,
-            options: fieldOptions
+            options: mainFieldOptions
           }
         }
         return item
@@ -423,11 +497,73 @@ async function handleTableChange(val) {
       if (firstTableName) {
         const fields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, firstTableName) || []
         console.log('获取到的字段列表:', fields)
+        
+        // 生成带表名的字段选项
+        const tableName = firstTableName
+        const fieldOptions = fields.map(field => ({
+          label: `${tableName}.${field}`,
+          value: `${tableName}.${field}`
+        }))
+        
+        // 先处理查询字段和条件字段的选项
+        let joinFieldOptions = []
+        if (currentNode.value.joinTableName) {
+          const joinFields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, currentNode.value.joinTableName) || []
+          const joinTableName = currentNode.value.joinTableName
+          joinFieldOptions = joinFields.map(field => ({
+            label: `${joinTableName}.${field}`,
+            value: `${joinTableName}.${field}`
+          }))
+        }
+        
+        // 合并主表和关联表字段选项
+        const allFieldOptions = [...fieldOptions, ...joinFieldOptions]
+        
+        // 更新ui_schema
         currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
           if (item.key === 'columns' && item.type === 'select' && item.multiple) {
             return {
               ...item,
-              options: fields.map(field => ({ label: field, value: field }))
+              options: fieldOptions
+            }
+          }
+          // 处理查询字段的下拉多选
+          if (item.key === 'fields' && item.type === 'select' && item.multiple) {
+            return {
+              ...item,
+              options: allFieldOptions
+            }
+          }
+          // 处理关联条件的主表字段下拉
+          if (item.key === 'joinConditions' && item.type === 'table-editor' && Array.isArray(item.columns)) {
+            const columns = item.columns.map(col => {
+              if (col.key === 'mainField' && col.type === 'select') {
+                return {
+                  ...col,
+                  options: fieldOptions
+                }
+              }
+              return col
+            })
+            return {
+              ...item,
+              columns
+            }
+          }
+          // 处理条件的字段名下拉
+          if (item.key === 'conditions' && item.type === 'table-editor' && Array.isArray(item.columns)) {
+            const columns = item.columns.map(col => {
+              if (col.key === 'fieldName' && col.type === 'select') {
+                return {
+                  ...col,
+                  options: allFieldOptions
+                }
+              }
+              return col
+            })
+            return {
+              ...item,
+              columns
             }
           }
           return item
@@ -517,6 +653,96 @@ function handleIsPrimaryKeyChange(val) {
   }
 }
 
+// 处理关联表名变更
+async function handleJoinTableNameChange(val) {
+  console.log('关联表名变更:', val)
+  // 更新当前节点的关联表名
+  currentNode.value = {
+    ...currentNode.value,
+    joinTableName: val
+  }
+  // 触发ui_schema更新（关联表字段下拉联动）
+  if (Array.isArray(currentNode.value.ui_schema) && currentNode.value.databaseName && val) {
+    try {
+      const fields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, val) || []
+      console.log('获取到的关联表字段列表:', fields)
+      
+      // 生成带表名的字段选项
+      const joinTableName = val
+      const joinFieldOptions = fields.map(field => ({
+        label: `${joinTableName}.${field}`,
+        value: `${joinTableName}.${field}`
+      }))
+      
+      // 生成关联表字段的下拉选项（用于关联条件）
+      const joinFieldOptionsForCondition = fields.map(field => ({
+        label: `${joinTableName}.${field}`,
+        value: `${joinTableName}.${field}`
+      }))
+      
+      // 先获取主表字段选项
+      let mainFieldOptions = []
+      if (currentNode.value.tableName) {
+        const mainTableName = Array.isArray(currentNode.value.tableName) ? currentNode.value.tableName[0] : currentNode.value.tableName
+        const mainFields = await props.getColumnsByDatabaseTable(currentNode.value.databaseName, mainTableName) || []
+        mainFieldOptions = mainFields.map(field => ({
+          label: `${mainTableName}.${field}`,
+          value: `${mainTableName}.${field}`
+        }))
+      }
+      
+      // 合并主表和关联表字段选项
+      const allFieldOptions = [...mainFieldOptions, ...joinFieldOptions]
+      
+      // 更新ui_schema
+      currentNode.value.ui_schema = currentNode.value.ui_schema.map(item => {
+        // 处理关联条件的关联表字段下拉
+        if (item.key === 'joinConditions' && item.type === 'table-editor' && Array.isArray(item.columns)) {
+          const columns = item.columns.map(col => {
+            if (col.key === 'joinField' && col.type === 'select') {
+              return {
+                ...col,
+                options: joinFieldOptionsForCondition
+              }
+            }
+            return col
+          })
+          return {
+            ...item,
+            columns
+          }
+        }
+        // 处理查询字段的下拉多选（添加关联表字段）
+        if (item.key === 'fields' && item.type === 'select' && item.multiple) {
+          return {
+            ...item,
+            options: allFieldOptions
+          }
+        }
+        // 处理条件的字段名下拉（添加关联表字段）
+        if (item.key === 'conditions' && item.type === 'table-editor' && Array.isArray(item.columns)) {
+          const columns = item.columns.map(col => {
+            if (col.key === 'fieldName' && col.type === 'select') {
+              return {
+                ...col,
+                options: allFieldOptions
+              }
+            }
+            return col
+          })
+          return {
+            ...item,
+            columns
+          }
+        }
+        return item
+      })
+    } catch (error) {
+      console.error('获取关联表字段列表失败:', error)
+    }
+  }
+}
+
 // 根据subtype获取对应的配置组件
 const getConfigComponent = () => {
   if (!currentNode.value) return BasicConfig
@@ -576,45 +802,36 @@ const updateNode = (updatedNode) => {
 }
 
 // 保存配置
-const saveConfig = () => {
-  if (!currentNode.value) return
+  const saveConfig = () => {
+    if (!currentNode.value) return
 
-  // select类型参数校验
-  if (currentNode.value.type === 'select') {
-    const names = currentNode.value.parameters.map(p => p.name)
-    const hasEmpty = names.some(n => !n)
-    const hasDuplicate = names.length !== new Set(names).size
-    if (hasEmpty) {
-      ElMessage.error('列名不能为空，请选择具体字段')
-      return
-    }
-    if (hasDuplicate) {
-      ElMessage.error('不能选择重复的列名')
-      return
-    }
-  }
-  
-  // 创建数据库参数处理
-  if (currentNode.value.type === 'create' ) {
-    // 先获取表单所有数据和sql
+    // 调用DynamicForm组件的方法获取表单数据和SQL
     if (dynamicFormRef.value && dynamicFormRef.value.getFormDataWithSql) {
       const allFormData = dynamicFormRef.value.getFormDataWithSql()
       Object.assign(currentNode.value, allFormData)
-      console.log("==",allFormData)
+      console.log("获取到的表单数据:", allFormData)
+      
+      // 更新parameters数组，便于模型图显示
       currentNode.value.parameters = Object.keys(allFormData)
         .filter(key => key !== 'sql')
         .map(key => ({ name: key, value: allFormData[key] }))
     }
-    // 再校验databaseName，charset和collation交由DynamicForm的表单校验
-    if (!currentNode.value.databaseName) {
+
+    // 特殊校验：数据库名不能为空
+    if (currentNode.value.databaseName === '' || currentNode.value.databaseName === undefined) {
       ElMessage.error('数据库名不能为空')
       return
     }
-  }
 
-  // 触发保存事件
-  emit('save', currentNode.value)
-  handleClose()
+    // 特殊校验：表名不能为空（除了创建数据库操作）
+    if (currentNode.value.subType !== 'database' && (currentNode.value.tableName === '' || currentNode.value.tableName === undefined || (Array.isArray(currentNode.value.tableName) && currentNode.value.tableName.length === 0))) {
+      ElMessage.error('表名不能为空')
+      return
+    }
+
+    // 触发保存事件
+    emit('save', currentNode.value)
+    handleClose()
 }
 
 // 关闭对话框

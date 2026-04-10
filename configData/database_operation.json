@@ -347,8 +347,8 @@
         "children": [
           {
             "id": "basic_select",
-            "name": "基本查询",
-            "description": "基础数据查询操作",
+            "name": "基础查询",
+            "description": "基础数据查询操作，支持DISTINCT",
             "type": "select",
             "subType": "basic",
             "category": "database_operation",
@@ -363,6 +363,7 @@
             "ui_schema":[
                 { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
                 { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+                { "key": "useDistinct", "label": "DISTINCT", "type": "checkbox" },
                 {
                   "key": "fields",
                   "label": "查询字段",
@@ -377,35 +378,113 @@
                   "type": "table-editor",
                   "columns": [
                     { "name": "字段名", "key": "fieldName", "type": "select" },
-                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "LIKE", "NOT LIKE", "IS NULL", "IS NOT NULL"] },
                     { "name": "字段值", "key": "fieldValue", "type": "input" }
                   ]
                 }
               ],
-              "sql_template": "SELECT {{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
+              "sql_template": "SELECT {{#if useDistinct}}DISTINCT {{/if}}{{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           },
           {
-            "id": "where_select",
-            "name": "条件查询",
-            "description": "带条件的数据查询操作",
+            "id": "order_select",
+            "name": "排序查询",
+            "description": "带ORDER BY的查询操作",
             "type": "select",
-            "subType": "where",
+            "subType": "order",
             "category": "database_operation",
             "version": "1.0.0",
             "status": "active",
             "inputs": [
               { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
-              { "name": "过滤条件", "connected": false, "id": "input2", "type": "filter" }
+              { "name": "排序条件", "connected": false, "id": "input2", "type": "order_condition" }
             ],
             "outputs": [
               { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": [],
-              "condition": ""
-            }
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              { "key": "useDistinct", "label": "DISTINCT", "type": "checkbox" },
+              {
+                "key": "fields",
+                "label": "查询字段",
+                "type": "table-editor",
+                "columns": [
+                  {"name": "字段名", "key": "fieldName", "type": "select"}
+                ]
+              },
+              {
+                "key": "conditions",
+                "label": "条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "LIKE", "NOT LIKE", "IS NULL", "IS NOT NULL"] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              },
+              { "key": "sortFields", "label": "排序字段", "type": "select", "required": true, "multiple": true },
+              { "key": "sortOrder", "label": "排序规则", "type": "select", "required": true, "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] },
+              { "key": "limit", "label": "限制数量", "type": "input", "required": false }
+            ],
+            "sql_template": "SELECT {{#if useDistinct}}DISTINCT {{/if}}{{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}} ORDER BY {{#each sortFields}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}}{{#if limit}} LIMIT {{limit}}{{/if}};"
+          },
+          {
+            "id": "group_select",
+            "name": "分组查询",
+            "description": "带GROUP BY和HAVING的分组查询操作",
+            "type": "select",
+            "subType": "group",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "分组条件", "connected": false, "id": "input2", "type": "group_condition" }
+            ],
+            "outputs": [
+              { "name": "分组结果", "connected": false, "id": "output1", "type": "group_data" }
+            ],
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              {
+                "key": "fields",
+                "label": "查询字段",
+                "type": "table-editor",
+                "required": false,
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select", "required": true },
+                  { "name": "函数", "key": "function", "type": "select", "options": ["", "COUNT", "SUM", "AVG", "MAX", "MIN"] },
+                  { "name": "别名", "key": "alias", "type": "input" }
+                ]
+              },
+              {
+                "key": "conditions",
+                "label": "条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "LIKE", "NOT LIKE", "IS NULL", "IS NOT NULL"] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              },
+              { "key": "groupBy", "label": "分组字段", "type": "select", "required": false, "multiple": true },
+              {
+                "key": "havingConditions",
+                "label": "HAVING条件",
+                "type": "table-editor", 
+                "required": false,
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              },
+              { "key": "sortFields", "label": "排序字段", "type": "select", "multiple": true },
+              { "key": "sortOrder", "label": "排序规则", "type": "select", "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] }
+            ],
+            "sql_template": "SELECT {{#if fields.length}}{{#each fields}}{{#if function}}{{function}}({{fieldName}}){{#if alias}} AS {{alias}}{{/if}}{{else}}{{fieldName}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if groupBy.length}} GROUP BY {{#each groupBy}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}{{#if havingConditions.length}} HAVING {{#each havingConditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if sortFields.length}} ORDER BY {{#each sortFields}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "join_select",
@@ -423,36 +502,88 @@
             "outputs": [
               { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": [],
-              "joinTables": []
-            }
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "主表名", "type": "select", "required": true },
+              { "key": "tableAlias", "label": "主表别名", "type": "input", "required": false },
+              { "key": "joinTableName", "label": "关联表名", "type": "select", "required": true },
+              { "key": "joinTableAlias", "label": "关联表别名", "type": "input", "required": false },
+              { "key": "joinType", "label": "连接类型", "type": "select", "required": true, "options": [{ "label": "INNER JOIN", "value": "INNER JOIN" }, { "label": "LEFT JOIN", "value": "LEFT JOIN" }, { "label": "RIGHT JOIN", "value": "RIGHT JOIN" }, { "label": "FULL JOIN", "value": "FULL JOIN" }] },
+              {
+                "key": "joinConditions",
+                "label": "关联条件",
+                "type": "table-editor",
+                "required": true,
+                "columns": [
+                  { "name": "主表字段", "key": "mainField", "type": "select", "required": true },
+                  { "name": "连接关系", "key": "joinOperator", "type": "select", "required": true, "options": [{ "label": "=", "value": "=" }, { "label": "<", "value": "<" }, { "label": ">", "value": ">" }, { "label": "<=", "value": "<=" }, { "label": ">=", "value": ">=" }, { "label": "!=", "value": "!=" }] },
+                  { "name": "关联表字段", "key": "joinField", "type": "select", "required": true }
+                ]
+              },
+              {
+                "key": "fields",
+                "label": "查询字段",
+                "type": "select",
+                "required": false,
+                "multiple": true
+              },
+              {
+                "key": "conditions",
+                "label": "条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "LIKE", "NOT LIKE", "IS NULL", "IS NOT NULL"] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              },
+              { "key": "sortFields", "label": "排序字段", "type": "select", "multiple": true },
+              { "key": "sortOrder", "label": "排序规则", "type": "select", "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] }
+            ],
+            "sql_template": "SELECT {{#if fields.length}}{{#each fields}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}} {{joinType}} {{joinTableName}}{{#if joinTableAlias}} AS {{joinTableAlias}}{{/if}} ON {{#each joinConditions}}{{mainField}} {{joinOperator}} {{joinField}}{{#unless @last}} AND {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if sortFields.length}} ORDER BY {{#each sortFields}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}};"
           },
           {
-            "id": "group_select",
-            "name": "分组查询",
-            "description": "分组聚合查询操作",
+            "id": "subquery_select",
+            "name": "子查询查询",
+            "description": "带子查询的查询操作",
             "type": "select",
-            "subType": "group",
+            "subType": "subquery",
             "category": "database_operation",
             "version": "1.0.0",
             "status": "active",
             "inputs": [
               { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
-              { "name": "分组字段", "connected": false, "id": "input2", "type": "group_fields" }
+              { "name": "子查询", "connected": false, "id": "input2", "type": "subquery" }
             ],
             "outputs": [
-              { "name": "分组结果", "connected": false, "id": "output1", "type": "group_data" }
+              { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": [],
-              "groupBy": [],
-              "aggregateFunctions": []
-            }
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "表名", "type": "select", "required": true },
+              { "key": "useDistinct", "label": "DISTINCT", "type": "checkbox" },
+              {
+                "key": "fields",
+                "label": "查询字段",
+                "type": "table-editor",
+                "columns": [
+                  {"name": "字段名", "key": "fieldName", "type": "select"}
+                ]
+              },
+              {
+                "key": "conditions",
+                "label": "条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "EXISTS", "NOT EXISTS"] },
+                  { "name": "子查询", "key": "subquery", "type": "textarea", "placeholder": "例如：SELECT id FROM users WHERE age > 30" }
+                ]
+              },
+              { "key": "sortFields", "label": "排序字段", "type": "select", "multiple": true },
+              { "key": "sortOrder", "label": "排序规则", "type": "select", "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] }
+            ],
+            "sql_template": "SELECT {{#if useDistinct}}DISTINCT {{/if}}{{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} ({{subquery}}){{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if sortFields.length}} ORDER BY {{#each sortFields}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}};"
           },
           {
             "id": "complex_select",
@@ -470,12 +601,34 @@
             "outputs": [
               { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": [],
-              "complexConditions": []
-            }
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "表名", "type": "select", "required": true },
+              { "key": "useDistinct", "label": "DISTINCT", "type": "checkbox" },
+              {
+                "key": "fields",
+                "label": "查询字段",
+                "type": "table-editor",
+                "columns": [
+                  {"name": "字段名", "key": "fieldName", "type": "select"}
+                ]
+              },
+              {
+                "key": "conditions",
+                "label": "条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "BETWEEN", "NOT BETWEEN", "LIKE", "NOT LIKE", "IS NULL", "IS NOT NULL"] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" },
+                  { "name": "逻辑运算符", "key": "logic", "type": "select", "options": ["AND", "OR"] }
+                ]
+              },
+              { "key": "sortFields", "label": "排序字段", "type": "select", "multiple": true },
+              { "key": "sortOrder", "label": "排序规则", "type": "select", "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] },
+              { "key": "limit", "label": "限制数量", "type": "input" }
+            ],
+            "sql_template": "SELECT {{#if useDistinct}}DISTINCT {{/if}}{{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#if logic}} {{logic}}{{/if}}{{/each}}{{/if}}{{#if sortFields.length}} ORDER BY {{#each sortFields}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}{{#if limit}} LIMIT {{limit}}{{/if}};"
           }
         ]
       }

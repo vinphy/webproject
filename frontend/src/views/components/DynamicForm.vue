@@ -21,7 +21,8 @@
           v-else-if="item.type === 'select'" 
           :label="item.label" 
           :prop="item.key"
-          :rules="item.required ? [{ required: true, message: `${item.label}不能为空` }] : []"
+          :rules="item.required ? item.multiple ? [{ required: true, type: 'array', min: 1, message: `${item.label}不能为空` }] : [{ required: true, message: `${item.label}不能为空` }] : []"
+          v-if="!(item.key === 'sortFields' || item.key === 'sortOrder') || (item.key === 'sortFields' || item.key === 'sortOrder') && formData.groupBy && formData.groupBy.length > 0"
         >
           <el-select 
             v-model="formData[item.key]" 
@@ -41,7 +42,7 @@
               />
             </template>
             <!-- 否则尝试从availableColumnsMap中获取字段列表 -->
-            <template v-else-if="item.key === 'sortFields' && formData.databaseName && formData.tableName && availableColumnsMap[formData.tableName]">
+            <template v-else-if="(item.key === 'sortFields' || item.key === 'groupBy') && formData.databaseName && formData.tableName && availableColumnsMap[formData.tableName]">
               <el-option 
                 v-for="column in availableColumnsMap[formData.tableName]" 
                 :key="column" 
@@ -66,13 +67,14 @@
           v-else-if="item.type === 'table-editor' " 
           :label="item.label" 
           :prop="item.key"
+          :rules="item.required ? [{ required: true, type: 'array', min: 1, message: `${item.label}不能为空` }] : []"
         >
           <TableEditor 
             v-model="formData[item.key] " 
             :columns="item.columns"
             :available-tables="availableTables"
             :available-columns-map="availableColumnsMap"
-            :show-constraint="item.key !== 'conditions' && item.key !== 'fields' && item.key !== 'caseConditions'"
+            :show-constraint="item.key !== 'conditions' && item.key !== 'fields' && item.key !== 'caseConditions' && item.key !== 'havingConditions'"
           />
         </el-form-item>
         
@@ -166,7 +168,13 @@
       } else if (item.defaultValue !== undefined) {
         data[item.key] = item.defaultValue
       } else if (data[item.key] === undefined) {
-        data[item.key] = item.type === 'table-editor' ? [] : ''
+        if (item.type === 'table-editor') {
+          data[item.key] = []
+        } else if (item.type === 'select' && item.multiple) {
+          data[item.key] = []
+        } else {
+          data[item.key] = ''
+        }
       }
       // 否则保留原有值
     })
