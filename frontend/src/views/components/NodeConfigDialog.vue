@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     :title="currentNode?.name + ' 参数配置'"
-    width="800px"
+    width="1300px"
     destroy-on-close
     @close="handleClose"
   >

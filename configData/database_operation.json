@@ -629,6 +629,78 @@
               { "key": "limit", "label": "限制数量", "type": "input" }
             ],
             "sql_template": "SELECT {{#if useDistinct}}DISTINCT {{/if}}{{#if fields.length}}{{#each fields}}{{fieldName}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{tableName}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#if logic}} {{logic}}{{/if}}{{/each}}{{/if}}{{#if sortFields.length}} ORDER BY {{#each sortFields}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}{{#if limit}} LIMIT {{limit}}{{/if}};"
+          },
+          {
+            "id": "flexible_subquery_select",
+            "name": "灵活子查询",
+            "description": "支持在不同位置使用子查询的查询操作",
+            "type": "select",
+            "subType": "flexible_subquery",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "查询条件", "connected": false, "id": "input1", "type": "condition" },
+              { "name": "子查询", "connected": false, "id": "input2", "type": "subquery" }
+            ],
+            "outputs": [
+              { "name": "查询结果", "connected": false, "id": "output1", "type": "data" }
+            ],
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "表名", "type": "select", "required": true },
+              { "key": "isSubquery", "label": "使用子查询作为表", "type": "checkbox" },
+              { "key": "tableSubquery", "label": "表子查询", "type": "textarea", "placeholder": "例如：(SELECT * FROM users WHERE age > 30) AS user_subquery" },
+              { "key": "useDistinct", "label": "DISTINCT", "type": "checkbox" },
+              {
+                "key": "fields",
+                "label": "查询字段",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "使用子查询", "key": "useSubquery", "type": "checkbox" },
+                  { "name": "子查询", "key": "subquery", "type": "textarea", "placeholder": "例如：SELECT MAX(age) FROM users" }
+                ]
+              },
+              {
+                "key": "whereConditions",
+                "label": "WHERE条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!=", "IN", "NOT IN", "EXISTS", "NOT EXISTS"] },
+                  { "name": "值", "key": "value", "type": "input" },
+                  { "name": "是子查询", "key": "isSubquery", "type": "checkbox" },
+                  { "name": "子查询", "key": "subquery", "type": "textarea", "placeholder": "例如：SELECT id FROM users WHERE age > 30" }
+                ]
+              },
+
+              {
+                "key": "havingConditions",
+                "label": "HAVING条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                  { "name": "值", "key": "value", "type": "input" },
+                  { "name": "是子查询", "key": "isSubquery", "type": "checkbox" },
+                  { "name": "子查询", "key": "subquery", "type": "textarea", "placeholder": "例如：SELECT MAX(age) FROM users" }
+                ]
+              },
+              {
+                "key": "orderFields",
+                "label": "排序字段",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "field", "type": "input" },
+                  { "name": "是子查询", "key": "isSubquery", "type": "checkbox" },
+                  { "name": "子查询", "key": "subquery", "type": "textarea", "placeholder": "例如：SELECT MAX(age) FROM users" },
+                  { "name": "排序规则", "key": "order", "type": "select", "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] }
+                ]
+              },
+              { "key": "limit", "label": "限制数量", "type": "input" }
+            ],
+            "sql_template": "SELECT {{#if useDistinct}}DISTINCT {{/if}}{{#if fields.length}}{{#each fields}}{{#if useSubquery}}({{subquery}}){{#if @last}}{{/if}}{{else}}{{fieldName}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}*{{/if}} FROM {{#if isSubquery}}{{tableSubquery}}{{else}}{{tableName}}{{/if}}{{#if whereConditions.length}} WHERE {{#each whereConditions}}{{fieldName}} {{operator}} {{#if isSubquery}}({{subquery}}){{else}}{{#if (isString value)}}'{{value}}'{{else}}{{value}}{{/if}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if havingConditions.length}} HAVING {{#each havingConditions}}{{fieldName}} {{operator}} {{#if isSubquery}}({{subquery}}){{else}}{{#if (isString value)}}'{{value}}'{{else}}{{value}}{{/if}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}}{{#if orderFields.length}} ORDER BY {{#each orderFields}}{{#if isSubquery}}({{subquery}}){{else}}{{field}}{{/if}} {{order}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}{{#if limit}} LIMIT {{limit}}{{/if}};"
           }
         ]
       }

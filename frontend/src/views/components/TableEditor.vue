@@ -47,6 +47,16 @@
               :true-label="true" 
               :false-label="false"
             />
+            
+            <!-- 文本域 -->
+            <el-input
+              v-else-if="col.type === 'textarea'"
+              v-model="row[col.key]"
+              type="textarea"
+              :rows="3"
+              :placeholder="col.placeholder"
+              v-if="!(col.key === 'subquery') || (col.key === 'subquery' && (row.useSubquery || row.isSubquery))"
+            />
           </template>
         </el-table-column>
         <el-table-column label="操作" :width="showConstraint ? '160' : '80'">
@@ -276,11 +286,12 @@
     }
   }
   
-  // 列宽设置
+  ///* 列宽设置 */
   const getColWidth = (col) => {
     if (col.type === 'input') return 120
     if (col.type === 'select') return 160
     if (col.type === 'checkbox') return 100
+    if (col.type === 'textarea') return 400
     return 120
   }
   

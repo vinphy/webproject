@@ -1,7 +1,8 @@
 <template>
+    <div class="form-container">
     <el-form 
       :model="formData" 
-      label-width="120px"
+      label-width="150px"
       ref="formRef"
       @submit.prevent="submitForm"
     >
@@ -74,7 +75,7 @@
             :columns="item.columns"
             :available-tables="availableTables"
             :available-columns-map="availableColumnsMap"
-            :show-constraint="item.key !== 'conditions' && item.key !== 'fields' && item.key !== 'caseConditions' && item.key !== 'havingConditions'"
+            :show-constraint="item.key !== 'conditions' && item.key !== 'fields' && item.key !== 'caseConditions' && item.key !== 'havingConditions' && item.key !== 'whereConditions' && item.key !== 'orderFields'"
           />
         </el-form-item>
         
@@ -84,6 +85,7 @@
           :label="item.label" 
           :prop="item.key"
           :rules="item.required ? [{ required: true, message: `${item.label}不能为空` }] : []"
+          v-if="!(item.key === 'tableSubquery') || (item.key === 'tableSubquery' && formData.isSubquery)"
         >
           <el-input
             v-model="formData[item.key]"
@@ -112,6 +114,7 @@
           readonly 
         />
       </div>
+    </div>
   </template>
   
   <script setup>
@@ -389,6 +392,35 @@
   </script>
 
 <style scoped>
+.form-container {
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.el-form {
+  width: 100%;
+}
+
+.el-form-item {
+  margin-bottom: 20px;
+}
+
+.el-form-item__content {
+  flex: 1;
+}
+
+/* 文本域样式 */
+.el-textarea {
+  width: 100%;
+}
+
+/* 表子查询文本域 */
+.el-form-item__content .el-textarea {
+  width: 100%;
+  min-height: 120px;
+}
+
 .sql-preview {
   margin-top: 30px;
   padding: 18px 20px 16px 20px;
@@ -396,6 +428,8 @@
   border-radius: 6px;
   box-shadow: 0 2px 8px 0 rgba(0,0,0,0.04);
   border: 1px solid #e4e7ed;
+  width: 100%;
+  box-sizing: border-box;
 }
 .sql-preview h4 {
   margin: 0 0 12px 0;
