@@ -50,7 +50,7 @@
               />
             </template>
             <!-- 否则尝试从availableColumnsMap中获取字段列表（通用情况） -->
-            <template v-else-if="(item.key === 'fieldName' || item.key === 'columns' || item.key === 'subqueryField') && formData.databaseName && formData.tableName && availableColumnsMap[formData.tableName]">
+            <template v-else-if="(item.key === 'fieldName' || item.key === 'columns' || item.key === 'subqueryField' || item.key === 'targetField') && formData.databaseName && formData.tableName && availableColumnsMap[formData.tableName]">
               <el-option 
                 v-for="column in availableColumnsMap[formData.tableName]" 
                 :key="column" 
@@ -72,7 +72,7 @@
             :columns="item.columns"
             :available-tables="availableTables"
             :available-columns-map="availableColumnsMap"
-            :show-constraint="item.key !== 'conditions' && item.key !== 'fields'"
+            :show-constraint="item.key !== 'conditions' && item.key !== 'fields' && item.key !== 'caseConditions'"
           />
         </el-form-item>
         

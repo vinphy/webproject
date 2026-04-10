@@ -30,14 +30,14 @@
                 />
               </template>
               <!-- 否则尝试从availableColumnsMap中获取字段列表 -->
-              <template v-else-if="col.key === 'fieldName' && Object.keys(availableColumnsMap).length > 0">
-                <el-option 
-                  v-for="column in Object.values(availableColumnsMap)[0] || []" 
-                  :key="column" 
-                  :label="column" 
-                  :value="column"
-                />
-              </template>
+            <template v-else-if="(col.key === 'fieldName' || col.key === 'targetField') && Object.keys(availableColumnsMap).length > 0">
+              <el-option 
+                v-for="column in Object.values(availableColumnsMap)[0] || []" 
+                :key="column" 
+                :label="column" 
+                :value="column"
+              />
+            </template>
             </el-select>
             
             <!-- 复选框 -->

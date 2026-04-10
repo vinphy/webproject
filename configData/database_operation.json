@@ -170,40 +170,10 @@
         "children": [
           {
             "id": "basic_update",
-            "name": "更新",
+            "name": "基础更新",
             "description": "基础数据更新操作",
             "type": "update",
             "subType": "basic",
-            "category": "database_operation",
-            "version": "1.0.0",
-            "status": "active",
-            "inputs": [
-              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" }
-            ],
-            "outputs": [
-              { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
-            ],
-            "ui_schema":[
-                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
-                { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
-                { 
-                  "key": "fields", 
-                  "label": "参数", 
-                  "type": "table-editor", 
-                  "columns": [
-                    {"name": "参数名", "key": "fieldName", "type": "select"},
-                    {"name": "参数值", "key": "fieldValue", "type": "input"}
-                  ]
-                }
-              ],
-              "sql_template": "UPDATE {{tableName}} SET {{#each fields}}{{fieldName}} = {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
-          },
-          {
-            "id": "where_update",
-            "name": "条件更新",
-            "description": "带条件的数据更新操作",
-            "type": "update",
-            "subType": "where",
             "category": "database_operation",
             "version": "1.0.0",
             "status": "active",
@@ -214,12 +184,159 @@
             "outputs": [
               { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
             ],
-            "config": {
-              "tableName": "",
-              "databaseName": "",
-              "fields": [],
-              "condition": ""
-            }
+            "ui_schema":[
+                { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+                { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+                { "key": "tableAlias", "label": "表别名", "type": "input", "required": false },
+                { 
+                  "key": "setFields", 
+                  "label": "更新字段", 
+                  "type": "table-editor", 
+                  "required": true,
+                  "columns": [
+                    {"name": "字段名", "key": "fieldName", "type": "select", "required": true},
+                    {"name": "字段值", "key": "fieldValue", "type": "input", "required": true}
+                  ]
+                },
+                {
+                  "key": "conditions",
+                  "label": "更新条件",
+                  "type": "table-editor",
+                  "columns": [
+                    { "name": "字段名", "key": "fieldName", "type": "select" },
+                    { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                    { "name": "字段值", "key": "fieldValue", "type": "input" }
+                  ]
+                }
+              ],
+              "sql_template": "UPDATE {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}} SET {{#each setFields}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} = {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
+          },
+          {
+            "id": "order_update",
+            "name": "排序更新",
+            "description": "带ORDER BY和LIMIT的更新操作",
+            "type": "update",
+            "subType": "order",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+              { "name": "条件输入", "connected": false, "id": "input2", "type": "condition" }
+            ],
+            "outputs": [
+              { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              { "key": "tableAlias", "label": "表别名", "type": "input", "required": false },
+              {
+                "key": "setFields",
+                "label": "更新字段",
+                "type": "table-editor",
+                "required": true,
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select", "required": true },
+                  { "name": "字段值", "key": "fieldValue", "type": "input", "required": true }
+                ]
+              },
+              {
+                "key": "conditions",
+                "label": "更新条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              },
+              { "key": "sortFields", "label": "排序字段", "type": "select", "required": true, "multiple": true },
+              { "key": "sortOrder", "label": "排序规则", "type": "select", "required": true, "options": [{ "label": "升序", "value": "ASC" }, { "label": "降序", "value": "DESC" }] },
+              { "key": "limit", "label": "限制数量", "type": "input", "required": true, "defaultValue": "100" }
+            ],
+            "sql_template": "UPDATE {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}} SET {{#each setFields}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} = {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}}, {{/unless}}{{/each}}{{#if conditions.length}} WHERE {{#each conditions}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}} ORDER BY {{#each sortFields}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{this}} {{../sortOrder}}{{#unless @last}}, {{/unless}}{{/each}} LIMIT {{limit}};"
+          },
+          {
+            "id": "case_update",
+            "name": "CASE更新",
+            "description": "使用CASE语句的更新操作",
+            "type": "update",
+            "subType": "case",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+              { "name": "条件输入", "connected": false, "id": "input2", "type": "condition" }
+            ],
+            "outputs": [
+              { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              { "key": "tableAlias", "label": "表别名", "type": "input", "required": false },
+              { "key": "targetField", "label": "目标字段", "type": "select", "required": true },
+              {
+                "key": "caseConditions",
+                "label": "CASE条件",
+                "type": "table-editor",
+                "required": true,
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select", "required": true },
+                  { "name": "操作符", "key": "operator", "type": "select", "required": true, "options": ["=", ">", "<", ">=", "<=", "!=", "BETWEEN"] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input", "required": true },
+                  { "name": "结果值", "key": "result", "type": "input", "required": true }
+                ]
+              },
+              {
+                "key": "conditions",
+                "label": "更新条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              }
+            ],
+            "sql_template": "UPDATE {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}} SET {{targetField}} = CASE {{#each caseConditions}}WHEN {{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}} THEN {{#if (isString result)}}'{{result}}'{{else}}{{result}}{{/if}}{{/each}} END{{#if conditions.length}} WHERE {{#each conditions}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
+          },
+          {
+            "id": "subquery_update",
+            "name": "子查询更新",
+            "description": "使用子查询的更新操作",
+            "type": "update",
+            "subType": "subquery",
+            "category": "database_operation",
+            "version": "1.0.0",
+            "status": "active",
+            "inputs": [
+              { "name": "数据输入", "connected": false, "id": "input1", "type": "data" },
+              { "name": "条件输入", "connected": false, "id": "input2", "type": "condition" }
+            ],
+            "outputs": [
+              { "name": "更新结果", "connected": false, "id": "output1", "type": "result" }
+            ],
+            "ui_schema": [
+              { "key": "databaseName", "label": "数据库名", "type": "select", "required": true },
+              { "key": "tableName", "label": "数据表名", "type": "select", "required": true },
+              { "key": "tableAlias", "label": "表别名", "type": "input", "required": false },
+              { "key": "targetField", "label": "目标字段", "type": "select", "required": true },
+              { "key": "subquery", "label": "子查询SQL", "type": "textarea", "required": true, "placeholder": "例如：SELECT SUM(amount) FROM order_items WHERE order_id = orders.id" },
+              {
+                "key": "conditions",
+                "label": "更新条件",
+                "type": "table-editor",
+                "columns": [
+                  { "name": "字段名", "key": "fieldName", "type": "select" },
+                  { "name": "操作符", "key": "operator", "type": "select", "options": ["=", ">", "<", ">=", "<=", "!="] },
+                  { "name": "字段值", "key": "fieldValue", "type": "input" }
+                ]
+              }
+            ],
+            "sql_template": "UPDATE {{tableName}}{{#if tableAlias}} AS {{tableAlias}}{{/if}} SET {{targetField}} = ({{subquery}}){{#if conditions.length}} WHERE {{#each conditions}}{{#if ../tableAlias}}{{../tableAlias}}.{{/if}}{{fieldName}} {{operator}} {{#if (isString fieldValue)}}'{{fieldValue}}'{{else}}{{fieldValue}}{{/if}}{{#unless @last}} AND {{/unless}}{{/each}}{{/if}};"
           }
         ]
       },
